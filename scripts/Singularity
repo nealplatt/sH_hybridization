@@ -1,0 +1,59 @@
+BootStrap: docker
+From: ubuntu:16.04
+
+%labels
+AUTHOR Roy "Neal" Platt
+MAINTAINER rplatt@txbiomed.org
+VERSION 0.0.5
+DATE 8 March 2018
+
+%post
+    apt-get update
+    apt-get clean
+    apt-get install -qy \
+        wget \
+        bzip2 \
+        default-jre \
+        zip \
+        vim \
+        dialog \
+        nano \
+        bwa \
+        samtools \
+        git \
+        bc \
+        bedtools
+
+		#pigz \
+		#r-base \
+		#r-base-dev
+
+
+    mkdir -p /usr/software /master/nplatt
+    cd /usr/software
+ 
+    #put java in software
+    ln -s /usr/bin/java
+
+    #Install bioconda
+    wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
+    chmod u+x Miniconda3-latest-Linux-x86_64.sh 
+    bash ./Miniconda3-latest-Linux-x86_64.sh -b -p /usr/software/miniconda3
+    export PATH="/usr/software/miniconda3/bin:$PATH"
+    conda install -y -c bioconda snakemake
+    rm Miniconda3-latest-Linux-x86_64.sh
+    ln -s /usr/software/miniconda3/bin/python /usr/local/bin
+
+    #Install GATK
+    wget https://github.com/broadinstitute/gatk/releases/download/4.0.1.1/gatk-4.0.1.1.zip
+    unzip gatk-4.0.1.1.zip
+    rm gatk-4.0.1.1.zip
+    ln -s /usr/software/gatk-4.0.1.1/gatk /usr/local/bin/
+
+    #install trimmomatic
+    wget http://www.usadellab.org/cms/uploads/supplementary/Trimmomatic/Trimmomatic-0.36.zip
+    unzip Trimmomatic-0.36.zip
+    ln -s Trimmomatic-0.36/trimmomatic-0.36.jar /usr/local/bin
+    rm Trimmomatic-0.36.zip
+
+   
