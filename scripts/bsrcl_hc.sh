@@ -68,7 +68,7 @@ for SAMPLE in $(cat $SAMPLE_LIST); do
 
     NUM_SAMPLES=$((NUM_SAMPLES+1))
     TOTAL=$((TOTAL+1))
-
+    done
 done 
 
 echo -e "PASSED\tFAILED\tTOTAL\tNUM_SAMPLES\tEXPECTED"
