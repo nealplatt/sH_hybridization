@@ -10,20 +10,78 @@
 
 source master/nplatt/sH_hybridizationscripts/set_env.sh
 
+cd $BSRCL_DIR
 
-#select all of the SNPs
-singularity exec ~/snpCalling_v0.0.5.img gatk SelectVariants -V cohort_sorted.g.vcf -select-type SNP -O cohort_raw_snps.g.vcf -R /master/nplatt/sH_hybridization/data/genome/schHae_v1.fa
+# SELECT SNPS ------------------------------------------------------------------
+SELECT_SNPS_JOB_NAME=cohort_select_snps
+THREADS=1
 
-#select all of the indels
-singularity exec ~/snpCalling_v0.0.5.img gatk SelectVariants -V cohort_sorted.g.vcf -select-type INDEL -O cohort_raw_indels.g.vcf -R /master/nplatt/sH_hybridization/data/genome/schHae_v1.fa
+IN_VCF="$BSRCL_DIR/cohort_raw.g.vcf"
+OUT_VCF="$BSRCL_DIR/cohort_raw_snps.g.vcf"
+    
+SELECT_SNPS="$SINGULARITY gatk SelectVariants -V $IN_VCF -select-type SNP -O $OUT_VCF -R $REFERENCE"
 
-#filter out the low qual SNPs
-singularity exec ~/snpCalling_v0.0.5.img gatk VariantFiltration \
-    -R -R /master/nplatt/sH_hybridization/data/genome/schHae_v1.fa \
-    -V cohort_raw_snps.g.vcf \
-    --filterExpression "QD < 2.0 || FS > 60.0 || MQ < 40.0 || MQRankSum < -12.5 || ReadPosRankSum < -8.0" \
-    --filterName "initial_snp_filter" \
-    -o filtered_snps.vcf 
+SELECT_SNPS_QSUB="$QSUB -pe mpi $THREADS -N $SELECT_SNPS_JOB_NAME -o logs/$SELECT_SNPS_JOB_NAME.log"
+
+echo $SELECT_SNPS >scripts/$SELECT_SNPS_QSUB.sh
+
+cat scripts/$SELECT_SNPS_JOB_NAME.sh | $SELECT_SNPS_QSUB
+
+# FILTER SNPS ------------------------------------------------------------------
+FILTER_SNPS_JOB_NAME=cohort_FILTER_snps
+THREADS=1
+
+IN_VCF=$OUT_VCF
+OUT_VCF="$BSRCL_DIR/cohort_filtered_snps.g.vcf"
+    
+FILTER_SNPS="$SINGULARITY gatk VariantFiltration \
+    -R $REFERENCE \
+    -V $IN_VCF \
+    --filterExpression "'"QD < 2.0 || FS > 60.0 || MQ < 40.0 || MQRankSum < -12.5 || ReadPosRankSum < -8.0"'" \
+    --filterName "'"recommended_snp_filter"'" \
+    -o $OUT_VCF"
+
+FILTER_SNPS_QSUB="$QSUB -pe mpi $THREADS -N $FILTER_SNPS_JOB_NAME -o logs/$FILTER_SNPS_JOB_NAME.log -hold_jid $SELECT_SNPS_JOB_NAME"
+
+echo $FILTER_SNPS >scripts/$FILTER_SNPS_QSUB.sh
+
+cat scripts/$FILTER_SNPS_JOB_NAME.sh | $FILTER_SNPS_QSUB
+
+# SELECT INDELS ----------------------------------------------------------------
+SELECT_INDELS_JOB_NAME=cohort_select_indels
+THREADS=1
+
+IN_VCF="$BSRCL_DIR/cohort_raw.g.vcf"
+OUT_VCF="$BSRCL_DIR/cohort_raw_indels.g.vcf"
+    
+SELECT_INDELS="$SINGULARITY gatk SelectVariants -V $IN_VCF -select-type INDEL -O $OUT_VCF -R $REFERENCE"
+
+SELECT_INDELS_QSUB="$QSUB -pe mpi $THREADS -N $SELECT_INDELS_JOB_NAME -o logs/$SELECT_INDELS_JOB_NAME.log"
+
+echo $SELECT_INDELS >scripts/$SELECT_INDELS_QSUB.sh
+
+cat scripts/$SELECT_JOB_NAME.sh | $SELECT_INDELS_QSUB
+
+
+# FILTER INDELS ------------------------------------------------------------------
+FILTER_INDELS_JOB_NAME=cohort_FILTER_INDELS
+THREADS=1
+
+IN_VCF=$OUT_VCF
+OUT_VCF="$BSRCL_DIR/cohort_filtered_indels.g.vcf"
+    
+FILTER_INDELS="$SINGULARITY gatk VariantFiltration \
+    -R $REFERENCE \
+    -V $IN_VCF \
+    --filterExpression "'"QD < 2.0 || FS > 200.0 || ReadPosRankSum < -20.0"'" \
+    --filterName "'"recommended_indel_filter"'" \
+    -o $OUT_VCF"
+
+FILTER_INDELS_QSUB="$QSUB -pe mpi $THREADS -N $FILTER_INDELS_JOB_NAME -o logs/$FILTER_INDELS_JOB_NAME.log -hold_jid $SELECT_INDELS_JOB_NAME"
+
+echo $FILTER_INDELS >scripts/$FILTER_INDELS_QSUB.sh
+
+cat scripts/$FILTER_INDELS_JOB_NAME.sh | $FILTER_INDELS_QSUB
 
 
 ################################################################################
