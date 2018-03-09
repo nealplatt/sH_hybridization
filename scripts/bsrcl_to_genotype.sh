@@ -98,13 +98,14 @@ echo -e "$PASSED\t$FAILED\t$TOTAL\t$EXPECTED"
 mkdir db
 
 for INTERVAL in $(cat $INTERVALS_DIR/all_filtered_intervals.list); do
-    GDBIMPORT_JOB_NAME=$SAMPLE.$INTERVAL
+    GDBIMPORT_JOB_NAME=$(echo $SAMPLE.$INTERVAL | sed 's/:/-/')
     THREADS=12
 
     IN_GVCF="$SAMPLE.g.vcf"
     OUT_DB="db/$INTERVAL"
     
-    #
+
+    
     GDBIMPORT="$SINGULARITY gatk --java-options "'"-Xmx4g -Xms4g"'" \
         GenomicsDBImport \
         -V $SAMPLE_LIST \
@@ -113,7 +114,7 @@ for INTERVAL in $(cat $INTERVALS_DIR/all_filtered_intervals.list); do
         --reader-threads $THREADS \
         --batch-size 24"
 
-    GDBIMPORT_QSUB="$QSUB -pe mpi $THREADS -N $GDBIMPORT_JOB_NAME -o logs/$GDBIMPORT_JOB_NAME.log -hold_jid $SORT_JOB_NAME"
+    GDBIMPORT_QSUB="$QSUB -pe mpi $THREADS -N $GDBIMPORT_JOB_NAME -o logs/$GDBIMPORT_JOB_NAME -hold_jid $SORT_JOB_NAME"
     echo $GDBIMPORT >scripts/$GDBIMPORT_JOB_NAME.sh
 
     #only submit a limited number of jobs at a time...(dont overload queue)
