@@ -47,4 +47,5 @@ ls $RAW_READS_DIR >$SAMPLE_LIST
 # 08] bsrcl_genotype.sh
 # 09] build_cohort_vcf.sh
 # 10] bsrcl_recal.sh
+# 11] bsrcl_hc_r2.sh
 
