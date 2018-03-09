@@ -10,6 +10,22 @@
 
 source master/nplatt/sH_hybridizationscripts/set_env.sh
 
+
+#select all of the SNPs
+singularity exec ~/snpCalling_v0.0.5.img gatk SelectVariants -V cohort_sorted.g.vcf -select-type SNP -O cohort_raw_snps.g.vcf -R /master/nplatt/sH_hybridization/data/genome/schHae_v1.fa
+
+#select all of the indels
+singularity exec ~/snpCalling_v0.0.5.img gatk SelectVariants -V cohort_sorted.g.vcf -select-type INDEL -O cohort_raw_indels.g.vcf -R /master/nplatt/sH_hybridization/data/genome/schHae_v1.fa
+
+#filter out the low qual SNPs
+singularity exec ~/snpCalling_v0.0.5.img gatk VariantFiltration \
+    -R -R /master/nplatt/sH_hybridization/data/genome/schHae_v1.fa \
+    -V cohort_raw_snps.g.vcf \
+    --filterExpression "QD < 2.0 || FS > 60.0 || MQ < 40.0 || MQRankSum < -12.5 || ReadPosRankSum < -8.0" \
+    --filterName "initial_snp_filter" \
+    -o filtered_snps.vcf 
+
+
 ################################################################################
 #recalibration
 ################################################################################
