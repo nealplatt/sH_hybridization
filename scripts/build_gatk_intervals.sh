@@ -143,7 +143,7 @@ FILTALL_JOB_NAME="filtall"
 THREADS=1
 
 IN_BED=$OUT_BED
-OUT_LIST="$INTERVALS_DIR/all_filtered_intervals.bed"
+OUT_LIST="$INTERVALS_DIR/all_filtered_intervals.list"
 
 FILTALL="$SINGULARITY awk '"'$4'" >= 24 {print "'$1+1":"$2"-"$3'"}' $IN_BED >$OUT_LIST;"
 
