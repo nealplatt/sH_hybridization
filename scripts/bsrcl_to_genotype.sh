@@ -134,7 +134,7 @@ for INTERVAL in $(cat $INTERVALS_DIR/all_filtered_intervals.list); do
         --reader-threads $THREADS \
         --batch-size 24"
 
-    GDBIMPORT_QSUB="$QSUB -pe mpi $THREADS -N $GDBIMPORT_JOB_NAME -o logs/$GDBIMPORT_JOB_NAME.log -hold_jid $SORT_JOB_NAME"
+    GDBIMPORT_QSUB="$QSUB -pe mpi $THREADS -N $GDBIMPORT_JOB_NAME -o logs/$GDBIMPORT_JOB_NAME.log"
     echo $GDBIMPORT >scripts/$GDBIMPORT_JOB_NAME.sh
 
     #only submit a limited number of jobs at a time...(dont overload queue)
@@ -150,5 +150,35 @@ for INTERVAL in $(cat $INTERVALS_DIR/all_filtered_intervals.list); do
 done
 
 #CHECK FOR COMPLETION OF IMPORT
+PASSED=0
+FAILED=0
+TOTAL=0
+EXPECTED=$(wc -l $INTERVALS_DIR/all_filtered_intervals.list)
 
+
+for INTERVAL in $(cat $INTERVALS_DIR/all_filtered_intervals.list); do
+    GDBIMPORT_JOB_NAME=$(echo $INTERVAL | sed 's/:/-/')
+    THREADS=12
+    LOG=logs/$GDBIMPORT_JOB_NAME.log
+
+
+
+    if [[ $(grep "XXXXXXXX" $LOG) ]]; then
+        PASSED=$((PASSED+1))
+    else
+        FAILED=$((FAILED+1))
+
+        THREADS=12
+        GDBIMPORT_QSUB="$QSUB -pe mpi $THREADS -N $GDBIMPORT_JOB_NAME -o logs/$GDBIMPORT_JOB_NAME.log"
+        
+        rm -r db/$GDBIMPORT_JOB_NAME 
+        cat scripts/$GDBIMPORT_JOB_NAME.sh | $GDBIMPORT_QSUB
+
+    fi 
+
+    TOTAL=$((TOTAL+1))
+done
+
+echo -e "PASSED\tFAILED\tTOTAL\tEXPECTED"
+echo -e "$PASSED\t$FAILED\t$TOTAL\t$EXPECTED"
 
