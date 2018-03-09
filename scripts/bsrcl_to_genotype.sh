@@ -94,21 +94,41 @@ echo -e "PASSED\tFAILED\tTOTAL\tEXPECTED"
 echo -e "$PASSED\t$FAILED\t$TOTAL\t$EXPECTED"
 
 
+
+
+
+#clean up a bit
+mkdir interval_vcfs
+
+mv *_interval_*.g.vcf* interval_vcfs
+rm *merged.g.vcf*
+rm *.list
+
 # GDBIMPORT ----------------------------------------------------------------
 mkdir db
 
+# make list of samples
+rm samples.list
+
+for SAMPLE in $(cat $SAMPLE_LIST); do
+    echo -e "$BSRCL_DIR/$SAMPLE.g.vcf" >>samples.list
+done
+
+
+# loop for submission
 for INTERVAL in $(cat $INTERVALS_DIR/all_filtered_intervals.list); do
-    GDBIMPORT_JOB_NAME=$(echo $SAMPLE.$INTERVAL | sed 's/:/-/')
+
+    SAFE_INTERVAL_NAME=$(echo $INTERVAL | sed 's/:/-/')
+
+    GDBIMPORT_JOB_NAME=$SAFE_INTERVAL_NAME
     THREADS=12
 
-    IN_GVCF="$SAMPLE.g.vcf"
-    OUT_DB="db/$INTERVAL"
-    
-
+    #IN_GVCF="$SAMPLE.g.vcf"
+    OUT_DB="db/$SAFE_INTERVAL_NAME"
     
     GDBIMPORT="$SINGULARITY gatk --java-options "'"-Xmx4g -Xms4g"'" \
         GenomicsDBImport \
-        -V $SAMPLE_LIST \
+        -V samples.list \
         --genomicsdb-workspace-path $OUT_DB \
         -L $INTERVAL \
         --reader-threads $THREADS \
