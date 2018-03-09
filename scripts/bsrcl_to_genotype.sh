@@ -7,7 +7,8 @@
 # bsrcl_to_genotype.sh - takes VCF files from haplotype caller and preps for 
 #  genotyping by creating 1 vcf per individual and importing into a DB
 
-# TODO(nplatt): write code to check log files for successful GDBimport
+# TODO(nplatt): XXX write code to check log files for successful GDBimport
+# TODO(nplatt): 
 
 
 source master/nplatt/sH_hybridizationscripts/set_env.sh
@@ -161,9 +162,7 @@ for INTERVAL in $(cat $INTERVALS_DIR/all_filtered_intervals.list); do
     THREADS=12
     LOG=logs/$GDBIMPORT_JOB_NAME.log
 
-
-
-    if [[ $(grep "XXXXXXXX" $LOG) ]]; then
+    if [[ $(grep "genomicsdb.GenomicsDBImport done" $LOG) ]]; then
         PASSED=$((PASSED+1))
     else
         FAILED=$((FAILED+1))
