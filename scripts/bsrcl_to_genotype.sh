@@ -53,8 +53,45 @@ for SAMPLE in $(cat $SAMPLE_LIST); do
 
 done
 
-#CHECK FOR COMPLETION
 
+#CHECK FOR COMPLETION OF SORT AND MERGE STEPS
+PASSED=0
+FAILED=0
+TOTAL=0
+EXPECTED=96
+
+
+for SAMPLE in $(cat $SAMPLE_LIST); do
+    MERGE_JOB_NAME=$SAMPLE".merge_indiv"
+    SORT_JOB_NAME=$SAMPLE".sort_indiv"
+      
+    MERGE_LOG="logs/$MERGE_JOB_NAME.merge_indiv.log"  
+    SORT_LOG="logs/$SORT_JOB_NAME.sort_indiv.log"
+
+
+    if [[ $(grep "picard.vcf.MergeVcfs done" $MERGE_LOG) && $(grep "picard.vcf.SortVcf done" $SORT_LOG) ]]; then
+        PASSED=$((PASSED+1))
+    else
+        FAILED=$((FAILED+1))
+
+        THREADS=12
+
+        MERGE_JOB_NAME=$SAMPLE".merge_indiv"
+        SORT_JOB_NAME=$SAMPLE".sort_indiv"
+
+  
+        MERGE_QSUB="$QSUB -pe mpi $THREADS -N $MERGE_JOB_NAME -o logs/$MERGE_JOB_NAME.log"
+        SORT_QSUB="$QSUB -pe mpi $THREADS -N $SORT_JOB_NAME -o logs/$SORT_JOB_NAME.log -hold_jid $MERGE_JOB_NAME"
+        
+        cat scripts/$MERGE_JOB_NAME.sh | $MERGE_QSUB
+        cat scripts/$SORT_JOB_NAME.sh | $SORT_QSUB
+    fi 
+
+    TOTAL=$((TOTAL+1))
+done
+
+echo -e "PASSED\tFAILED\tTOTAL\tEXPECTED"
+echo -e "$PASSED\t$FAILED\t$TOTAL\t$EXPECTED"
 
 
 # GDBIMPORT ----------------------------------------------------------------
@@ -88,10 +125,5 @@ for INTERVAL in $(cat $INTERVALS_DIR/all_filtered_intervals.list); do
 done
 
 #CHECK FOR COMPLETION
-#%
-#%
-#%##################################
-#%
-#%
 
 
