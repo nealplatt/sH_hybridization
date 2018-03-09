@@ -75,3 +75,9 @@ echo -e "PASSED\tFAILED\tTOTAL\tNUM_SAMPLES\tEXPECTED"
 echo -e "$PASSED\t$FAILED\t$TOTAL\t$NUM_SAMPLES\t$EXPECTED"
 
 #re-run untill all samples completed
+
+#           PASSED  FAILED  TOTAL   NUM_SAMPLES    EXPECTED
+#1st pass   4623    177     4800    4800           4800
+#2nd pass   4797    3       4800    4800           4800
+#3rd pass   4800    0       4800    4800           4800
+
