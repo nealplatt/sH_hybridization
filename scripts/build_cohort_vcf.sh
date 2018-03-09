@@ -88,7 +88,7 @@ MERGE_JOB_NAME=$SAMPLE".merge_cohort_round_"$ROUND
 THREADS=1
 
 IN_LIST="$INTERVAL.intList"
-OUT_VCF="round_$ROUND/$INTERVAL.vcf"
+OUT_VCF="$BSRCL_DIR/tmp_cohort.vcf"
     
 MERGE="gatk --java-options "'"-Xmx4G"'" MergeVcfs -I  $IN_LIST -O $OUT_VCF -R $REFERENCE"
 
@@ -100,15 +100,15 @@ cat scripts/$MERGE_JOB_NAME.sh | $MERGE_QSUB
 #<<<<<<<<<<<<<<<<<<< wait till all finished >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 # SORT COHORT VCF --------------------------------------------------------------
-SORT_JOB_NAME=$SAMPLE".sort_indiv"
+SORT_JOB_NAME=sort_cohort
 THREADS=12
 
-IN_GVCF=$OUT_GVCF
-OUT_GVCF="$SAMPLE.g.vcf"
+IN_GVCF="$BSRCL_DIR/tmp_cohort.vcf"
+OUT_GVCF="$BSRCL_DIR/cohort_raw.g.vcf"
     
 SORT="$SINGULARITY gatk --java-options "'"-Xmx4G"'" SortVcf -I $IN_GVCF -O $OUT_GVCF"
 
-SORT_QSUB="$QSUB -pe mpi $THREADS -N $SORT_JOB_NAME -o logs/$SORT_JOB_NAME.log -hold_jid $MERGE_JOB_NAME"
+SORT_QSUB="$QSUB -pe mpi $THREADS -N $SORT_JOB_NAME -o logs/$SORT_JOB_NAME.log"
 echo $SORT >scripts/$SORT_JOB_NAME.sh
 
 cat scripts/$SORT_JOB_NAME.sh | $SORT_QSUB
