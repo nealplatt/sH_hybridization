@@ -13,13 +13,15 @@ source master/nplatt/sH_hybridizationscripts/set_env.sh
 
 cd $BSRCL_DIR
 
+mkdir interval_vcf
+
 for SAMPLE in $(cat $SAMPLE_LIST); do
-    for INTERVAL in $(ls GBDI or CAT interval lsit); do
-        GENOTYPE_JOB_NAME=$SAMPLE".$INTERVAL"
+    for INTERVAL in $(ls db); do
+        GENOTYPE_JOB_NAME=$INTERVAL
         THREADS=1
 
         IN_DB="gendb://db/$INTERVAL"
-        OUT_VCF="$INTERVAL.vcf"
+        OUT_VCF="interval_vcf/$INTERVAL.vcf"
     
         GENOTYPE="$SINGULARITY gatk GenotypeGVCFs -R $REFERENCE -V $IN_DB -new-qual -O $OUT_VCF"
 
