@@ -9,7 +9,7 @@
 # TODO(nplatt): add code to check that all combos run successfully
 # TODO(nplatt): update comments
 
-source master/nplatt/sH_hybridizationscripts/set_env.sh
+source master/nplatt/sH_hybridization/scripts/set-env.sh
 
 cd $BSRCL_DIR
 
@@ -17,7 +17,7 @@ mkdir interval_vcf
 
 for SAMPLE in $(cat $SAMPLE_LIST); do
     for INTERVAL in $(ls db); do
-        GENOTYPE_JOB_NAME=$INTERVAL
+        GENOTYPE_JOB_NAME=$INTERVAL".genotype"
         THREADS=1
 
         IN_DB="gendb://db/$INTERVAL"
@@ -25,10 +25,10 @@ for SAMPLE in $(cat $SAMPLE_LIST); do
     
         GENOTYPE="$SINGULARITY gatk GenotypeGVCFs -R $REFERENCE -V $IN_DB -new-qual -O $OUT_VCF"
 
-        $GENOTYPE_QSUB="$QSUB -pe mpi $THREADS -N $GENOTYPE_JOB_NAME -o logs/$GENOTYPE_JOB_NAME.log"
+        GENOTYPE_QSUB="$QSUB -pe mpi $THREADS -N $GENOTYPE_JOB_NAME -o logs/$GENOTYPE_JOB_NAME.log"
         echo $GENOTYPE >scripts/$GENOTYPE_JOB_NAME.sh
 
-        cat scripts/$GENOTYPE.sh | $GENOTYPE
+        cat scripts/$GENOTYPE_JOB_NAME.sh | $GENOTYPE_QSUB
     done
 done
 
