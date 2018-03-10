@@ -49,4 +49,30 @@ done
 
 #CHECK FOR COMPLETION
 
+PASSED=0
+FAILED=0
+TOTAL=0
+NUM_SAMPLES=0
+EXPECTED=$(expr 96 \* 50)
 
+for INTERVAL in $(ls db); do
+    GENOTYPE_JOB_NAME=$INTERVAL".genotype"
+    LOG="logs/$GENOTYPE_JOB_NAME.log"
+
+
+    if [[ $(grep "GenotypeGVCFs done" $LOG) ]]; then
+        PASSED=$((PASSED+1))
+    else
+        FAILED=$((FAILED+1))
+        THREADS=4
+    
+    GENOTYPE_QSUB="$QSUB -pe mpi $THREADS -N $GENOTYPE_JOB_NAME -o logs/$GENOTYPE_JOB_NAME.log"
+    echo $GENOTYPE >scripts/$GENOTYPE_JOB_NAME.sh
+    fi
+
+    NUM_SAMPLES=$((NUM_SAMPLES+1))
+    TOTAL=$((TOTAL+1))
+done
+
+echo -e "PASSED\tFAILED\tTOTAL\tNUM_SAMPLES\tEXPECTED"
+echo -e "$PASSED\t$FAILED\t$TOTAL\t$NUM_SAMPLES\t$EXPECTED
