@@ -4,7 +4,7 @@
 # NPlatt
 # Neal.platt@gmail.com
 
-# bsrcl_hc_r2.sh - use BSQR tables for second round of HC in recalibration proc.
+# bqsr-r2_haplotypeCaller.sh - use BSQR tables for second round of HC in recalibration proc.
 
 # TODO(nplatt): update comments
 # TODO(nplatt): has not been through test-run yet
@@ -12,6 +12,8 @@
 source master/nplatt/sH_hybridizationscripts/set_env.sh
 
 cd $BSRCL_DIR
+
+mkdir hc_vcf_r2
 
 for SAMPLE in $(cat $SAMPLE_LIST); do
     for INTERVAL in $(seq -w 0 49); do    
@@ -21,8 +23,7 @@ for SAMPLE in $(cat $SAMPLE_LIST); do
         THREADS=1
 
         IN_BED="$INTERVALS_DIR/filtered_interval.part$INTERVAL.list"
-        IN_BAM=$MAP_DIR/$SAMPLE"_processed.bam"
-        IN_BSQR_TABLE="88888888888888888888888888888888888888888888888888"
+        IN_BAM=$SAMPLE".bqsr-1.bam"
         OUT_GVCF=$BSRCL_DIR"/hc_vcf_r2/"$SAMPLE"_interval_"$INTERVAL".g.vcf"
     
         HC="$SINGULARITY gatk HaplotypeCaller \
@@ -30,7 +31,6 @@ for SAMPLE in $(cat $SAMPLE_LIST); do
             -O $OUT_GVCF \
             -R $REFERENCE \
             -L $IN_BED \
-            -BQSR post_recal_data.1.table \
             -ERC GVCF"
 
         HC_QSUB="$QSUB -pe mpi $THREADS -N $HC_JOB_NAME -o logs/$HC_JOB_NAME.log"
