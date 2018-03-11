@@ -151,14 +151,15 @@ for BAM in $(ls $MAP_DIR/*_processed.bam); do
     IN_BAM=$IN_BAM
     IN_VCF=$IN_VCF
     IN_TABLE=$OUT_TABLE
+
     OUT_TABLE=$SAMPLE"_postrecal-1_data.table"
+    OUT_BAM=$SAMPLE".bqsr-1.bam"
     
-    RECAL_MODIFY="$SINGULARITY gatk BaseRecalibrator \
+    RECAL_MODIFY="$SINGULARITY gatk ApplyBQSR \
         -R $REFERENCE \
-        -I $BAM \
-        --known-sites $IN_VCF \
-        --BQSR recal_data.1.table \
-        -O $OUT_TABLE"
+        -I $IN_BAM \
+        --bqsr-recal-file $OUT_TABLE \
+        -O $OUT_BAM"
 
     RECAL_MODIFY_QSUB="$QSUB -pe mpi $THREADS -N $RECAL_MODIFY_JOB_NAME -o logs/$RECAL_MODIFY_JOB_NAME.log, -hold_jid $RECAL_OBSERVE_JOB_NAME"
 
