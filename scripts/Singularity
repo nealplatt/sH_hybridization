@@ -22,7 +22,7 @@ DATE 11 March 2018
         samtools \
         git \
         bc \
-        bedtools
+        bedtools \
         pigz \
         r-base \
         r-base-dev
