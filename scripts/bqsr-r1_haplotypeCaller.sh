@@ -6,7 +6,8 @@
 
 # bsrcl_hc.sh - iterates haplotype caller across all samples and individuals
 
-# TODO(nplatt): Update comments
+# TODO(neal): Update comments
+# TODO(neal): have outfiles go to a hc_r1_vcfs dir
 
 #load variables
 source master/nplatt/sH_hybridizationscripts/set_env.sh
