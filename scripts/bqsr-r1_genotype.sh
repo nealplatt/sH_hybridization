@@ -66,8 +66,8 @@ for INTERVAL in $(ls db); do
         FAILED=$((FAILED+1))
         THREADS=4
     
-    GENOTYPE_QSUB="$QSUB -pe mpi $THREADS -N $GENOTYPE_JOB_NAME -o logs/$GENOTYPE_JOB_NAME.log"
-    cat scripts/$GENOTYPE_JOB_NAME.sh | $GENOTYPE_QSUB
+        GENOTYPE_QSUB="$QSUB -pe mpi $THREADS -N $GENOTYPE_JOB_NAME -o logs/$GENOTYPE_JOB_NAME.log"
+        cat scripts/$GENOTYPE_JOB_NAME.sh | $GENOTYPE_QSUB
     fi
 
     NUM_SAMPLES=$((NUM_SAMPLES+1))
