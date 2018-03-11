@@ -168,7 +168,7 @@ THREADS=12
 cd $BSRCL_DIR
 
 IN_GVCF="$BSRCL_DIR/tmp_cohort.vcf"
-OUT_GVCF="$BSRCL_DIR/cohort.g.vcf"
+OUT_GVCF="$BSRCL_DIR/cohort_preBQSR.g.vcf"
 
 SORT="$SINGULARITY gatk --java-options "'"-Xmx4G"'" SortVcf -I $IN_GVCF -O $OUT_GVCF"
 
