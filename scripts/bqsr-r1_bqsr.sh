@@ -125,7 +125,6 @@ for BAM in $(ls $MAP_DIR/*_processed.bam); do
     SAMPLE=$(basename $BAM _processed.bam)
 
     # RECAL SCORE/OBSERVE READS-------------------------------------------------    
-
     RECAL_OBSERVE_JOB_NAME="$SAMPLE.recal_score_reads"
     THREADS=12
 
@@ -141,30 +140,50 @@ for BAM in $(ls $MAP_DIR/*_processed.bam); do
 
     RECAL_OBSERVE_QSUB="$QSUB -pe mpi $THREADS -N $RECAL_OBSERVE_JOB_NAME -o logs/$RECAL_OBSERVE_JOB_NAME.log -hold_jid $FILTER_SNPS_JOB_NAME"
 
-    echo $RECAL_OBSERVE >scripts/$RECAL_OBSERVE_JOB_NAME.sh
-    cat scripts/$RECAL_OBSERVE_JOB_NAME.sh | $RECAL_OBSERVE_QSUB
+    #echo $RECAL_OBSERVE >scripts/$RECAL_OBSERVE_JOB_NAME.sh
+    #cat scripts/$RECAL_OBSERVE_JOB_NAME.sh | $RECAL_OBSERVE_QSUB
 
-    # RECAL MODIFED READS -----------------------------------------------------------    
-    RECAL_MODIFY_JOB_NAME="$SAMPLE.recal_modifed_reads"
+    # MOD READS ----------------------------------------------------------------    
+    MOD_READS_JOB_NAME="$SAMPLE.recal_modifed_reads"
     THREADS=12
 
-    IN_BAM=$IN_BAM
+    IN_BAM=$BAM
     IN_VCF=$IN_VCF
     IN_TABLE=$OUT_TABLE
 
-    OUT_TABLE=$SAMPLE"_postrecal-1_data.table"
+
     OUT_BAM=$SAMPLE".bqsr-1.bam"
     
     RECAL_MODIFY="$SINGULARITY gatk ApplyBQSR \
         -R $REFERENCE \
         -I $IN_BAM \
-        --bqsr-recal-file $OUT_TABLE \
+        --bqsr-recal-file $IN_TABLE \
         -O $OUT_BAM"
 
     RECAL_MODIFY_QSUB="$QSUB -pe mpi $THREADS -N $RECAL_MODIFY_JOB_NAME -o logs/$RECAL_MODIFY_JOB_NAME.log, -hold_jid $RECAL_OBSERVE_JOB_NAME"
 
-    echo $RECAL_MODIFY >scripts/$RECAL_MODIFY_JOB_NAME.sh
-    cat scripts/$RECAL_MODIFY_JOB_NAME.sh | $RECAL_MODIFY_QSUB    
+    #echo $RECAL_MODIFY >scripts/$RECAL_MODIFY_JOB_NAME.sh
+    #cat scripts/$RECAL_MODIFY_JOB_NAME.sh | $RECAL_MODIFY_QSUB    
+
+    # RECAL SCORE/OBSERVE READS-------------------------------------------------    
+
+    SCORE_MOD_JOB_NAME="$SAMPLE.recal_score_reads"
+    THREADS=12
+
+    IN_BAM=$OUT_BAM
+    IN_VCF="$BSRCL_DIR/cohort_filtered_snps.g.vcf"
+    OUT_TABLE=$SAMPLE"_postrecal-1_data.table"
+    
+    SCORE_MOD="$SINGULARITY gatk BaseRecalibrator \
+        -R $REFERENCE \
+        -I $BAM \
+        --known-sites $IN_VCF \
+        -O $OUT_TABLE"
+
+    SCORE_MOD_QSUB="$QSUB -pe mpi $THREADS -N $SCORE_MOD_JOB_NAME -o logs/$SCORE_MOD_JOB_NAME.log -hold_jid $MOD_READS_JOB_NAME"
+
+    #echo $SCORE_MOD >scripts/$SCORE_MOD_JOB_NAME.sh
+    #cat scripts/$SCORE_MOD_JOB_NAME.sh | $SCORE_MOD_QSUB
 
     # RECAL ANALYZE COVARIATES -------------------------------------------------    
     ANALYZE_JOB_NAME="$SAMPLE.covariate_analysis"
@@ -175,14 +194,13 @@ for BAM in $(ls $MAP_DIR/*_processed.bam); do
     OUT_PDF=$SAMPLE"_recalibration_plot.1.pdf"
 
     ANALYZE="$SINGULARITY gatk AnalyzeCovariates \
-        -R $REFERENCE \
         -before $BEFORE_TABLE \
         -after $AFTER_TABLE \
         -plots $OUT_PDF"
 
-    ANALYZE_QSUB="$QSUB -pe mpi $THREADS -N $ANALYZE_JOB_NAME -o logs/$ANALYZE_JOB_NAME.log -hold_jid $RECAL_MODIFY_JOB_NAME"
+    ANALYZE_QSUB="$QSUB -pe mpi $THREADS -N $ANALYZE_JOB_NAME -o logs/$ANALYZE_JOB_NAME.log -hold_jid $SCORE_MOD_JOB_NAME,$RECAL_OBSERVE_JOB_NAME"
 
-    echo $ANAlYZE >scripts/$ANALYZE_JOB_NAME.sh
+    echo $ANALYZE >scripts/$ANALYZE_JOB_NAME.sh
     cat scripts/$ANALYZE_JOB_NAME.sh | $ANALYZE_QSUB  
 
 done
