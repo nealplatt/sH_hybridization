@@ -4,8 +4,8 @@ From: ubuntu:16.04
 %labels
 AUTHOR Roy "Neal" Platt
 MAINTAINER rplatt@txbiomed.org
-VERSION 0.0.5
-DATE 8 March 2018
+VERSION 0.0.6
+DATE 11 March 2018
 
 %post
     apt-get update
@@ -23,10 +23,9 @@ DATE 8 March 2018
         git \
         bc \
         bedtools
-
-		#pigz \
-		#r-base \
-		#r-base-dev
+        pigz \
+        r-base \
+        r-base-dev
 
 
     mkdir -p /usr/software /master/nplatt
