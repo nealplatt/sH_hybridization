@@ -17,14 +17,14 @@ cd $BSRCL_DIR
 NUM_JOBS_IN_QUEUE=0
 MAX_JOBS_ALLOWED=3000
 
-mkdir interval_vcf
+mkdir genotype_interval_vcfs
 
 for INTERVAL in $(ls db); do
     GENOTYPE_JOB_NAME=$INTERVAL".genotype"
     THREADS=1
 
     IN_DB="gendb://db/$INTERVAL"
-    OUT_VCF="interval_vcf/$INTERVAL.vcf"
+    OUT_VCF="genotype_interval_vcfs/$INTERVAL.vcf"
     
     GENOTYPE="$SINGULARITY gatk GenotypeGVCFs -R $REFERENCE -V $IN_DB -new-qual -O $OUT_VCF"
 
@@ -67,7 +67,7 @@ for INTERVAL in $(ls db); do
         THREADS=4
     
     GENOTYPE_QSUB="$QSUB -pe mpi $THREADS -N $GENOTYPE_JOB_NAME -o logs/$GENOTYPE_JOB_NAME.log"
-    cat >scripts/$GENOTYPE_JOB_NAME.sh | $GENOTYPE_QSUB
+    cat scripts/$GENOTYPE_JOB_NAME.sh | $GENOTYPE_QSUB
     fi
 
     NUM_SAMPLES=$((NUM_SAMPLES+1))

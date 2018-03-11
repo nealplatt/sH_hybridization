@@ -18,27 +18,26 @@ cd $BSRCL_DIR
 ROUND=1
 mkdir $BSRCL_DIR/round_$ROUND
 cd $BSRCL_DIR/round_$ROUND
-ls interval_vcf/*.vcf >interval_vcf.list
+mkdir logs scripts
+
+ls ../interval_vcfs/*.vcf >interval_vcf.list
 
 $SINGULARITY split -d -n l/1000 --additional-suffix .intList interval_vcf.list
 
 
 
-for INTERVAL in $(seq -w 1 1000); do
+for INTERVAL in $(seq -w 0 999); do
 
-    MERGE_JOB_NAME=$SAMPLE".merge_cohort_round_"$ROUND
+    MERGE_JOB_NAME="merge_cohort_round_"$INTERVAL"_"$ROUND
     THREADS=1
 
-    IN_LIST="$INTERVAL.intList"
-    OUT_VCF="round_$ROUND/$INTERVAL.vcf"
+    IN_LIST=x"$INTERVAL.intList"
+    OUT_VCF="$INTERVAL.vcf"
     
-    MERGE="gatk --java-options "-Xmx4G" \
-    MergeVcfs \
-    -I  $IN_LIST \
-    -O $OUT_VCF \
-    -R $REFERENCE"
+    MERGE_QSUB="$QSUB -pe mpi $THREADS -N $MERGE_JOB_NAME -o logs/$MERGE_JOB_NAME.log"
 
-    MERGE="gatk --java-options "'"-Xmx4G"'" MergeVcfs -I  $IN_LIST -O $OUT_VCF -R $REFERENCE"
+
+    MERGE="$SINGULARITY gatk MergeVcfs -I  $IN_LIST -O $OUT_VCF -R $REFERENCE"
     echo $MERGE >scripts/$MERGE_JOB_NAME.sh
 
     cat scripts/$MERGE_JOB_NAME.sh | $MERGE_QSUB
@@ -51,22 +50,25 @@ done
 
 # MERGE ROUND 2 ----------------------------------------------------------------
 ROUND=2
+
 mkdir $BSRCL_DIR/round_$ROUND
 cd $BSRCL_DIR/round_$ROUND
 
+mkdir logs scripts
+
 ls $BSRCL_DIR/round_1/*.vcf >interval_vcf.list
 
-$SINGULARITY split -d -n l/250 --additional-suffix .intList interval_vcf.list
+$SINGULARITY split -d -n l/100 --additional-suffix .intList interval_vcf.list
 
-for INTERVAL in $(seq -w 1 250); do
+for INTERVAL in $(seq -w 0 99); do
 
-    MERGE_JOB_NAME=$SAMPLE".merge_cohort_round_"$ROUND
+    MERGE_JOB_NAME="merge_cohort_round_"$ROUND"_"$INTERVAL
     THREADS=1
 
-    IN_LIST="$INTERVAL.intList"
-    OUT_VCF="round_$ROUND/$INTERVAL.vcf"
+    IN_LIST="x"$INTERVAL".intList"
+    OUT_VCF="$INTERVAL.vcf"
     
-    MERGE="gatk --java-options "'"-Xmx4G"'" MergeVcfs -I  $IN_LIST -O $OUT_VCF -R $REFERENCE"
+    MERGE="$SINGULARITY gatk MergeVcfs -I  $IN_LIST -O $OUT_VCF -R $REFERENCE"
 
     MERGE_QSUB="$QSUB -pe mpi $THREADS -N $MERGE_JOB_NAME -o logs/$MERGE_JOB_NAME.log"
     echo $MERGE >scripts/$MERGE_JOB_NAME.sh
@@ -75,6 +77,7 @@ for INTERVAL in $(seq -w 1 250); do
  
 done
 #<<<<<<<<<<<<<<<<<<< wait till all finished >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
 
 
 # MERGE ROUND 3 ----------------------------------------------------------------
