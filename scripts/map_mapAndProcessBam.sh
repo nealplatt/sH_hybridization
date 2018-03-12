@@ -9,7 +9,7 @@
 # TODO(nplatt): add code to clean up dir of tmp bam files
 # TODO(nplatt): update comments
 
-source /master/nplatt/sH_hybridizationscripts/set_env.sh
+source /master/nplatt/sH_hybridization/scripts/set-env.sh
 
 mkdir $MAP_DIR $MAP_DIR/logs $MAP_DIR/scripts
 

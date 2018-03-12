@@ -37,15 +37,17 @@ ls $RAW_READS_DIR >$SAMPLE_LIST
 
 
 # WORKFLOW/PIPELINE ------------------------------------------------------------
-# 01] set_env.sh
-# 02] filter_reads.sh AND prep_genomes.sh
-# 03] map_process_bam.sh
-# 04] check_map_process_bam.sh
-# 05] build_gatk_intervals.sh
-# 06] bsrcl_hc.sh
-# 07] bsrcl_to_genotype.sh
-# 08] bsrcl_genotype.sh
-# 09] build_cohort_vcf.sh
-# 10] bsrcl_recal.sh
-# 11] bsrcl_hc_r2.sh
+# 01] set-env.sh
+# 02] map_filterReads.sh
+# 03] map_prepGenome.sh
+# 04] map_mapAndProcessBam.sh
+# 05] map_checkBams.sh
+# 06] map_buildListOfIntervals.sh
+# 07] bqsr-r1_haplotypeCaller.sh
+# 08] bqsr-r1_prepForGenotype.sh
+# 09] bqsr-r1_genotype.sh
+# 10] bqsr-r1_buildCohortVcf.sh
+# 11] bqsr-r1_bqsr.sh
+# 12] bqsr-r2_haplotypeCaller.sh
+# 13] bqsr-r2_prepForGenotype.sh
 

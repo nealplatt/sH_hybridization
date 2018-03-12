@@ -10,7 +10,7 @@
 # TODO(neal): have outfiles go to a hc_r1_vcfs dir
 
 #load variables
-source /master/nplatt/sH_hybridizationscripts/set_env.sh
+source /master/nplatt/sH_hybridization/scripts/set-env.sh
 
 #Filter reads wit trimmomatic
 mkdir $BQSR_DIR $BQSR_DIR/scripts $BQSR_DIR/logs

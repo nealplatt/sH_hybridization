@@ -11,7 +11,7 @@
 # TODO(nplatt): update comments
 
 # done manually/interactivley on the head node --- sue me.
-source /master/nplatt/sH_hybridizationscripts/set_env.sh
+source /master/nplatt/sH_hybridization/scripts/set-env.sh
 cd $BQSR_DIR
 
 # MERGE ROUND 1 ----------------------------------------------------------------

@@ -9,7 +9,7 @@
 # TODO(nplatt): update comments
 
 #load variables
-source /master/nplatt/sH_hybridizationscripts/set_env.sh
+source /master/nplatt/sH_hybridization/scripts/set-env.sh
 
 #Filter reads wit trimmomatic
 mkdir $FILTER_READS_DIR $FILTER_READS_DIR/scripts $FILTER_READS_DIR/logs

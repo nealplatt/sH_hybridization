@@ -9,7 +9,7 @@
 # TODO(nplatt): auto-Download the genome from NCBI rather than having it stored.
 
 #load variables
-source /master/nplatt/sH_hybridizationscripts/set_env.sh
+source /master/nplatt/sH_hybridization/scripts/set-env.sh
 
 mkdir $GENOME_DIR $GENOME_DIR/scripts $GENOME_DIR/logs
 cd $GENOME_DIR
