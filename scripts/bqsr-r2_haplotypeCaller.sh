@@ -52,17 +52,17 @@ EXPECTED=$(expr 96 \* 50)
 for SAMPLE in $(cat $SAMPLE_LIST); do
     
     for INTERVAL in $(seq -w 0 49); do
-        HC_JOB_NAME=$SAMPLE"."$INTERVAL.hc
+        HC_JOB_NAME=$SAMPLE".r2."$INTERVAL.hc
         LOG="logs/$HC_JOB_NAME.log"
 
         if [[ $(grep "HaplotypeCaller done" $LOG) ]]; then
             PASSED=$((PASSED+1))
         else
             FAILED=$((FAILED+1))
-            HC_JOB_NAME=$SAMPLE"."$INTERVAL.hc
-            THREADS=4
+
+            THREADS=12
             HC_QSUB="$QSUB -pe mpi $THREADS -N $HC_JOB_NAME -o logs/$HC_JOB_NAME.log"
-            cat scripts/$HC_JOB_NAME.sh | $HC_QSUB
+            #cat scripts/$HC_JOB_NAME.sh | $HC_QSUB
         fi 
 
     NUM_SAMPLES=$((NUM_SAMPLES+1))
