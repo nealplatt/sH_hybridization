@@ -28,7 +28,7 @@ REFERENCE="$GENOME_DIR/schHae_v1.fa"
 QSUB="qsub -V -cwd -j y -S /bin/bash -q all.q"
 
 # SINGULARITY  -----------------------------------------------------------------
-SINGULARITY_IMG="$HOME_DIR/snpCalling_v0.0.5.img"
+SINGULARITY_IMG="$HOME_DIR/snpCalling_v0.0.6.img"
 SINGULARITY="singularity exec $SINGULARITY_IMG"
 
 # CREATE DOWNSTREAM LISTS ------------------------------------------------------
