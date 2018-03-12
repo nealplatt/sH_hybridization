@@ -6,8 +6,8 @@
 
 # bqsr-r2_haplotypeCaller.sh - use BSQR tables for second round of HC in recalibration proc.
 
-# TODO(nplatt): update comments
-# TODO(nplatt): has not been through test-run yet
+# TODO(neal): update comments
+
 
 source /master/nplatt/sH_hybridization/scripts/set-env.sh
 
@@ -62,7 +62,7 @@ for SAMPLE in $(cat $SAMPLE_LIST); do
 
             THREADS=12
             HC_QSUB="$QSUB -pe mpi $THREADS -N $HC_JOB_NAME -o logs/$HC_JOB_NAME.log"
-            #cat scripts/$HC_JOB_NAME.sh | $HC_QSUB
+            cat scripts/$HC_JOB_NAME.sh | $HC_QSUB
         fi 
 
     NUM_SAMPLES=$((NUM_SAMPLES+1))
@@ -73,20 +73,8 @@ done
 echo -e "PASSED\tFAILED\tTOTAL\tNUM_SAMPLES\tEXPECTED"
 echo -e "$PASSED\t$FAILED\t$TOTAL\t$NUM_SAMPLES\t$EXPECTED"
 
-#-------------------------------------------------------------------------------
-#NOTES FROM GATK FORUM:
-#https://gatkforums.broadinstitute.org/gatk/discussion/4913/recommended-protocol-for-bootstrapping-haplotypecaller-and-baserecalibrator-outputs
+#        PASSED  FAILED  TOTAL   NUM_SAMPLES     EXPECTED
+#1stPass 4799    1       4800    4800            4800
+#2ndPass 4800    0       4800    4800            4800
 
-#1.1.4 HaplotypeCaller -R $REF -I $BAM_FILE -ERC GVCF -BQSR post_recal_data.1.table -o recal_1.g.vcf
-#1.1.5 Filter recal_1.g.vcf --> recal_1.g.filtered.vcf
 
-#Iteration 2
-#1.2.1 BaseRecalibrator -R $REF -I $BAM_FILE -knownSites recal_1.g.filtered.vcf -o recal_data.2.table
-#1.2.2 BaseRecalibrator -R $REF -I $BAM_FILE -knownSites recal_1.g.filtered.vcf -BQSR recal_data.2.table -o post_recal_data.2.table
-#1.2.3 AnalyzeCovariates -R $REF -before recal_data.2.table -after post_recal_data.2.table -plots recalibration_plots.2.pdf
-#1.2.4 HaplotypeCaller -R $REF -I $BAM_FILE -ERC GVCF -BQSR post_recal_data.2.table -o recal_2.g.vcf
-#1.2.5 Filter recal_2.g.vcf --> recal_2.g.filtered.vcf
-
-#--> HC -BQSR on the fly recalibration of "raw" bam files
-#--> Each iteration should produce a new vcf file that is used for the recalibration of "raw" reads
-#--> Differences between the AnalyzeCovariates before and after should diminush after each iteration (difference 1.1.3 > difference 1.2.3)
