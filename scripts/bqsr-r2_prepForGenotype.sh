@@ -96,10 +96,17 @@ echo -e "$PASSED\t$FAILED\t$TOTAL\t$EXPECTED"
 
 #           PASSED  FAILED  TOTAL   EXPECTED
 #1stPass    95      1       96      96
+#2ndPass    96      0       96      96
+
 
 
 #some cleaning up
 rm tmp_* *.list
+
+mv logs/* ../logs/old/
+mv scripts/* ../scripts/old/
+
+rm -r logs scripts
 
 # GDBIMPORT ----------------------------------------------------------------
 mkdir $BQSR_DIR"/db_r2"
@@ -107,10 +114,10 @@ mkdir $BQSR_DIR"/db_r2"
 cd $BQSR_DIR
 
 # make list of samples
-rm samples.list
+rm samples_r2.list
 
 for SAMPLE in $(cat $SAMPLE_LIST); do
-    echo -e $BQSR_DIR"/individual_vcf_r2/"$SAMPLE"_bqsr-r2.g.vcf" >>samples.list
+    echo -e $BQSR_DIR"/individual_vcf_r2/"$SAMPLE"_bqsr-r2.g.vcf" >>samples_r2.list
 done
 
 
@@ -126,7 +133,7 @@ for INTERVAL in $(cat $INTERVALS_DIR/all_filtered_intervals.list); do
     
     GDBIMPORT="$SINGULARITY gatk --java-options "'"-Xmx4g -Xms4g"'" \
         GenomicsDBImport \
-        -V samples.list \
+        -V samples_r2.list \
         --genomicsdb-workspace-path $OUT_DB \
         -L $INTERVAL \
         --reader-threads $THREADS \
