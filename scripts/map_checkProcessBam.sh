@@ -11,7 +11,7 @@
 # TODO(nplatt): if sample has all of its files...delete intermediate files.
 
 #load variables
-source master/nplatt/sH_hybridizationscripts/set_env.sh
+source /master/nplatt/sH_hybridizationscripts/set_env.sh
 
 cd $MAP_DIR
 

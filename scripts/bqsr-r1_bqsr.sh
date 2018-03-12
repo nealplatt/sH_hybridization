@@ -9,16 +9,16 @@
 # TODO(nplatt): update comments
 # TODO(nplatt): has not been through test-run yet
 
-source master/nplatt/sH_hybridizationscripts/set_env.sh
+source /master/nplatt/sH_hybridizationscripts/set_env.sh
 
-cd $BSRCL_DIR
+cd $BQSR_DIR
 
 # SELECT SNPS ------------------------------------------------------------------
 SELECT_SNPS_JOB_NAME=cohort_select_snps
 THREADS=1
 
-IN_VCF="$BSRCL_DIR/cohort_preBSQR.g.vcf"
-OUT_VCF="$BSRCL_DIR/cohort_preBSQR_rawSNPS.g.vcf"
+IN_VCF="$BQSR_DIR/cohort_preBSQR.g.vcf"
+OUT_VCF="$BQSR_DIR/cohort_preBSQR_rawSNPS.g.vcf"
     
 SELECT_SNPS="$SINGULARITY gatk SelectVariants \
     -V $IN_VCF \
@@ -36,8 +36,8 @@ cat scripts/$SELECT_SNPS_JOB_NAME.sh | $SELECT_SNPS_QSUB
 FILTER_SNPS_JOB_NAME="cohort_filter_snps"
 THREADS=1
 
-IN_VCF="$BSRCL_DIR/cohort_preBSQR_rawSNPS.g.vcf"
-OUT_VCF="$BSRCL_DIR/cohort_filtered_snps.g.vcf"
+IN_VCF="$BQSR_DIR/cohort_preBSQR_rawSNPS.g.vcf"
+OUT_VCF="$BQSR_DIR/cohort_filtered_snps.g.vcf"
 
 FILTER_SNPS="$SINGULARITY gatk VariantFiltration \
     -R $REFERENCE \
@@ -56,8 +56,8 @@ cat scripts/$FILTER_SNPS_JOB_NAME.sh | $FILTER_SNPS_QSUB
 SELECT_INDELS_JOB_NAME="cohort_select_indels"
 THREADS=1
 
-IN_VCF="$BSRCL_DIR/cohort_preBSQR.g.vcf"
-OUT_VCF="$BSRCL_DIR/cohort_preBSQR_rawIndels.g.vcf"
+IN_VCF="$BQSR_DIR/cohort_preBSQR.g.vcf"
+OUT_VCF="$BQSR_DIR/cohort_preBSQR_rawIndels.g.vcf"
     
 SELECT_INDELS="$SINGULARITY gatk SelectVariants \
     -V $IN_VCF \
@@ -76,8 +76,8 @@ cat scripts/$SELECT_JOB_NAME.sh | $SELECT_INDELS_QSUB
 FILTER_INDELS_JOB_NAME="cohort_filter_indels"
 THREADS=1
 
-IN_VCF="$BSRCL_DIR/cohort_preBSQR_rawIndels.g.vcf"
-OUT_VCF="$BSRCL_DIR/cohort_filtered_indels.g.vcf"
+IN_VCF="$BQSR_DIR/cohort_preBSQR_rawIndels.g.vcf"
+OUT_VCF="$BQSR_DIR/cohort_filtered_indels.g.vcf"
 
 FILTER_INDELS="$SINGULARITY gatk VariantFiltration \
     -R $REFERENCE \
@@ -97,9 +97,9 @@ cat scripts/$FILTER_INDELS_JOB_NAME.sh | $FILTER_INDELS_QSUB
 MERGE_JOB_NAME="merge_filtered_vcfs"
 THREADS=1
 
-IN_SNP_VCF="$BSRCL_DIR/cohort_filtered_indels.g.vcf"
-IN_INDEL_VCF="$BSRCL_DIR/cohort_filtered_snps.g.vcf"
-OUT_VCF="$BSRCL_DIR/cohort_filtered_snps-indels.g.vcf"
+IN_SNP_VCF="$BQSR_DIR/cohort_filtered_indels.g.vcf"
+IN_INDEL_VCF="$BQSR_DIR/cohort_filtered_snps.g.vcf"
+OUT_VCF="$BQSR_DIR/cohort_filtered_snps-indels.g.vcf"
         
 MERGE="$SINGULARITY gatk CombineVariants \
    -R $REFERENCE \
@@ -129,7 +129,7 @@ for BAM in $(ls $MAP_DIR/*_processed.bam); do
     THREADS=12
 
     IN_BAM=$MAP_DIR/$BAM
-    IN_VCF="$BSRCL_DIR/cohort_filtered_snps.g.vcf"
+    IN_VCF="$BQSR_DIR/cohort_filtered_snps.g.vcf"
     OUT_TABLE=$SAMPLE"_recal-1_data.table"
     
     RECAL_OBSERVE="$SINGULARITY gatk BaseRecalibrator \
@@ -171,7 +171,7 @@ for BAM in $(ls $MAP_DIR/*_processed.bam); do
     THREADS=12
 
     IN_BAM=$OUT_BAM
-    IN_VCF="$BSRCL_DIR/cohort_filtered_snps.g.vcf"
+    IN_VCF="$BQSR_DIR/cohort_filtered_snps.g.vcf"
     OUT_TABLE=$SAMPLE"_postrecal-1_data.table"
     
     SCORE_MOD="$SINGULARITY gatk BaseRecalibrator \

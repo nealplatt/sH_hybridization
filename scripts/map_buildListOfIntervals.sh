@@ -10,7 +10,7 @@
 # TODO(nplatt): Update comments
 
 #load variables
-source master/nplatt/sH_hybridizationscripts/set_env.sh
+source /master/nplatt/sH_hybridizationscripts/set_env.sh
 
 mkdir $INTERVALS_DIR $INTERVALS_DIR/scripts $INTERVALS_DIR/logs
 

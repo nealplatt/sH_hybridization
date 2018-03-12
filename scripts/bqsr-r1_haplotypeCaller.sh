@@ -10,12 +10,12 @@
 # TODO(neal): have outfiles go to a hc_r1_vcfs dir
 
 #load variables
-source master/nplatt/sH_hybridizationscripts/set_env.sh
+source /master/nplatt/sH_hybridizationscripts/set_env.sh
 
 #Filter reads wit trimmomatic
-mkdir $BSRCL_DIR $BSRCL_DIR/scripts $BSRCL_DIR/logs
+mkdir $BQSR_DIR $BQSR_DIR/scripts $BQSR_DIR/logs
 
-cd $BSRCL_DIR
+cd $BQSR_DIR
 
 for SAMPLE in $(cat $SAMPLE_LIST); do
     for INTERVAL in $(seq -w 0 49); do    
@@ -26,7 +26,7 @@ for SAMPLE in $(cat $SAMPLE_LIST); do
 
         IN_BED="$INTERVALS_DIR/filtered_interval.part$INTERVAL.list"
         IN_BAM=$MAP_DIR/$SAMPLE"_processed.bam"
-        OUT_GVCF=$BSRCL_DIR/$SAMPLE"_interval_"$INTERVAL".g.vcf"
+        OUT_GVCF=$BQSR_DIR/$SAMPLE"_interval_"$INTERVAL".g.vcf"
     
         HC="$SINGULARITY gatk HaplotypeCaller \
             -I $IN_BAM \

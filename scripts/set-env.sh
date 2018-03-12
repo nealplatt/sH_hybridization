@@ -21,7 +21,7 @@ GENOME_DIR="$DATA_DIR/genome"
 FILTER_READS_DIR="$RESULTS_DIR/filter_reads"
 MAP_DIR="$RESULTS_DIR/map_reads"
 INTERVALS_DIR="$RESULTS_DIR/intervals"
-BSRCL_DIR="$RESULTS_DIR/base_recalibration"
+BQSR_DIR="$RESULTS_DIR/base_recalibration"
 
 # SET UP FREQ USED VARS --------------------------------------------------------
 REFERENCE="$GENOME_DIR/schHae_v1.fa"

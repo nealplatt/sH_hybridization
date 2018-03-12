@@ -10,9 +10,9 @@
 # TODO(nplatt): update comments
 
 
-source master/nplatt/sH_hybridization/scripts/set-env.sh
+source /master/nplatt/sH_hybridization/scripts/set-env.sh
 
-cd $BSRCL_DIR
+cd $BQSR_DIR
 
 NUM_JOBS_IN_QUEUE=0
 MAX_JOBS_ALLOWED=3000

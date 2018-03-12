@@ -11,9 +11,9 @@
 # TODO(nplatt): 
 
 
-source master/nplatt/sH_hybridizationscripts/set_env.sh
+source /master/nplatt/sH_hybridizationscripts/set_env.sh
 
-cd $BSRCL_DIR
+cd $BQSR_DIR
 
 
 MAX_JOBS_ALLOWED=300
@@ -112,7 +112,7 @@ mkdir db
 rm samples.list
 
 for SAMPLE in $(cat $SAMPLE_LIST); do
-    echo -e "$BSRCL_DIR/$SAMPLE.g.vcf" >>samples.list
+    echo -e "$BQSR_DIR/$SAMPLE.g.vcf" >>samples.list
 done
 
 

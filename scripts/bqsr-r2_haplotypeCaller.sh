@@ -9,9 +9,9 @@
 # TODO(nplatt): update comments
 # TODO(nplatt): has not been through test-run yet
 
-source master/nplatt/sH_hybridizationscripts/set_env.sh
+source /master/nplatt/sH_hybridizationscripts/set_env.sh
 
-cd $BSRCL_DIR
+cd $BQSR_DIR
 
 mkdir hc_vcf_r2
 
@@ -24,7 +24,7 @@ for SAMPLE in $(cat $SAMPLE_LIST); do
 
         IN_BED="$INTERVALS_DIR/filtered_interval.part$INTERVAL.list"
         IN_BAM=$SAMPLE".bqsr-1.bam"
-        OUT_GVCF=$BSRCL_DIR"/hc_vcf_r2/"$SAMPLE"_interval_"$INTERVAL".g.vcf"
+        OUT_GVCF=$BQSR_DIR"/hc_vcf_r2/"$SAMPLE"_interval_"$INTERVAL".g.vcf"
     
         HC="$SINGULARITY gatk HaplotypeCaller \
             -I $IN_BAM \

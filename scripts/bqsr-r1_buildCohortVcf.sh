@@ -11,13 +11,13 @@
 # TODO(nplatt): update comments
 
 # done manually/interactivley on the head node --- sue me.
-source master/nplatt/sH_hybridizationscripts/set_env.sh
-cd $BSRCL_DIR
+source /master/nplatt/sH_hybridizationscripts/set_env.sh
+cd $BQSR_DIR
 
 # MERGE ROUND 1 ----------------------------------------------------------------
 ROUND=1
-mkdir $BSRCL_DIR/round_$ROUND
-cd $BSRCL_DIR/round_$ROUND
+mkdir $BQSR_DIR/round_$ROUND
+cd $BQSR_DIR/round_$ROUND
 mkdir logs scripts
 
 ls ../genotype_interval_vcfs/*.vcf >interval_vcf.list
@@ -78,8 +78,8 @@ echo -e "$PASSED\t$FAILED\t$TOTAL\t$NUM_SAMPLES\t$EXPECTED"
 # MERGE ROUND 2 ----------------------------------------------------------------
 ROUND=2
 
-mkdir $BSRCL_DIR"/round_"$ROUND
-cd $BSRCL_DIR"/round_"$ROUND
+mkdir $BQSR_DIR"/round_"$ROUND
+cd $BQSR_DIR"/round_"$ROUND
 mkdir logs scripts
 
 ls ../genotype_interval_vcfs/*.vcf >interval_vcf.list
@@ -140,17 +140,17 @@ echo -e "$PASSED\t$FAILED\t$TOTAL\t$NUM_SAMPLES\t$EXPECTED"
 
 # MERGE ROUND 3 ----------------------------------------------------------------
 ROUND=3
-mkdir $BSRCL_DIR/round_$ROUND
-cd $BSRCL_DIR/round_$ROUND
+mkdir $BQSR_DIR/round_$ROUND
+cd $BQSR_DIR/round_$ROUND
 
 mkdir logs scripts
-ls $BSRCL_DIR/round_2/*.vcf >interval_vcf.list
+ls $BQSR_DIR/round_2/*.vcf >interval_vcf.list
 
 MERGE_JOB_NAME=$SAMPLE".merge_cohort_round_"$ROUND
 THREADS=1
 
 IN_LIST="interval_vcf.list"
-OUT_VCF="$BSRCL_DIR/tmp_cohort.vcf"
+OUT_VCF="$BQSR_DIR/tmp_cohort.vcf"
 
 MERGE="$SINGULARITY gatk MergeVcfs -I $IN_LIST -O $OUT_VCF -R $REFERENCE"
 
@@ -165,10 +165,10 @@ cat scripts/$MERGE_JOB_NAME.sh | $MERGE_QSUB
 SORT_JOB_NAME=sort_cohort
 THREADS=12
 
-cd $BSRCL_DIR
+cd $BQSR_DIR
 
-IN_GVCF="$BSRCL_DIR/tmp_cohort.vcf"
-OUT_GVCF="$BSRCL_DIR/cohort_preBQSR.g.vcf"
+IN_GVCF="$BQSR_DIR/tmp_cohort.vcf"
+OUT_GVCF="$BQSR_DIR/cohort_preBQSR.g.vcf"
 
 SORT="$SINGULARITY gatk --java-options "'"-Xmx4G"'" SortVcf -I $IN_GVCF -O $OUT_GVCF"
 
