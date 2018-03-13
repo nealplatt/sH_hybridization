@@ -53,7 +53,7 @@ done
 PASSED=0
 FAILED=0
 TOTAL=0
-EXPECTED=$(ls -d db_r2 | wc -l)
+EXPECTED=$(ls db_r2 | wc -l)
 
 #check that each log file has "GenotypeGVCFs done" indicating run to completion
 for INTERVAL in $(ls db_r2); do
@@ -65,6 +65,7 @@ for INTERVAL in $(ls db_r2); do
 
     if [[ $(grep "GenotypeGVCFs done" $LOG) ]]; then
         PASSED=$((PASSED+1))
+
     else
         #resubmit with 12 threads (only reason doing this is to "hog" memory
         #  from an entire node rather than sharing        
@@ -72,15 +73,19 @@ for INTERVAL in $(ls db_r2); do
         THREADS=12
     
         JOB_QSUB="$QSUB -pe mpi $THREADS -N $GENOTYPE_JOB_NAME $LOG $DEPEND"
-        cat scripts/$GENOTYPE_JOB_NAME.sh | $GENOTYPE_QSUB
+        cat scripts/$GENOTYPE_JOB_NAME.sh | $JOB_QSUB
     fi
 
     TOTAL=$((TOTAL+1))
+    echo -e "$PASSED\t$FAILED\t$TOTAL\t$EXPECTED"
+
 done
 
 echo -e "PASSED\tFAILED\tTOTAL\tEXPECTED"
 echo -e "$PASSED\t$FAILED\t$TOTAL\t$EXPECTED"
 
+
 #           PASSED  FAILED  TOTAL   EXPECTED
-#1stPass
+#1stPass    26710   125     26835   26835
+#1stPass    26835   0       26835   26835
 
