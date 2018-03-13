@@ -39,7 +39,7 @@ DATE 11 March 2018
     chmod u+x Miniconda3-latest-Linux-x86_64.sh 
     bash ./Miniconda3-latest-Linux-x86_64.sh -b -p /usr/software/miniconda3
     export PATH="/usr/software/miniconda3/bin:$PATH"
-    conda install -y -c bioconda snakemake
+    conda install -y -c bioconda 
     rm Miniconda3-latest-Linux-x86_64.sh
     ln -s /usr/software/miniconda3/bin/python /usr/local/bin
 
@@ -54,5 +54,8 @@ DATE 11 March 2018
     unzip Trimmomatic-0.36.zip
     ln -s Trimmomatic-0.36/trimmomatic-0.36.jar /usr/local/bin
     rm Trimmomatic-0.36.zip
+
+    #installing R packages
+    R --slave -e 'install.packages("ggplot2", repos="https://cloud.r-project.org/")'
 
    
