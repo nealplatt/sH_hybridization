@@ -10,7 +10,7 @@
 
 source /master/nplatt/sH_hybridization/scripts/set-env.sh
 
-mkdir $BQSR_DIR/bqsr_r2
+mkdir $BQSR_DIR/bqsr_r2 $BQSR_DIR/bqsr_r2/logs $BQSR_DIR/bqsr_r2/scripts $BQSR_DIR/r2_cov_plots $BQSR_DIR/r2_bqsr_bams
 
 cd $BQSR_DIR/bqsr_r2
 
@@ -95,31 +95,6 @@ CMD="$SINGULARITY gatk VariantFiltration \
     --filter-expression "'"QD < 2.0 || FS > 200.0 || ReadPosRankSum < -20.0"'" \
     --filter-name "'"recommended_indel_filter"'" \
     -O $OUT_VCF"
-
-JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME $LOG $DEPEND"
-
-echo $CMD >$SCRIPT
-cat $SCRIPT | $JOB_QSUB
-
-
-# MERGE FILTERED VCFS ------------------------------------------------------------------
-JOB_NAME="merge_filtered_vcfs"
-THREADS=1
-LOG="-o logs/$JOB_NAME.log"
-DEPEND="-hold_jid cohort_filter_snps,cohort_filter_indels"
-SCRIPT="scripts/$JOB_NAME.sh"
-
-IN_SNP_VCF="$BQSR_DIR/bqsr_r2/cohort_r2_filtered_SNPS.g.vcf"
-IN_INDEL_VCF="$BQSR_DIR/bqsr_r2/cohort_r2_filtered_INDELS.g.vcf"
-OUT_VCF="$BQSR_DIR/bqsr_r2/cohort_r2_filtered_variants.vcf"
-        
-CMD="$SINGULARITY gatk CombineVariants \
-   -R $REFERENCE \
-   --variant:snps $IN_SNP_VCF \
-   --variant:indels $IN_INDEL_VCF \
-   -O $OUT_VCF \
-   -genotypeMergeOptions PRIORITIZE \
-   -priority snps,indels"
 
 JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME $LOG $DEPEND"
 
@@ -225,3 +200,31 @@ for BAM in $(ls $MAP_DIR/*_processed.bam); do
     cat $SCRIPT | $JOB_QSUB  
 
 done
+
+#check for convergence in recal data
+
+# CLEANUP ----------------------------------------------------------------------
+rm -r hc_vcf_r2
+rm -r individual_vcf_r2
+rm -r r1_bqsr_bams
+rm -r db_r2
+rm -r genotype_interval_vcfs_r2
+rm -r cohort_vcf_r2
+rm samples_r2.list
+rm samples.list
+rm cohort_filtered_snps.g.vcf.idx
+rm cohort_preBSQR.g.vcf
+rm cohort_preBSQR.g.vcf.idx
+rm cohort_preBSQR_rawIndels.g.vcf
+rm cohort_preBSQR_rawIndels.g.vcf.idx
+rm cohort_preBSQR_rawSNPS.g.vcf
+rm cohort_preBSQR_rawSNPS.g.vcf.idx
+rm cohort_filtered_indels.g.vcf
+rm cohort_filtered_indels.g.vcf.idx
+rm cohort_filtered_snps.g.vcf
+rm cohort_filtered_snps.g.vcf.idx
+
+#cohort_r1_BQSR.g.vcf
+
+
+
