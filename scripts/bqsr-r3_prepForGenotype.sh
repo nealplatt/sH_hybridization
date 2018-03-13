@@ -9,9 +9,7 @@
 
 # TODO(nplatt): first pass
 
-
 source /master/nplatt/sH_hybridization/scripts/set-env.sh
-
 
 ROUND=r3
 
@@ -161,8 +159,6 @@ for INTERVAL in $(cat $INTERVALS_DIR/all_filtered_intervals.list); do
     DELETE $LOG $SCRIPT
 
     #only submit a limited number of jobs at a time...(dont overload queue)
-    NUM_JOBS_IN_QUEUE=$(qstat | grep Sh. | wc -l)
-
     LIMIT_RUNNING_JOBS_TO 300
         
     SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"    
