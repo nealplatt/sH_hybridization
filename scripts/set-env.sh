@@ -35,6 +35,23 @@ SINGULARITY="singularity exec $SINGULARITY_IMG"
 SAMPLE_LIST="$RESULTS_DIR/sample.list"
 ls $RAW_READS_DIR >$SAMPLE_LIST
 
+# DELETE LOG AND SCRIPT --------------------------------------------------------
+DELETE () {
+    #delete log file    
+    if [ -f "$1" ]; then
+        rm $1
+    fi
+    
+    #delete script file
+    if [ -f "$2" ]; then
+        rm $2
+    fi
+}
+
+SUBMIT () {
+    echo $1 >$2
+    cat $2 | $3
+}
 
 # WORKFLOW/PIPELINE ------------------------------------------------------------
 # 01] set-env.sh
