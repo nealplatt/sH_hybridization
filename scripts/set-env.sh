@@ -23,6 +23,9 @@ MAP_DIR="$RESULTS_DIR/map_reads"
 INTERVALS_DIR="$RESULTS_DIR/intervals"
 BQSR_DIR="$RESULTS_DIR/base_recalibration"
 
+SCRIPTS_DIR="$RESULTS_DIR/scripts"
+LOGS_DIR="$RESULTS_DIR/logs"
+
 # SET UP FREQ USED VARS --------------------------------------------------------
 REFERENCE="$GENOME_DIR/schHae_v1.fa"
 QSUB="qsub -V -cwd -j y -S /bin/bash -q all.q"

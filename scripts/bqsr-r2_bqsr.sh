@@ -10,16 +10,16 @@
 
 source /master/nplatt/sH_hybridization/scripts/set-env.sh
 
-mkdir $BQSR_DIR/bqsr_r2 $BQSR_DIR/bqsr_r2/logs $BQSR_DIR/bqsr_r2/scripts $BQSR_DIR/r2_cov_plots $BQSR_DIR/r2_bqsr_bams
+mkdir $BQSR_DIR/bqsr_r2 $BQSR_DIR/r2_cov_plots $BQSR_DIR/r2_bqsr_bams
 
 cd $BQSR_DIR/bqsr_r2
 
 # SELECT SNPS ------------------------------------------------------------------
 JOB_NAME=cohort_select_snps
 THREADS=1
-LOG="$RESULTS_DIR/logs/$JOB_NAME.log" 
+LOG="$LOGS_DIR/$JOB_NAME.log" 
 DEPEND=""
-SCRIPT="$RESULTS_DIR/scripts/$JOB_NAME.sh"
+SCRIPT="$SCRIPTS_DIR/$JOB_NAME.sh"
 
 JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG $DEPEND"
 
@@ -38,11 +38,11 @@ SUBMIT $CMD $SCRIPT $JOB_QSUB
 # FILTER SNPS ------------------------------------------------------------------
 JOB_NAME="cohort_filter_snps"
 THREADS=1
-LOG="-o logs/$JOB_NAME.log"
+LOG="$LOGS_DIR/$JOB_NAME.log" 
 DEPEND="-hold_jid cohort_select_snps"
-SCRIPT="scripts/$JOB_NAME.sh"
+SCRIPT="$SCRIPTS_DIR/$JOB_NAME.sh"
 
-JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME $LOG $DEPEND"
+JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG $DEPEND"
 
 IN_VCF="$BQSR_DIR/bqsr_r2/cohort_r2_BSQR_rawSNPS.g.vcf"
 OUT_VCF="$BQSR_DIR/bqsr_r2/cohort_r2_filtered_snps.g.vcf"
@@ -60,11 +60,11 @@ SUBMIT $CMD $SCRIPT $JOB_QSUB
 # SELECT INDELS ----------------------------------------------------------------
 JOB_NAME="cohort_select_indels"
 THREADS=1
-LOG="-o logs/$JOB_NAME.log"
+LOG="$LOGS_DIR/$JOB_NAME.log" 
 DEPEND=""
-SCRIPT="scripts/$JOB_NAME.sh"
+SCRIPT="$SCRIPTS_DIR/$JOB_NAME.sh"
 
-JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME $LOG $DEPEND"
+JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG $DEPEND"
 
 IN_VCF="$BQSR_DIR/cohort_r1_BQSR.g.vcf"
 OUT_VCF="$BQSR_DIR/bqsr_r2/cohort_r2_BSQR_rawINDELS.g.vcf"
@@ -82,11 +82,11 @@ SUBMIT $CMD $SCRIPT $JOB_QSUB
 # FILTER INDELS ------------------------------------------------------------------
 JOB_NAME="cohort_filter_indels"
 THREADS=1
-LOG="-o logs/$JOB_NAME.log"
+LOG="$LOGS_DIR/$JOB_NAME.log" 
 DEPEND="-hold_jid cohort_select_indels"
-SCRIPT="scripts/$JOB_NAME.sh"
+SCRIPT="$SCRIPTS_DIR/$JOB_NAME.sh"
 
-JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME $LOG $DEPEND"
+JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG $DEPEND"
 
 IN_VCF="$BQSR_DIR/bqsr_r2/cohort_r2_BSQR_rawINDELS.g.vcf"
 OUT_VCF="$BQSR_DIR/bqsr_r2/cohort_r2_filtered_INDELS.g.vcf"
@@ -113,15 +113,15 @@ for BAM in $(ls $MAP_DIR/*_processed.bam); do
     # RECAL SCORE/OBSERVE READS-------------------------------------------------    
     JOB_NAME="$SAMPLE.recal_score_reads_r2"
     THREADS=12
-    LOG="-o logs/$JOB_NAME.log"
+    LOG="$LOGS_DIR/$JOB_NAME.log" 
     DEPEND="-hold_jid merge_filtered_vcfs"
-    SCRIPT="scripts/$JOB_NAME.sh"
+    SCRIPT="$SCRIPTS_DIR/$JOB_NAME.sh"
 
-    JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME $LOG $DEPEND"
+    JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG $DEPEND"
 
     IN_BAM=$BAM
     IN_VCF="$BQSR_DIR/bqsr_r2/cohort_r2_filtered_snps.g.vcf"
-    OUT_TABLE=$BQSR_DIR/bqsr_r2/$SAMPLE"_recal-1_data.table"
+    OUT_TABLE=$BQSR_DIR/r2_cov_plots/$SAMPLE"_recal-1_data.table"
     
     CMD="$SINGULARITY gatk BaseRecalibrator \
         -R $REFERENCE \
@@ -133,18 +133,18 @@ for BAM in $(ls $MAP_DIR/*_processed.bam); do
     #SUBMIT $CMD $SCRIPT $JOB_QSUB
 
     # MOD READS ----------------------------------------------------------------    
-    JOB_NAME="$SAMPLE.recal_modifed_reads_r2"
+    JOB_NAME="$SAMPLE.recal_modify_reads_r2"
     THREADS=12
-    LOG="-o logs/$JOB_NAME.log"
-    DEPEND="-hold_jid $SAMPLE.recal_score_reads"
-    SCRIPT="scripts/$JOB_NAME.sh"
+    LOG="$LOGS_DIR/$JOB_NAME.log" 
+    DEPEND="-hold_jid $SAMPLE.recal_score_reads_r2"
+    SCRIPT="$SCRIPTS_DIR/$JOB_NAME.sh"
 
     IN_BAM=$BAM
     IN_VCF=$IN_VCF
     IN_TABLE=$OUT_TABLE
-    OUT_BAM=$BQSR_DIR/bqsr_r2/$SAMPLE".bqsr-2.bam"
+    OUT_BAM=$BQSR_DIR/r2_bqsr_bams/$SAMPLE".bqsr-2.bam"
 
-    JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME $LOG $DEPEND"
+    JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG $DEPEND"
     
     CMD="$SINGULARITY gatk ApplyBQSR \
         -R $REFERENCE \
@@ -152,22 +152,22 @@ for BAM in $(ls $MAP_DIR/*_processed.bam); do
         --bqsr-recal-file $IN_TABLE \
         -O $OUT_BAM"
 
-    DELETE $LOG $SCRIPT
-    SUBMIT $CMD $SCRIPT $JOB_QSUB 
+    #DELETE $LOG $SCRIPT
+    #SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB" 
 
     # RECAL SCORE/OBSERVE READS-------------------------------------------------    
 
     JOB_NAME="$SAMPLE.recal_score_modreads_r2"
     THREADS=12
-    LOG="-o logs/$JOB_NAME.log"
-    DEPEND="-hold_jid $SAMPLE.recal_score_modreads_r2"
-    SCRIPT="scripts/$JOB_NAME.sh"
+    LOG="$LOGS_DIR/$JOB_NAME.log" 
+    DEPEND="-hold_jid $SAMPLE.recal_modify_reads_r2"
+    SCRIPT="$SCRIPTS_DIR/$JOB_NAME.sh"
 
     IN_BAM=$OUT_BAM
     IN_VCF=$IN_VCF
-    OUT_TABLE=$BQSR_DIR/bqsr_r2/$SAMPLE"_postrecal-1_data.table"
+    OUT_TABLE=$BQSR_DIR/r2_cov_plots/$SAMPLE"_postrecal-1_data.table"
 
-    JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME $LOG $DEPEND"
+    JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG $DEPEND"
     
     CMD="$SINGULARITY gatk BaseRecalibrator \
         -R $REFERENCE \
@@ -175,21 +175,21 @@ for BAM in $(ls $MAP_DIR/*_processed.bam); do
         --known-sites $IN_VCF \
         -O $OUT_TABLE"
 
-    DELETE $LOG $SCRIPT
-    SUBMIT $CMD $SCRIPT $JOB_QSUB 
+    #DELETE $LOG $SCRIPT
+    #SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB" 
 
     # RECAL ANALYZE COVARIATES -------------------------------------------------    
     JOB_NAME="$SAMPLE.covariate_r2"
     THREADS=12
-    LOG="-o logs/$JOB_NAME.log"
+    LOG="$LOGS_DIR/$JOB_NAME.log" 
     DEPEND="-hold_jid $SAMPLE.recal_score_reads_r2,$SAMPLE.recal_score_modreads_r2"
-    SCRIPT="scripts/$JOB_NAME.sh"
+    SCRIPT="$SCRIPTS_DIR/$JOB_NAME.sh"
 
-    JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME $LOG $DEPEND"
+    JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG $DEPEND"
 
-    BEFORE_TABLE=$BQSR_DIR/bqsr_r2/$SAMPLE"_recal-1_data.table"
-    AFTER_TABLE=$BQSR_DIR/bqsr_r2/$SAMPLE"_postrecal-1_data.table"
-    OUT_PDF=$BQSR_DIR/bqsr_r2/$SAMPLE"_recalibration_plot.2.pdf"
+    BEFORE_TABLE=$BQSR_DIR/r1_cov_plots/$SAMPLE"_postrecal-1_data.table"
+    AFTER_TABLE=$BQSR_DIR/r2_cov_plots/$SAMPLE"_postrecal-1_data.table"
+    OUT_PDF=$BQSR_DIR/r2_cov_plots/$SAMPLE"_recalibration_plot.2.pdf"
 
     CMD="$SINGULARITY gatk AnalyzeCovariates \
         -before $BEFORE_TABLE \
@@ -197,7 +197,7 @@ for BAM in $(ls $MAP_DIR/*_processed.bam); do
         -plots $OUT_PDF"
 
     DELETE $LOG $SCRIPT
-    SUBMIT $CMD $SCRIPT $JOB_QSUB  
+    SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB" 
 
 done
 
@@ -223,8 +223,7 @@ rm cohort_filtered_indels.g.vcf
 rm cohort_filtered_indels.g.vcf.idx
 rm cohort_filtered_snps.g.vcf
 rm cohort_filtered_snps.g.vcf.idx
-
-#cohort_r1_BQSR.g.vcf
+rm cohort_r1_BQSR.g.vcf
 
 
 
