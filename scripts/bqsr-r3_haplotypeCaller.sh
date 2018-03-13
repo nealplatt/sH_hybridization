@@ -52,14 +52,7 @@ done
 #
 
 #sleep while all jobs are running
-NUM_JOBS_IN_QUEUE=$(qstat | grep Sh. | wc -l)
-
-   while [ $NUM_JOBS_IN_QUEUE -gt 0 ]; do
-        sleep 60s
-        echo -n "."
-        NUM_JOBS_IN_QUEUE=$(qstat | grep nplatt | wc -l)
-    done
-
+WAIT_FOR_CLEAR_QUEUE
 #
 #                               <...wait...>
 #
@@ -78,6 +71,7 @@ while [ $FAILED -ne 0]; do
         for INTERVAL in $(seq -w 0 49); do
             JOB_NAME=$SAMPLE".$ROUND."$INTERVAL.hc
             LOG="$LOGS_DIR/$JOB_NAME.log" 
+            SCRIPT="$SCRIPTS_DIR/$JOB_NAME.sh"
 
             if [[ $(grep "HaplotypeCaller done" $LOG) ]]; then
                 PASSED=$((PASSED+1))

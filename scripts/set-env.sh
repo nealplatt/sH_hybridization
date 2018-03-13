@@ -56,6 +56,27 @@ SUBMIT () {
     cat $2 | $3
 }
 
+
+WAIT_FOR_CLEAR_QUEUE () {
+    NUM_JOBS_IN_QUEUE=$(qstat | grep Sh. | wc -l)
+   
+    while [ $NUM_JOBS_IN_QUEUE -gt 0 ]; do
+        sleep 60s
+        echo -n "."
+        NUM_JOBS_IN_QUEUE=$(qstat | grep Sh. | wc -l)
+    done
+}
+
+LIMIT_RUNNING_JOBS_TO () {
+    NUM_JOBS_IN_QUEUE=$(qstat | grep Sh. | wc -l)
+   
+    while [ $NUM_JOBS_IN_QUEUE -gt $1 ]; do
+        sleep 60s
+        echo -n "."
+        NUM_JOBS_IN_QUEUE=$(qstat | grep Sh. | wc -l)
+    done
+}
+
 # WORKFLOW/PIPELINE ------------------------------------------------------------
 # 01] set-env.sh
 # 02] map_filterReads.sh
@@ -73,7 +94,12 @@ SUBMIT () {
 # 14] bqsr-r2_genotype.sh
 # 15] bqsr-r2_buildCohortVcf.sh
 # 16] bqsr-r2_bqsr.sh
-# 17] bqsr-r2_buildCohortVcf.sh
+# 12] bqsr-r3_haplotypeCaller.sh
+# 13] bqsr-r3_prepForGenotype.sh
+# 14] bqsr-r3_genotype.sh
+# 15] bqsr-r3_buildCohortVcf.sh
+# 16] bqsr-r3_bqsr.sh
+
 
 
 #--results
