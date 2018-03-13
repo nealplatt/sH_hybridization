@@ -58,5 +58,5 @@ DATE 11 March 2018
     #installing R packages
     R --slave -e 'install.packages("ggplot2", repos="https://cloud.r-project.org/")'
     R --slave -e 'install.packages("gplots", repos="https://cloud.r-project.org/")'
-
-   
+    R --slave -e 'install.packages("reshape", repos="https://cloud.r-project.org/")'
+    R --slave -e 'install.packages("gsalib", repos="https://cloud.r-project.org/")'
