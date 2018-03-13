@@ -7,7 +7,6 @@
 # bqsr-r2_prepForGenotype.sh - takes VCF files from haplotype caller and preps 
 #   for genotyping by creating 1 vcf per individual and importing into a DB
 
-# TODO(nplatt): XXX write code to check log files for successful GDBimport
 # TODO(nplatt): 
 
 
@@ -163,7 +162,6 @@ EXPECTED=$(wc -l $INTERVALS_DIR/all_filtered_intervals.list)
 
 for INTERVAL in $(cat $INTERVALS_DIR/all_filtered_intervals.list); do
     GDBIMPORT_JOB_NAME=$(echo $INTERVAL | sed 's/:/-/')"_r2"
-    THREADS=12
     LOG=logs/$GDBIMPORT_JOB_NAME.log
 
     if [[ $(grep "genomicsdb.GenomicsDBImport done" $LOG) ]]; then
@@ -174,7 +172,7 @@ for INTERVAL in $(cat $INTERVALS_DIR/all_filtered_intervals.list); do
         THREADS=12
         GDBIMPORT_QSUB="$QSUB -pe mpi $THREADS -N $GDBIMPORT_JOB_NAME -o logs/$GDBIMPORT_JOB_NAME.log"
         
-        rm -r db/$GDBIMPORT_JOB_NAME 
+        rm -r db_r2/$GDBIMPORT_JOB_NAME 
         cat scripts/$GDBIMPORT_JOB_NAME.sh | $GDBIMPORT_QSUB
 
     fi 
