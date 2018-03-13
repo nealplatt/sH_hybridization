@@ -33,7 +33,7 @@ CMD="$SINGULARITY gatk SelectVariants \
     -R $REFERENCE"
 
 DELETE $LOG $SCRIPT
-SUBMIT $CMD $SCRIPT $JOB_QSUB
+SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
 
 # FILTER SNPS ------------------------------------------------------------------
 JOB_NAME="cohort_filter_snps"
@@ -55,7 +55,7 @@ CMD="$SINGULARITY gatk VariantFiltration \
     -O $OUT_VCF"
 
 DELETE $LOG $SCRIPT
-SUBMIT $CMD $SCRIPT $JOB_QSUB
+SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
 
 # SELECT INDELS ----------------------------------------------------------------
 JOB_NAME="cohort_select_indels"
@@ -76,7 +76,7 @@ CMD="$SINGULARITY gatk SelectVariants \
     -R $REFERENCE"
 
 DELETE $LOG $SCRIPT
-SUBMIT $CMD $SCRIPT $JOB_QSUB
+SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
 
 
 # FILTER INDELS ------------------------------------------------------------------
@@ -99,7 +99,7 @@ CMD="$SINGULARITY gatk VariantFiltration \
     -O $OUT_VCF"
 
 DELETE $LOG $SCRIPT
-SUBMIT $CMD $SCRIPT $JOB_QSUB
+SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
 
 
 ################################################################################
@@ -130,7 +130,7 @@ for BAM in $(ls $MAP_DIR/*_processed.bam); do
         -O $OUT_TABLE"
 
     #DELETE $LOG $SCRIPT
-    #SUBMIT $CMD $SCRIPT $JOB_QSUB
+    #SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
 
     # MOD READS ----------------------------------------------------------------    
     JOB_NAME="$SAMPLE.recal_modify_reads_r2"
