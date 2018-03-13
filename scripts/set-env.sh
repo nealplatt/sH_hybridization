@@ -50,4 +50,20 @@ ls $RAW_READS_DIR >$SAMPLE_LIST
 # 11] bqsr-r1_bqsr.sh
 # 12] bqsr-r2_haplotypeCaller.sh
 # 13] bqsr-r2_prepForGenotype.sh
+# 14] bqsr-r2_genotype.sh
+# 15] bqsr-r2_buildCohortVcf.sh
+# 16] bqsr-r2_bqsr.sh
+# 17] bqsr-r2_buildCohortVcf.sh
 
+
+#--results
+#----filter_reads
+#----map_reads
+#----intervals
+#----base_recalibration
+#------logs
+#------scripts
+#------r0_bqsr_tables
+#------r1_bqsr_tables
+#------rN_bqsr_tables
+#------<modified bams>
