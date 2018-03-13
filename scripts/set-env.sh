@@ -94,11 +94,11 @@ LIMIT_RUNNING_JOBS_TO () {
 # 14] bqsr-r2_genotype.sh
 # 15] bqsr-r2_buildCohortVcf.sh
 # 16] bqsr-r2_bqsr.sh
-# 12] bqsr-r3_haplotypeCaller.sh
-# 13] bqsr-r3_prepForGenotype.sh
-# 14] bqsr-r3_genotype.sh
-# 15] bqsr-r3_buildCohortVcf.sh
-# 16] bqsr-r3_bqsr.sh
+# 17] bqsr-r3_haplotypeCaller.sh
+# 18] bqsr-r3_prepForGenotype.sh
+# 19] bqsr-r3_genotype.sh
+# ***20] bqsr-r3_buildCohortVcf.sh
+# ***21] bqsr-r3_bqsr.sh
 
 
 
@@ -107,9 +107,7 @@ LIMIT_RUNNING_JOBS_TO () {
 #----map_reads
 #----intervals
 #----base_recalibration
-#------logs
-#------scripts
 #------r0_bqsr_tables
 #------r1_bqsr_tables
 #------rN_bqsr_tables
-#------<modified bams>
+#------<final modified bams>
