@@ -9,8 +9,6 @@
 
 # TODO(nplatt): first pass
 
-source /master/nplatt/sH_hybridization/scripts/set-env.sh
-
 cd $BQSR_DIR/$ROUND"_individual_vcf"
 
 for SAMPLE in $(cat $SAMPLE_LIST); do
@@ -39,7 +37,7 @@ for SAMPLE in $(cat $SAMPLE_LIST); do
     JOB_NAME="snp."$SAMPLE.$ROUND.sort
     THREADS=12
     LOG="$LOGS_DIR/$JOB_NAME.log" 
-    DEPEND="-hold_jid $SAMPLE.$ROUND.merge"
+    DEPEND="-hold_jid snp.$SAMPLE.$ROUND.merge"
     SCRIPT="$SUB_SCRIPTS_DIR/$JOB_NAME.sh"
 
     IN_GVCF=$OUT_GVCF
@@ -118,8 +116,10 @@ WAIT_FOR_CLEAR_QUEUE
 
 
 # GDBIMPORT ----------------------------------------------------------------
+rm $ROUND"_individual_vcf"/samples_$ROUND.list
+
 for SAMPLE in $(cat $SAMPLE_LIST); do
-    echo $BQSR_DIR/$ROUND"_indvi_vcf"/$SAMPLE"_bqsr-"$ROUND".g.vcf" >>$ROUND"_individual_vcf"/samples_$ROUND.list
+    echo $BQSR_DIR/$ROUND"_indiv_vcf"/$SAMPLE"_bqsr-"$ROUND".g.vcf" >>samples_$ROUND.list
 done
 
 # loop for submission
@@ -140,7 +140,7 @@ for INTERVAL in $(cat $INTERVALS_DIR/all_filtered_intervals.list); do
 
     CMD="$SINGULARITY gatk --java-options "'"-Xmx4g -Xms4g"'" \
         GenomicsDBImport \
-        -V $ROUND"_db"/samples_$ROUND.list \
+        -V samples_$ROUND.list \
         --genomicsdb-workspace-path $OUT_DB \
         -L $INTERVAL \
         --reader-threads $THREADS \
@@ -149,7 +149,6 @@ for INTERVAL in $(cat $INTERVALS_DIR/all_filtered_intervals.list); do
     DELETE $LOG $SCRIPT
 
     #only submit a limited number of jobs at a time...(dont overload queue)
-    echo "waiting for space to clear on the queue"    
     LIMIT_RUNNING_JOBS_TO 300
         
     SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"    
