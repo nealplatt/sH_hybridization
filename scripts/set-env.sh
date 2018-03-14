@@ -61,9 +61,9 @@ WAIT_FOR_CLEAR_QUEUE () {
     NUM_JOBS_IN_QUEUE=$(qstat | grep "snp." | wc -l)
    
     while [ $NUM_JOBS_IN_QUEUE -gt 0 ]; do
-        sleep 60s
+        sleep 20s
         echo -n "."
-        NUM_JOBS_IN_QUEUE=$(qstat | grep $1 | wc -l)
+        NUM_JOBS_IN_QUEUE=$(qstat | grep "snp." | wc -l)
     done
 }
 
@@ -72,7 +72,7 @@ LIMIT_RUNNING_JOBS_TO () {
     NUM_JOBS_IN_QUEUE=$(qstat | grep "snp." | wc -l)
    
     while [ $NUM_JOBS_IN_QUEUE -gt $1 ]; do
-        sleep 60s
+        sleep 20s
         echo -n "."
         NUM_JOBS_IN_QUEUE=$(qstat | grep "snp." | wc -l)
     done
