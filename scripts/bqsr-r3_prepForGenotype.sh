@@ -73,7 +73,7 @@ WAIT_FOR_CLEAR_QUEUE
 
 #check that sort and merge steps finished to completion
 FAILED="1"
-while [ $FAILED -ne 0]; do
+while [ $FAILED -ne 0 ]; do
     PASSED=0
     FAILED=0
     TOTAL=0
@@ -177,7 +177,7 @@ WAIT_FOR_CLEAR_QUEUE
 
 #CHECK FOR COMPLETION OF IMPORT
 FAILED="1"
-while [ $FAILED -ne 0]; do
+while [ $FAILED -ne 0 ]; do
     PASSED=0
     FAILED=0
     TOTAL=0

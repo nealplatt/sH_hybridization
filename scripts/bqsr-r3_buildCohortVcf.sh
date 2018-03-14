@@ -11,180 +11,166 @@
 
 # done manually/interactivley on the head/scheduler node --- sue me.
 source /master/nplatt/sH_hybridization/scripts/set-env.sh
-cd $BQSR_DIR
+
+ROUND=r3
+WORK_DIR=$BQSR_DIR/$ROUND"_bqsr"
+
+mkdir $WORK_DIR
+cd $WORK_DIR
+
 
 # MERGE ROUND 1 ----------------------------------------------------------------
-ROUND=2
-mkdir $BQSR_DIR/cohort_vcf_r2
+ls $BQSR_DIR/$ROUND"_genotype"/*.vcf >interval_vcf.list
 
-ls genotype_interval_vcfs_r2/*.vcf >cohort_vcf_r2/interval_vcf.list
-
-$SINGULARITY split -d -n l/1000 --additional-suffix .list cohort_vcf_r2/interval_vcf.list cohort_vcf_r2/int.
+$SINGULARITY split -d -n l/1000 --additional-suffix .list interval_vcf.list int.
 
 for INTERVAL in $(seq -w 0 999); do
 
-    MERGE_JOB_NAME="merge_cohort_round_"$INTERVAL"_"$ROUND
+    JOB_NAME="merge_cohort_"$INTERVAL"_"$ROUND
     THREADS=1
+    LOG="$LOGS_DIR/$JOB_NAME.log" 
+    DEPEND=""
+    SCRIPT="$SCRIPTS_DIR/$JOB_NAME.sh"
 
-    IN_LIST="cohort_vcf_r2/int."$INTERVAL".list"
-    OUT_VCF="cohort_vcf_r2/$INTERVAL.vcf"
+    IN_LIST="$WORK_DIR/int."$INTERVAL".list"
+    OUT_VCF="$WORK_DIR/$INTERVAL.vcf"
 
-    MERGE_QSUB="$QSUB -pe mpi $THREADS -N $MERGE_JOB_NAME -o logs/$MERGE_JOB_NAME.log"
-    MERGE="$SINGULARITY gatk MergeVcfs -I $IN_LIST -O $OUT_VCF -R $REFERENCE"
-    echo $MERGE >scripts/$MERGE_JOB_NAME.sh
+    JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG $DEPEND"
 
-    cat scripts/$MERGE_JOB_NAME.sh | $MERGE_QSUB
+    CMD="$SINGULARITY gatk MergeVcfs -I $IN_LIST -O $OUT_VCF -R $REFERENCE"
+
+    DELETE $LOG $SCRIPT
+    SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
 
 done
 
 
-#                               <...>
-#                       wait till all finished
-#                               <...>
+#
+#                               <...wait...>
+#
+#sleep while all jobs are running
+WAIT_FOR_CLEAR_QUEUE
+#
+#                               <...wait...>
+#
 
-#check for completion
-PASSED=0
-FAILED=0
-TOTAL=0
-EXPECTED=1000
 
-for INTERVAL in $(seq -w 0 999); do
 
-    MERGE_JOB_NAME="merge_cohort_round_"$INTERVAL"_"$ROUND
-    LOG="logs/$MERGE_JOB_NAME.log"
-    THREADS=12
+################################################################################
+# Check log files to see that all ran to completion 
+FAILED="1"
+while [ $FAILED -ne 0 ]; do
+    PASSED=0
+    FAILED=0
+    TOTAL=0
+    EXPECTED=1000
 
-    if [[ $(grep "picard.vcf.MergeVcfs done" $LOG) ]]; then
-        PASSED=$((PASSED+1))
-    else
-        FAILED=$((FAILED+1))
+    for INTERVAL in $(seq -w 0 999); do
+        JOB_NAME="merge_cohort_"$INTERVAL"_"$ROUND
+        THREADS=1
+        LOG="$LOGS_DIR/$JOB_NAME.log" 
+        DEPEND=""
+        SCRIPT="$SCRIPTS_DIR/$JOB_NAME.sh"
+        JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG $DEPEND"
 
-        MERGE_QSUB="$QSUB -pe mpi $THREADS -N $MERGE_JOB_NAME -o logs/$MERGE_JOB_NAME.log"
+        if [[ $(grep "picard.vcf.MergeVcfs done" $LOG) ]]; then
+            PASSED=$((PASSED+1))
+        else
+            #resubmit with 12 threads (only reason doing this is to "hog" memory
+            #  from an entire node rather than sharing        
+            FAILED=$((FAILED+1))
+            THREADS=12
+    
+            rm $LOG
+            cat $SCRIPT | $JOB_QSUB
+        fi
 
-        cat scripts/$MERGE_JOB_NAME.sh | $MERGE_QSUB
-    fi
-
-    NUM_SAMPLES=$((NUM_SAMPLES+1))
-    TOTAL=$((TOTAL+1))
+        NUM_SAMPLES=$((NUM_SAMPLES+1))
+        TOTAL=$((TOTAL+1))
+    done
 done
 
-echo -e "PASSED\tFAILED\tTOTAL\tEXPECTED"
-echo -e "$PASSED\t$FAILED\t$TOTAL\t$EXPECTED"
-
-#           PASSED  FAILED  TOTAL   EXPECTED
-#1stPass    979     21      1000    1000
-#2ndPass    1000    0       1000    1000
-
+#
+#                               <...wait...>
+#
+#sleep while all jobs are running
+WAIT_FOR_CLEAR_QUEUE
+#
+#                               <...wait...>
+#
 
 # MERGE ROUND 2 ----------------------------------------------------------------
-ROUND=2
+rm *.list
+ls $WORK_DIR/*.vcf >interval_vcf.list
 
-mkdir $BQSR_DIR"/cohort_vcf_r2/round_"$ROUND
-cd $BQSR_DIR"/cohort_vcf_r2/round_"$ROUND
-mkdir logs scripts
-
-ls $BQSR_DIR/cohort_vcf_r2/*.vcf >interval_vcf.list
-
-
-$SINGULARITY split -d -n l/100 --additional-suffix .list interval_vcf.list int.
+$SINGULARITY split -d -n l/100 --additional-suffix .list interval_vcf.list int2.
 
 for INTERVAL in $(seq -w 0 99); do
 
-    MERGE_JOB_NAME="merge_cohort_round_"$INTERVAL"_"$ROUND
+    JOB_NAME="merge2_cohort_"$INTERVAL"_"$ROUND
     THREADS=1
+    LOG="$LOGS_DIR/$JOB_NAME.log" 
+    DEPEND=""
+    SCRIPT="$SCRIPTS_DIR/$JOB_NAME.sh"
 
-    IN_LIST="int."$INTERVAL".list"
-    OUT_VCF="$INTERVAL.vcf"
+    IN_LIST="$WORK_DIR/int2."$INTERVAL".list"
+    OUT_VCF="$WORK_DIR/$INTERVAL.2.vcf"
 
-    MERGE_QSUB="$QSUB -pe mpi $THREADS -N $MERGE_JOB_NAME -o logs/$MERGE_JOB_NAME.log"
+    JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG $DEPEND"
 
+    CMD="$SINGULARITY gatk MergeVcfs -I $IN_LIST -O $OUT_VCF -R $REFERENCE"
 
-    MERGE="$SINGULARITY gatk MergeVcfs -I  $IN_LIST -O $OUT_VCF -R $REFERENCE"
-    echo $MERGE >scripts/$MERGE_JOB_NAME.sh
-
-    cat scripts/$MERGE_JOB_NAME.sh | $MERGE_QSUB
-
-done
-
-
-#                               <...>
-#                       wait till all finished
-#                               <...>
-
-#check for completion
-PASSED=0
-FAILED=0
-TOTAL=0
-EXPECTED=100
-
-for INTERVAL in $(seq -w 0 99); do
-
-    MERGE_JOB_NAME="merge_cohort_round_"$INTERVAL"_2"
-    LOG="logs/$MERGE_JOB_NAME.log"
-    THREADS=12
-
-    if [[ $(grep "picard.vcf.MergeVcfs done" $LOG) ]]; then
-        PASSED=$((PASSED+1))
-    else
-        FAILED=$((FAILED+1))
-
-        MERGE_QSUB="$QSUB -pe mpi $THREADS -N $MERGE_JOB_NAME -o logs/$MERGE_JOB_NAME.log"
-
-        cat scripts/$MERGE_JOB_NAME.sh | $MERGE_QSUB
-    fi
-
-    NUM_SAMPLES=$((NUM_SAMPLES+1))
-    TOTAL=$((TOTAL+1))
+    DELETE $LOG $SCRIPT
+    SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
 
 done
 
-echo -e "PASSED\tFAILED\tTOTAL\tEXPECTED"
-echo -e "$PASSED\t$FAILED\t$TOTAL\t$EXPECTED"
 
-#           PASSED  FAILED  TOTAL   EXPECTED
-#1stPass    94      6       100     100
-#2ndPass    100     0       100     100
+#
+#                               <...wait...>
+#
+#sleep while all jobs are running
+WAIT_FOR_CLEAR_QUEUE
+#
+#                               <...wait...>
+#
 
 
 # MERGE ROUND 3 ----------------------------------------------------------------
-ROUND=3
+rm *.list
+ls $WORK_DIR/*.2.vcf >interval3_vcf.list
 
-mkdir $BQSR_DIR"/cohort_vcf_r2/round_"$ROUND
-cd $BQSR_DIR"/cohort_vcf_r2/round_"$ROUND
-
-mkdir logs scripts
-ls ../round_2/*.vcf >interval_vcf.list
-
-MERGE_JOB_NAME="merge_cohort_round_"$ROUND
+JOB_NAME="merge3_cohort_"$INTERVAL"_"$ROUND
 THREADS=1
+LOG="$LOGS_DIR/$JOB_NAME.log" 
+DEPEND=""
+SCRIPT="$SCRIPTS_DIR/$JOB_NAME.sh"
 
-IN_LIST="interval_vcf.list"
-OUT_VCF="$BQSR_DIR/cohort_vcf_r2/tmp_cohort.vcf"
+IN_LIST="$WORK_DIR/interval3_vcf.list"
+OUT_VCF="$WORK_DIR/tmp_cohort.vcf"
 
-MERGE="$SINGULARITY gatk MergeVcfs -I $IN_LIST -O $OUT_VCF -R $REFERENCE"
+JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG $DEPEND"
 
-MERGE_QSUB="$QSUB -pe mpi $THREADS -N $MERGE_JOB_NAME -o logs/$MERGE_JOB_NAME.log"
-echo $MERGE >scripts/$MERGE_JOB_NAME.sh
+CMD="$SINGULARITY gatk MergeVcfs -I $IN_LIST -O $OUT_VCF -R $REFERENCE"
 
-cat scripts/$MERGE_JOB_NAME.sh | $MERGE_QSUB
-
-#                               <...>
-#                       wait till all finished
-#                               <...>
-
+DELETE $LOG $SCRIPT
+SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
 
 # SORT COHORT VCF --------------------------------------------------------------
 SORT_JOB_NAME=sort_cohort
 THREADS=12
+LOG="$LOGS_DIR/$JOB_NAME.log"
+DEPEND="-hold_jid merge3_cohort_"$INTERVAL"_"$ROUND
+SCRIPT="$SCRIPTS_DIR/$JOB_NAME.sh"
 
-cd $BQSR_DIR
+IN_GVCF="$WORK_DIR/tmp_cohort.vcf"
+OUT_GVCF="$WORK_DIR/cohort_$ROUND.g.vcf"
 
-IN_GVCF="$BQSR_DIR/cohort_vcf_r2/tmp_cohort.vcf"
-OUT_GVCF="$BQSR_DIR/cohort_r1_BQSR.g.vcf"
-
-SORT="$SINGULARITY gatk --java-options "'"-Xmx8G"'" SortVcf -I $IN_GVCF -O $OUT_GVCF"
+CMD="$SINGULARITY gatk --java-options "'"-Xmx8G"'" SortVcf -I $IN_GVCF -O $OUT_GVCF"
 
 SORT_QSUB="$QSUB -pe mpi $THREADS -N $SORT_JOB_NAME -o logs/$SORT_JOB_NAME.log"
-echo $SORT >scripts/$SORT_JOB_NAME.sh
 
-cat scripts/$SORT_JOB_NAME.sh | $SORT_QSUB
+DELETE $LOG $SCRIPT
+SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
+
+

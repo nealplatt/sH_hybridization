@@ -64,7 +64,7 @@ WAIT_FOR_CLEAR_QUEUE
 
 #reset variables
 FAILED="1"
-while [ $FAILED -ne 0]; do
+while [ $FAILED -ne 0 ]; do
     PASSED=0
     FAILED=0
     TOTAL=0
