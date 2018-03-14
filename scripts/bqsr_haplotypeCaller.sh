@@ -14,14 +14,14 @@ for SAMPLE in $(cat $SAMPLE_LIST); do
     for INTERVAL in $(seq -w 0 49); do    
     
         # HC -------------------------------------------------------------------
-        JOB_NAME=$SAMPLE".$ROUND."$INTERVAL.hc
+        JOB_NAME="snp."$SAMPLE".$ROUND."$INTERVAL.hc
         THREADS=1
         LOG="$LOGS_DIR/$JOB_NAME.log" 
         DEPEND=""
         SCRIPT="$SUB_SCRIPTS_DIR/$JOB_NAME.sh"
 
         #<CHANGE THE INPUT BAM FOR EACH ROUND>
-        IN_BAM=$MAP_DIR/$SAMPLE"_processed.bam"
+        IN_BAM=$UNMODIFIED_BAM_DIR/$SAMPLE*".bam"
         IN_BED="$INTERVALS_DIR/filtered_interval.part$INTERVAL.list"
         OUT_GVCF=$BQSR_DIR/$ROUND"_hc"/$SAMPLE"_interval_"$INTERVAL.$ROUND".g.vcf"
     
