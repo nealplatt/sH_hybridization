@@ -170,4 +170,121 @@ SORT_QSUB="$QSUB -pe mpi $THREADS -N $SORT_JOB_NAME -o logs/$SORT_JOB_NAME.log"
 DELETE $LOG $SCRIPT
 SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
 
+# SELECT SNPS ------------------------------------------------------------------
+JOB_NAME="snp.cohort_select_snps"
+THREADS=1
+LOG="$LOGS_DIR/$JOB_NAME.log" 
+DEPEND="snp.sort_cohort"
+SCRIPT="$SCRIPTS_DIR/$JOB_NAME.sh"
+
+JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG $DEPEND"
+
+IN_VCF=$ROUND"_vcfs/cohort_raw_"$ROUND.vcf
+OUT_VCF=$ROUND"_vcfs/cohort_"$ROUND"_rawSNPS.g.vcf"
+    
+CMD="$SINGULARITY gatk SelectVariants \
+    -V $IN_VCF \
+    -select-type SNP \
+    -O $OUT_VCF \
+    -R $REFERENCE"
+
+DELETE $LOG $SCRIPT
+SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
+
+# FILTER SNPS ------------------------------------------------------------------
+JOB_NAME="snp.cohort_filter_snps"
+THREADS=1
+LOG="$LOGS_DIR/$JOB_NAME.log" 
+DEPEND="-hold_jid snp.cohort_select_snps"
+SCRIPT="$SCRIPTS_DIR/$JOB_NAME.sh"
+
+JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG $DEPEND"
+
+IN_VCF=$ROUND"_vcfs/cohort_"$ROUND"_rawSNPS.g.vcf"
+OUT_VCF=$ROUND"_vcfs/cohort_"$ROUND"_filteredSNPS.g.vcf"
+
+CMD="$SINGULARITY gatk VariantFiltration \
+    -R $REFERENCE \
+    -V $IN_VCF \
+    --filter-expression "'"QD < 2.0 || FS > 60.0 || MQ < 40.0 || MQRankSum < -12.5 || ReadPosRankSum < -8.0"'" \
+    --filter-name "'"recommended_snp_filter"'" \
+    -O $OUT_VCF"
+
+DELETE $LOG $SCRIPT
+SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
+
+# SELECT INDELS ----------------------------------------------------------------
+JOB_NAME="snp.cohort_select_indels"
+THREADS=1
+LOG="$LOGS_DIR/$JOB_NAME.log" 
+DEPEND="snp.sort_cohort"
+SCRIPT="$SCRIPTS_DIR/$JOB_NAME.sh"
+
+JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG $DEPEND"
+
+IN_VCF="$WORK_DIR/cohort_$ROUND.g.vcf"
+OUT_VCF=$ROUND"_vcfs/cohort_"$ROUND"_rawINDELS.g.vcf"
+    
+CMD="$SINGULARITY gatk SelectVariants \
+    -V $IN_VCF \
+    -select-type INDEL \
+    -O $OUT_VCF \
+    -R $REFERENCE"
+
+DELETE $LOG $SCRIPT
+SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
+
+
+# FILTER INDELS ------------------------------------------------------------------
+JOB_NAME="snp.cohort_filter_indels"
+THREADS=1
+LOG="$LOGS_DIR/$JOB_NAME.log" 
+DEPEND="-hold_jid snp.cohort_select_indels"
+SCRIPT="$SCRIPTS_DIR/$JOB_NAME.sh"
+
+JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG $DEPEND"
+
+IN_VCF=$ROUND"_vcfs/cohort_"$ROUND"_rawINDELS.g.vcf"
+OUT_VCF=$ROUND"_vcfs/cohort_"$ROUND"_filteredINDELS.g.vcf"
+
+CMD="$SINGULARITY gatk VariantFiltration \
+    -R $REFERENCE \
+    -V $IN_VCF \
+    --filter-expression "'"QD < 2.0 || FS > 200.0 || ReadPosRankSum < -20.0"'" \
+    --filter-name "'"recommended_indel_filter"'" \
+    -O $OUT_VCF"
+
+DELETE $LOG $SCRIPT
+SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
+
+
+# MERGE VARIANTS----------------------------------------------------------------
+JOB_NAME="snp.merge_filtered_variants"
+THREADS=1
+LOG="$LOGS_DIR/$JOB_NAME.log" 
+DEPEND="-hold_jid snp.cohort_filter_indels,snp.cohort_filter_snps"
+SCRIPT="$SCRIPTS_DIR/$JOB_NAME.sh"
+
+JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG $DEPEND"
+
+IN_SNP_VCF=$ROUND"_vcfs/cohort_"$ROUND"_filteredSNPS.g.vcf"
+IN_INDEL_VCF=$ROUND"_vcfs/cohort_"$ROUND"_filteredINDELS.g.vcf"
+OUT_VCF=$ROUND"_vcfs/cohort_"$ROUND"_filteredVariants.g.vcf"
+
+CMD="$SINGULARITY gatk CombineVariants \
+   -R $REFERENCE \
+   --variant:snps $IN_SNP_VCF \
+   --variant:indels $IN_INDEL_VCF \
+   -O $OUT_VCF \
+   -genotypeMergeOptions PRIORITIZE \
+   -priority snps,indels"
+
+DELETE $LOG $SCRIPT
+SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
+
+
+################################################################################
+#                       R E C A L I B R A T I O N 
+################################################################################
+
 
