@@ -119,7 +119,7 @@ WAIT_FOR_CLEAR_QUEUE
 rm $ROUND"_individual_vcf"/samples_$ROUND.list
 
 for SAMPLE in $(cat $SAMPLE_LIST); do
-    echo $BQSR_DIR/$ROUND"_indiv_vcf"/$SAMPLE"_bqsr-"$ROUND".g.vcf" >>samples_$ROUND.list
+    echo $BQSR_DIR/$ROUND"_individual_vcf"/$SAMPLE"_bqsr-"$ROUND".g.vcf" >>samples_$ROUND.list
 done
 
 # loop for submission
@@ -133,14 +133,14 @@ for INTERVAL in $(cat $INTERVALS_DIR/all_filtered_intervals.list); do
     DEPEND=""
     SCRIPT="$SUB_SCRIPTS_DIR/$JOB_NAME.sh"
 
-    IN_LIST=$ROUND"_individual_vcf"/samples_$ROUND.list  
-    OUT_DB=$ROUND"_db"/$SAFE_INTERVAL_NAME
+    IN_LIST=$BQSR_DIR/$ROUND"_individual_vcf"/samples_$ROUND.list  
+    OUT_DB=$BQSR_DIR/$ROUND"_db"/$SAFE_INTERVAL_NAME
     
     JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG $DEPEND"
 
     CMD="$SINGULARITY gatk --java-options "'"-Xmx4g -Xms4g"'" \
         GenomicsDBImport \
-        -V samples_$ROUND.list \
+        -V $IN_LIST \
         --genomicsdb-workspace-path $OUT_DB \
         -L $INTERVAL \
         --reader-threads $THREADS \
