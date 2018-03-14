@@ -7,7 +7,7 @@
 # bqsr-r3_genotype.sh - runs GATK's GenotypeGVCF on each sample/interval 
 #   combination
 
-# TODO(nplatt): update comments
+# TODO (nplatt): update comments
 
 #import env variables
 source /master/nplatt/sH_hybridization/scripts/set-env.sh
@@ -94,13 +94,8 @@ while [ $FAILED -ne 0]; do
 
         TOTAL=$((TOTAL+1))
     done
+
+    WAIT_FOR_CLEAR_QUEUE
+
 done
-
-echo -e "PASSED\tFAILED\tTOTAL\tEXPECTED"
-echo -e "$PASSED\t$FAILED\t$TOTAL\t$EXPECTED"
-
-
-#           PASSED  FAILED  TOTAL   EXPECTED
-#1stPass    
-#1stPass    
 

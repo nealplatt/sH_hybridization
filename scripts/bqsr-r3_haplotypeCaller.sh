@@ -59,7 +59,7 @@ WAIT_FOR_CLEAR_QUEUE
 
 # HC-CHECKER------------------------------------------------------------
 FAILED="1"
-while [ $FAILED -ne 0]; do
+while [ $FAILED -ne 0 ]; do
     PASSED=0
     FAILED=0
     TOTAL=0
@@ -79,23 +79,24 @@ while [ $FAILED -ne 0]; do
                 FAILED=$((FAILED+1))
 
                 THREADS=12
-                $JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG"
-            
-                DELETE $LOG $SCRIPT
-                SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
+                JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG"
+
+                rm $LOG
+                cat $SCRIPT | $JOB_QSUB
             fi 
 
             NUM_SAMPLES=$((NUM_SAMPLES+1))
             TOTAL=$((TOTAL+1))
         done
-    done 
+    done
+
+    WAIT_FOR_CLEAR_QUEUE
+ 
 done
+
+
 
 echo -e "PASSED\tFAILED\tTOTAL\tNUM_SAMPLES\tEXPECTED"
 echo -e "$PASSED\t$FAILED\t$TOTAL\t$NUM_SAMPLES\t$EXPECTED"
-
-#        PASSED  FAILED  TOTAL   NUM_SAMPLES     EXPECTED
-#1stPass 
-#2ndPass 
 
 
