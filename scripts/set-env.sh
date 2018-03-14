@@ -76,38 +76,3 @@ LIMIT_RUNNING_JOBS_TO () {
         NUM_JOBS_IN_QUEUE=$(qstat | grep Sh. | wc -l)
     done
 }
-
-# WORKFLOW/PIPELINE ------------------------------------------------------------
-# 01] set-env.sh
-# 02] map_filterReads.sh
-# 03] map_prepGenome.sh
-# 04] map_mapAndProcessBam.sh
-# 05] map_checkBams.sh
-# 06] map_buildListOfIntervals.sh
-# 07] bqsr-r1_haplotypeCaller.sh
-# 08] bqsr-r1_prepForGenotype.sh
-# 09] bqsr-r1_genotype.sh
-# 10] bqsr-r1_buildCohortVcf.sh
-# 11] bqsr-r1_bqsr.sh
-# 12] bqsr-r2_haplotypeCaller.sh
-# 13] bqsr-r2_prepForGenotype.sh
-# 14] bqsr-r2_genotype.sh
-# 15] bqsr-r2_buildCohortVcf.sh
-# 16] bqsr-r2_bqsr.sh
-# 17] bqsr-r3_haplotypeCaller.sh
-# 18] bqsr-r3_prepForGenotype.sh
-# 19] bqsr-r3_genotype.sh
-# ***20] bqsr-r3_buildCohortVcf.sh
-# ***21] bqsr-r3_bqsr.sh
-
-
-
-#--results
-#----filter_reads
-#----map_reads
-#----intervals
-#----base_recalibration
-#------r0_bqsr_tables
-#------r1_bqsr_tables
-#------rN_bqsr_tables
-#------<final modified bams>
