@@ -110,27 +110,26 @@ while [ $FAILED -ne 0]; do
     done
 done
 
-echo -e "PASSED\tFAILED\tTOTAL\tEXPECTED"
-echo -e "$PASSED\t$FAILED\t$TOTAL\t$EXPECTED"
 
-#           PASSED  FAILED  TOTAL   EXPECTED
-#1stPass    
-#2ndPass    
+#
+#                               <...wait...>
+#
 
-
-
-
-WORK_DIR=$BQSR_DIR/$ROUND"_db"
-
-mkdir $WORK_DIR
-cd $WORK_DIR
+#sleep while all jobs are running
+WAIT_FOR_CLEAR_QUEUE
+#
+#                               <...wait...>
+#
 
 
 # GDBIMPORT ----------------------------------------------------------------
-for SAMPLE in $(cat $SAMPLE_LIST); do
-    echo $BQSR_DIR/$ROUND"_indvi_vcf"$SAMPLE"_bqsr-r2.g.vcf" >>samples_$ROUND.list
-done
+DB_DIR=$BQSR_DIR/$ROUND"_db"
 
+mkdir $DB_DIR
+
+for SAMPLE in $(cat $SAMPLE_LIST); do
+    echo $BQSR_DIR/$ROUND"_indvi_vcf"/$SAMPLE"_bqsr-"$ROUND".g.vcf" >>$WORK_DIR/samples_$ROUND.list
+done
 
 # loop for submission
 for INTERVAL in $(cat $INTERVALS_DIR/all_filtered_intervals.list); do
@@ -144,13 +143,13 @@ for INTERVAL in $(cat $INTERVALS_DIR/all_filtered_intervals.list); do
     SCRIPT="$SCRIPTS_DIR/$JOB_NAME.sh"
 
     IN_LIST=$WORK_DIR/samples_$ROUND.list  
-    OUT_DB="$WORK_DIR/$SAFE_INTERVAL_NAME"
+    OUT_DB="$DB_DIR/$SAFE_INTERVAL_NAME"
     
     JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG $DEPEND"
 
     CMD="$SINGULARITY gatk --java-options "'"-Xmx4g -Xms4g"'" \
         GenomicsDBImport \
-        -V samples_$ROUND.list \
+        -V $WORK_DIR/samples_$ROUND.list \
         --genomicsdb-workspace-path $OUT_DB \
         -L $INTERVAL \
         --reader-threads $THREADS \
@@ -199,7 +198,7 @@ while [ $FAILED -ne 0]; do
         else
             FAILED=$((FAILED+1))
        
-            rm -r $WORK_DIR/$ROUND"_db"/$GDBIMPORT_JOB_NAME 
+            rm -r $DB_DIR/$SAFE_INTERVAL_NAME 
             rm $LOG
             cat $SCRIPT | $JOB_QSUB
 
@@ -208,10 +207,4 @@ while [ $FAILED -ne 0]; do
         TOTAL=$((TOTAL+1))
     done
 done
-
-echo -e "PASSED\tFAILED\tTOTAL\tEXPECTED"
-echo -e "$PASSED\t$FAILED\t$TOTAL\t$EXPECTED"
-
-#           PASSED  FAILED  TOTAL   EXPECTED
-#1stPass    
 
