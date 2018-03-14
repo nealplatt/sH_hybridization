@@ -30,21 +30,11 @@ sudo singularity build scripts/Singularity <image name>
     map_mapAndProcessBam.sh
     map_checkBams.sh
     map_buildListOfIntervals.sh
-    bqsr-r1_haplotypeCaller.sh
-    bqsr-r1_prepForGenotype.sh
-    bqsr-r1_genotype.sh
-    bqsr-r1_buildCohortVcf.sh
-    bqsr-r1_bqsr.sh
-    bqsr-r2_haplotypeCaller.sh
-    bqsr-r2_prepForGenotype.sh
-    bqsr-r2_genotype.sh
-    bqsr-r2_buildCohortVcf.sh
-    bqsr-r2_bqsr.sh
-    bqsr-r3_haplotypeCaller.sh
-    bqsr-r3_prepForGenotype.sh
-    bqsr-r3_genotype.sh
-    # ***bqsr-r3_buildCohortVcf.sh
-    # ***bqsr-r3_bqsr.sh
+    bqsr_haplotypeCaller.sh
+    bqsr_prepForGenotype.sh
+    bqsr_genotype.sh
+    bqsr_buildCohortVcf.sh
+    bqsr_recalibration.sh
     ```
 
 
