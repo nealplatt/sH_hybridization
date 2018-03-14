@@ -58,8 +58,7 @@ SUBMIT () {
 
 
 WAIT_FOR_CLEAR_QUEUE () {
-    # $1 = search term
-    NUM_JOBS_IN_QUEUE=$(qstat | grep $1 | wc -l)
+    NUM_JOBS_IN_QUEUE=$(qstat | grep "snp." | wc -l)
    
     while [ $NUM_JOBS_IN_QUEUE -gt 0 ]; do
         sleep 60s
@@ -69,13 +68,12 @@ WAIT_FOR_CLEAR_QUEUE () {
 }
 
 LIMIT_RUNNING_JOBS_TO () {
-    # $1 = search term
-    # $2 = num max jobs
-    NUM_JOBS_IN_QUEUE=$(qstat | grep $1 | wc -l)
+    # $1 = num max jobs
+    NUM_JOBS_IN_QUEUE=$(qstat | grep "snp." | wc -l)
    
-    while [ $NUM_JOBS_IN_QUEUE -gt $2 ]; do
+    while [ $NUM_JOBS_IN_QUEUE -gt $1 ]; do
         sleep 60s
         echo -n "."
-        NUM_JOBS_IN_QUEUE=$(qstat | grep $1 | wc -l)
+        NUM_JOBS_IN_QUEUE=$(qstat | grep "snp." | wc -l)
     done
 }

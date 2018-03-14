@@ -18,7 +18,7 @@ for SAMPLE in $(cat $SAMPLE_LIST); do
     # MERGE_INDIV_GVCF ---------------------------------------------------------
     ls  $BQSR_DIR/$ROUND"_hc"/$SAMPLE"_interval_"*".g.vcf" >$SAMPLE.list      
 
-    JOB_NAME=$SAMPLE.$ROUND.merge
+    JOB_NAME="snp."$SAMPLE.$ROUND.merge
     THREADS=12
     LOG="$LOGS_DIR/$JOB_NAME.log" 
     DEPEND=""
@@ -36,7 +36,7 @@ for SAMPLE in $(cat $SAMPLE_LIST); do
 
 
     # SORT_INDIV_GVCF ----------------------------------------------------------
-    JOB_NAME=$SAMPLE.$ROUND.sort
+    JOB_NAME="snp."$SAMPLE.$ROUND.sort
     THREADS=12
     LOG="$LOGS_DIR/$JOB_NAME.log" 
     DEPEND="-hold_jid $SAMPLE.$ROUND.merge"
@@ -77,8 +77,8 @@ while [ $FAILED -ne 0 ]; do
     for SAMPLE in $(cat $SAMPLE_LIST); do
         THREADS=12
                 
-        MERGE_JOB_NAME=$SAMPLE.$ROUND.merge
-        SORT_JOB_NAME=$SAMPLE.$ROUND.sort
+        MERGE_JOB_NAME="snp."$SAMPLE.$ROUND.merge
+        SORT_JOB_NAME="snp."$SAMPLE.$ROUND.sort
       
         MERGE_LOG="$LOGS_DIR/$MERGE_JOB_NAME.log"  
         SORT_LOG="$LOGS_DIR/$SORT_JOB_NAME.log"
@@ -127,7 +127,7 @@ for INTERVAL in $(cat $INTERVALS_DIR/all_filtered_intervals.list); do
 
     SAFE_INTERVAL_NAME=$(echo $INTERVAL | sed 's/:/-/')
 
-    JOB_NAME=$SAFE_INTERVAL_NAME"_"$ROUND
+    JOB_NAME="snp."$SAFE_INTERVAL_NAME"_"$ROUND
     THREADS=12
     LOG="$LOGS_DIR/$JOB_NAME.log" 
     DEPEND=""
@@ -150,7 +150,7 @@ for INTERVAL in $(cat $INTERVALS_DIR/all_filtered_intervals.list); do
 
     #only submit a limited number of jobs at a time...(dont overload queue)
     echo "waiting for space to clear on the queue"    
-    LIMIT_RUNNING_JOBS_TO nplatt 300
+    LIMIT_RUNNING_JOBS_TO 300
         
     SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"    
 done
@@ -162,7 +162,7 @@ done
 
 #sleep while all jobs are running
 echo "waiting for queue to clear"
-WAIT_FOR_CLEAR_QUEUE nplatt
+WAIT_FOR_CLEAR_QUEUE
 #
 #                               <...wait...>
 #
@@ -179,7 +179,7 @@ while [ $FAILED -ne 0 ]; do
 
     for INTERVAL in $(cat $INTERVALS_DIR/all_filtered_intervals.list); do
         SAFE_INTERVAL_NAME=$(echo $INTERVAL | sed 's/:/-/')
-        JOB_NAME=$SAFE_INTERVAL_NAME"_"$ROUND
+        JOB_NAME="snp."$SAFE_INTERVAL_NAME"_"$ROUND
         THREADS=12
         LOG="$LOGS_DIR/$JOB_NAME.log" 
         DEPEND=""

@@ -17,7 +17,7 @@ cd $ROUND"_genotype"
 #genotype each interval in the db_r3 dir (qsub)
 for INTERVAL in $(ls $BQSR_DIR/$ROUND"_db"); do
     #job specific params    
-    JOB_NAME=$INTERVAL".genotype_"$ROUND
+    JOB_NAME="snp."$INTERVAL".genotype_"$ROUND
     THREADS=1
     LOG="$LOGS_DIR/$JOB_NAME.log" 
     DEPEND=""
@@ -68,7 +68,7 @@ while [ $FAILED -ne 0 ]; do
 
     #check that each log file has "GenotypeGVCFs done" indicating run to completion
     for INTERVAL in $(ls $BQSR_DIR/$ROUND"_db"/$INTERVAL); do
-        JOB_NAME=$INTERVAL".genotype_"$ROUND
+        JOB_NAME="snp."$INTERVAL".genotype_"$ROUND
         THREADS=1
         LOG="$LOGS_DIR/$JOB_NAME.log" 
         DEPEND=""

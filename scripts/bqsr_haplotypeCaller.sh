@@ -38,7 +38,7 @@ for SAMPLE in $(cat $SAMPLE_LIST); do
         SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
 
         #only submit a limited number of jobs at a time...(dont overload queue)
-        LIMIT_RUNNING_JOBS_TO nplatt 3000
+        LIMIT_RUNNING_JOBS_TO 3000
 
     done
 done
@@ -49,7 +49,7 @@ done
 
 #sleep while all jobs with name SH.* finish running
 echo "waiting for queue to clear"
-WAIT_FOR_CLEAR_QUEUE "Sh."
+WAIT_FOR_CLEAR_QUEUE
 #
 #                               <...wait...>
 #
@@ -66,7 +66,7 @@ while [ $FAILED -ne 0 ]; do
     for SAMPLE in $(cat $SAMPLE_LIST); do
     
         for INTERVAL in $(seq -w 0 49); do
-            JOB_NAME=$SAMPLE".$ROUND."$INTERVAL.hc
+            JOB_NAME="snp."$SAMPLE".$ROUND."$INTERVAL.hc
             LOG="$LOGS_DIR/$JOB_NAME.log" 
             SCRIPT="$SUB_SCRIPTS_DIR/$JOB_NAME.sh"
 
@@ -88,7 +88,7 @@ while [ $FAILED -ne 0 ]; do
     done
     
     echo "waiting for queue to clear"
-    WAIT_FOR_CLEAR_QUEUE "Sh."
+    WAIT_FOR_CLEAR_QUEUE
  
 done
 
