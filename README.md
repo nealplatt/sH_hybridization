@@ -10,15 +10,19 @@
 git clone https://github.com/nealplatt/sH_hybridization.git
 ```
 
-2) Download raw sequence reads to data/
+2) Build singularity image/container
+```    
+sudo singularity build scripts/Singularity <image name>
+```
+
+4) Modify major env variables in the `scripts/set-env.sh` 
+
+3) Download raw sequence reads to data/
 ```    
 # SRA links provided upon publication
 ```
 
-3) Modify major env variables in the `scripts/set-env.sh` 
-
-
-4) Execute scripts in scripts in the following order:
+5) Execute scripts in scripts in the following order:
     ```
     set-env.sh
     map_filterReads.sh
