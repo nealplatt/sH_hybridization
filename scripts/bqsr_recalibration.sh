@@ -4,18 +4,18 @@
 # NPlatt
 # Neal.platt@gmail.com
 
-# bqsr-r2_bqsr.sh - use hard filtered SNPs to recalibrate base calls (round 1)
+# bqsr_recalibration.sh - use hard filtered SNPs to recalibrate base calls (round 1)
 
 # TODO(nplatt): update comments
 
 cd $BQSR_DIR
 
+#!!! UNMODIFIED_BAM_DIR set in the pipeline script
+for BAM in $(ls $UNMODIFIED_BAM_DIR/*_.bam); do
 
-for BAM in $(ls $MAP_DIR/*_processed.bam); do <-----------------------------------------------------changed to in.bam from prev round
+    SAMPLE=$(echo $(basename $BAM) | cut -f1,2 -d"_")
 
-    SAMPLE=$(basename $BAM _processed.bam)<-----------------------------------------------------changed to in.bam from prev round
-
-    # RECAL SCORE/OBSERVE READS-------------------------------------------------    
+    # BUILD TABLE FROM HQ SNPS AND PREV BAMS -----------------------------------    
     JOB_NAME="snp.$SAMPLE.recal_score_reads_"$ROUND
     THREADS=12
     LOG="$LOGS_DIR/$JOB_NAME.log" 
@@ -26,7 +26,7 @@ for BAM in $(ls $MAP_DIR/*_processed.bam); do <---------------------------------
 
     IN_BAM=$BAM
     IN_VCF=$ROUND"_vcfs/cohort_"$ROUND"_filteredVariants.g.vcf"
-    OUT_TABLE=$BQSR_DIR/$ROUND"_tables/"$SAMPLE"_prerecal-"$ROUND".table"
+    OUT_TABLE=$BQSR_DIR/$ROUND"_tables/"$SAMPLE"_PRErecal."$ROUND".table"
     
     CMD="$SINGULARITY gatk BaseRecalibrator \
         -R $REFERENCE \
@@ -37,7 +37,7 @@ for BAM in $(ls $MAP_DIR/*_processed.bam); do <---------------------------------
     DELETE $LOG $SCRIPT
     SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
 
-    # MOD READS ----------------------------------------------------------------    
+    # MODIFY THE BAM FILES -----------------------------------------------------    
     JOB_NAME="snp.$SAMPLE.recal_modify_reads_r2"
     THREADS=12
     LOG="$LOGS_DIR/$JOB_NAME.log" 
@@ -47,7 +47,7 @@ for BAM in $(ls $MAP_DIR/*_processed.bam); do <---------------------------------
     IN_BAM=$BAM
     IN_VCF=$IN_VCF
     IN_TABLE=$OUT_TABLE
-    OUT_BAM=$BQSR_DIR/$ROUND"_bqsr_bams"/$SAMPLE".bqsr-"$ROUND".bam"
+    OUT_BAM=$BQSR_DIR/$ROUND"_bqsr_bams"/$SAMPLE"_bqsr-"$ROUND".bam"
 
     JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG $DEPEND"
     
@@ -60,7 +60,7 @@ for BAM in $(ls $MAP_DIR/*_processed.bam); do <---------------------------------
     DELETE $LOG $SCRIPT
     SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB" 
 
-    # RECAL SCORE/OBSERVE READS-------------------------------------------------    
+    # SCORE THE RECALIBRATED BAM FILES -----------------------------------------    
 
     JOB_NAME="snp.$SAMPLE.recal_score_modreads_r2"
     THREADS=12
@@ -70,7 +70,7 @@ for BAM in $(ls $MAP_DIR/*_processed.bam); do <---------------------------------
 
     IN_BAM=$OUT_BAM
     IN_VCF=$IN_VCF
----------------------------------------------OUT_TABLE=$BQSR_DIR/r2_cov_plots/$SAMPLE"_postrecal-1_data.table"
+    OUT_TABLE=$ROUND"_tables/"$SAMPLE"_POSTrecal.$ROUND.table"
 
     JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG $DEPEND"
     
@@ -83,7 +83,7 @@ for BAM in $(ls $MAP_DIR/*_processed.bam); do <---------------------------------
     DELETE $LOG $SCRIPT
     SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB" 
 
-    # RECAL ANALYZE COVARIATES -------------------------------------------------    
+    # ANALYZE THE RECALIBRATED DATA --------------------------------------------    
     JOB_NAME="snp.$SAMPLE.covariate_r2"
     THREADS=12
     LOG="$LOGS_DIR/$JOB_NAME.log" 
@@ -92,13 +92,14 @@ for BAM in $(ls $MAP_DIR/*_processed.bam); do <---------------------------------
 
     JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG $DEPEND"
 
------------------------------------------BEFORE_TABLE=$BQSR_DIR/r1_cov_plots/$SAMPLE"_postrecal-1_data.table"
------------------------------------------AFTER_TABLE=$BQSR_DIR/r2_cov_plots/$SAMPLE"_postrecal-1_data.table"
+    #!!! BEFORE_MOD_TABLE set in the pipeline script
+    BEFORE_MOD_TABLE=$PREV_RECAL_TABLE_DIR$SAMPLE$PREV_RECAL_TABLE_EXT
+    AFTER_MOD_TABLE=$ROUND"_tables/"$SAMPLE"_POSTrecal.$ROUND.table"
     OUT_PDF=$BQSR_DIR/$ROUND"_cov_plots/"$SAMPLE"_recalibration_plot."$ROUND".pdf"
 
     CMD="$SINGULARITY gatk AnalyzeCovariates \
-        -before $BEFORE_TABLE \
-        -after $AFTER_TABLE \
+        -before $BEFORE_MOD_TABLE \
+        -after $AFTER_MOD_TABLE \
         -plots $OUT_PDF"
 
     DELETE $LOG $SCRIPT
@@ -107,28 +108,4 @@ for BAM in $(ls $MAP_DIR/*_processed.bam); do <---------------------------------
 done
 
 #check for convergence in recal data
-
-# CLEANUP ----------------------------------------------------------------------
-#rm -r hc_vcf_r2
-#rm -r individual_vcf_r2
-#rm -r r1_bqsr_bams
-#rm -r db_r2
-#rm -r genotype_interval_vcfs_r2
-#rm -r cohort_vcf_r2
-#rm samples_r2.list
-#rm samples.list
-#rm cohort_filtered_snps.g.vcf.idx
-#rm cohort_preBSQR.g.vcf
-#rm cohort_preBSQR.g.vcf.idx
-#rm cohort_preBSQR_rawIndels.g.vcf
-#rm cohort_preBSQR_rawIndels.g.vcf.idx
-#rm cohort_preBSQR_rawSNPS.g.vcf
-#rm cohort_preBSQR_rawSNPS.g.vcf.idx
-#rm cohort_filtered_indels.g.vcf
-#rm cohort_filtered_indels.g.vcf.idx
-#rm cohort_filtered_snps.g.vcf
-#rm cohort_filtered_snps.g.vcf.idx
-#rm cohort_r1_BQSR.g.vcf
-
-
 
