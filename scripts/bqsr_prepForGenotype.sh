@@ -11,7 +11,7 @@
 
 source /master/nplatt/sH_hybridization/scripts/set-env.sh
 
-cd $ROUND"_individual_VCF"
+cd $BQSR_DIR/$ROUND"_individual_VCF"
 
 for SAMPLE in $(cat $SAMPLE_LIST); do
 
