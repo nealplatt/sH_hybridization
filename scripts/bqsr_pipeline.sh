@@ -27,10 +27,10 @@ export PREV_RECAL_TABLE_EXT="_PRErecal.r1.table"
 
 #make major directories
 mkdir $ROUND"_hc"
-mkdir $ROUND"_individual_VCF"
+mkdir $ROUND"_individual_vcf"
 mkdir $ROUND"_db"
 mkdir $ROUND"_genotype"
-mkdir $ROUND"_cohort_VCF"
+mkdir $ROUND"_cohort_vcf"
 mkdir $ROUND"_vcfs"
 mkdir $ROUND"_bams"
 mkdir $ROUND"_tables"

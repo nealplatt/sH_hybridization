@@ -11,7 +11,7 @@
 
 source /master/nplatt/sH_hybridization/scripts/set-env.sh
 
-cd $BQSR_DIR/$ROUND"_individual_VCF"
+cd $BQSR_DIR/$ROUND"_individual_vcf"
 
 for SAMPLE in $(cat $SAMPLE_LIST); do
 
@@ -119,7 +119,7 @@ WAIT_FOR_CLEAR_QUEUE
 
 # GDBIMPORT ----------------------------------------------------------------
 for SAMPLE in $(cat $SAMPLE_LIST); do
-    echo $BQSR_DIR/$ROUND"_indvi_vcf"/$SAMPLE"_bqsr-"$ROUND".g.vcf" >>$ROUND"_individual_VCF"/samples_$ROUND.list
+    echo $BQSR_DIR/$ROUND"_indvi_vcf"/$SAMPLE"_bqsr-"$ROUND".g.vcf" >>$ROUND"_individual_vcf"/samples_$ROUND.list
 done
 
 # loop for submission
@@ -133,7 +133,7 @@ for INTERVAL in $(cat $INTERVALS_DIR/all_filtered_intervals.list); do
     DEPEND=""
     SCRIPT="$SUB_SCRIPTS_DIR/$JOB_NAME.sh"
 
-    IN_LIST=$ROUND"_individual_VCF"/samples_$ROUND.list  
+    IN_LIST=$ROUND"_individual_vcf"/samples_$ROUND.list  
     OUT_DB=$ROUND"_db"/$SAFE_INTERVAL_NAME
     
     JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG $DEPEND"

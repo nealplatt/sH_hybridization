@@ -11,7 +11,7 @@
 
 WAIT_FOR_CLEAR_QUEUE
 
-cd $ROUND"_cohort_VCF"
+cd $ROUND"_cohort_vcf"
 
 # MERGE ROUND 1 ----------------------------------------------------------------
 ls $BQSR_DIR/$ROUND"_genotype"/*.vcf >interval_vcf.list

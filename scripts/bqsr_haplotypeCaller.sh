@@ -46,7 +46,6 @@ done
 #
 #                               <...wait...>
 #
-
 #sleep while all jobs with name SH.* finish running
 echo "waiting for queue to clear"
 WAIT_FOR_CLEAR_QUEUE
@@ -91,4 +90,5 @@ while [ $FAILED -ne 0 ]; do
     WAIT_FOR_CLEAR_QUEUE
  
 done
+
 
