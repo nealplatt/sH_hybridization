@@ -8,146 +8,25 @@
 
 # TODO(nplatt): update comments
 
-source /master/nplatt/sH_hybridization/scripts/set-env.sh
-
-ROUND=r3
-WORK_DIR=$BQSR_DIR/$ROUND"_bqsr"
-
-cd $WORK_DIR
-
-# SELECT SNPS ------------------------------------------------------------------
-JOB_NAME=cohort_select_snps
-THREADS=1
-LOG="$LOGS_DIR/$JOB_NAME.log" 
-DEPEND="sort_cohort"
-SCRIPT="$SCRIPTS_DIR/$JOB_NAME.sh"
-
-JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG $DEPEND"
-
-IN_VCF="$WORK_DIR/cohort_$ROUND.g.vcf"
-OUT_VCF="$WORK_DIR/cohort_"$ROUND"_rawSNPS.g.vcf"
-    
-CMD="$SINGULARITY gatk SelectVariants \
-    -V $IN_VCF \
-    -select-type SNP \
-    -O $OUT_VCF \
-    -R $REFERENCE"
-
-DELETE $LOG $SCRIPT
-SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
-
-# FILTER SNPS ------------------------------------------------------------------
-JOB_NAME="cohort_filter_snps"
-THREADS=1
-LOG="$LOGS_DIR/$JOB_NAME.log" 
-DEPEND="-hold_jid cohort_select_snps"
-SCRIPT="$SCRIPTS_DIR/$JOB_NAME.sh"
-
-JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG $DEPEND"
-
-IN_VCF="$WORK_DIR/cohort_"$ROUND"_rawSNPS.g.vcf"
-OUT_VCF="$WORK_DIR/cohort_"$ROUND"_filteredSNPS.g.vcf"
-
-CMD="$SINGULARITY gatk VariantFiltration \
-    -R $REFERENCE \
-    -V $IN_VCF \
-    --filter-expression "'"QD < 2.0 || FS > 60.0 || MQ < 40.0 || MQRankSum < -12.5 || ReadPosRankSum < -8.0"'" \
-    --filter-name "'"recommended_snp_filter"'" \
-    -O $OUT_VCF"
-
-DELETE $LOG $SCRIPT
-SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
-
-# SELECT INDELS ----------------------------------------------------------------
-JOB_NAME="cohort_select_indels"
-THREADS=1
-LOG="$LOGS_DIR/$JOB_NAME.log" 
-DEPEND="sort_cohort"
-SCRIPT="$SCRIPTS_DIR/$JOB_NAME.sh"
-
-JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG $DEPEND"
-
-IN_VCF="$WORK_DIR/cohort_$ROUND.g.vcf"
-OUT_VCF="$WORK_DIR/cohort_"$ROUND"_rawINDELS.g.vcf"
-    
-CMD="$SINGULARITY gatk SelectVariants \
-    -V $IN_VCF \
-    -select-type INDEL \
-    -O $OUT_VCF \
-    -R $REFERENCE"
-
-DELETE $LOG $SCRIPT
-SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
+cd $BQSR_DIR
 
 
-# FILTER INDELS ------------------------------------------------------------------
-JOB_NAME="cohort_filter_indels"
-THREADS=1
-LOG="$LOGS_DIR/$JOB_NAME.log" 
-DEPEND="-hold_jid cohort_select_indels"
-SCRIPT="$SCRIPTS_DIR/$JOB_NAME.sh"
+for BAM in $(ls $MAP_DIR/*_processed.bam); do <-----------------------------------------------------changed to in.bam from prev round
 
-JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG $DEPEND"
-
-IN_VCF="$WORK_DIR/cohort_"$ROUND"_rawINDELS.g.vcf"
-OUT_VCF="$WORK_DIR/cohort_"$ROUND"_filteredINDELS.g.vcf"
-
-CMD="$SINGULARITY gatk VariantFiltration \
-    -R $REFERENCE \
-    -V $IN_VCF \
-    --filter-expression "'"QD < 2.0 || FS > 200.0 || ReadPosRankSum < -20.0"'" \
-    --filter-name "'"recommended_indel_filter"'" \
-    -O $OUT_VCF"
-
-DELETE $LOG $SCRIPT
-SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
-
-
-# MERGE VARIANTS----------------------------------------------------------------
-JOB_NAME="merge_filtered_variants"
-THREADS=1
-LOG="$LOGS_DIR/$JOB_NAME.log" 
-DEPEND="-hold_jid cohort_filter_indels,cohort_filter_snps"
-SCRIPT="$SCRIPTS_DIR/$JOB_NAME.sh"
-
-JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG $DEPEND"
-
-IN_SNP_VCF="$WORK_DIR/cohort_"$ROUND"_filteredSNPS.g.vcf"
-IN_INDEL_VCF="$WORK_DIR/cohort_"$ROUND"_filteredINDELS.g.vcf"
-OUT_VCF=$BQSR_DIR/$ROUND"_filtered_vcf/cohort_"$ROUND"_filteredVariants.g.vcf"
-
-CMD="$SINGULARITY gatk CombineVariants \
-   -R $REFERENCE \
-   --variant:snps $IN_SNP_VCF \
-   --variant:indels $IN_INDEL_VCF \
-   -O $OUT_VCF \
-   -genotypeMergeOptions PRIORITIZE \
-   -priority snps,indels"
-
-DELETE $LOG $SCRIPT
-SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
-
-
-################################################################################
-#                       R E C A L I B R A T I O N 
-################################################################################
-
-for BAM in $(ls $MAP_DIR/*_processed.bam); do
-
-    SAMPLE=$(basename $BAM _processed.bam)
+    SAMPLE=$(basename $BAM _processed.bam)<-----------------------------------------------------changed to in.bam from prev round
 
     # RECAL SCORE/OBSERVE READS-------------------------------------------------    
-    JOB_NAME="$SAMPLE.recal_score_reads_"$ROUND
+    JOB_NAME="snp.$SAMPLE.recal_score_reads_"$ROUND
     THREADS=12
     LOG="$LOGS_DIR/$JOB_NAME.log" 
-    DEPEND="-hold_jid merge_filtered_variants"
+    DEPEND="-hold_jid snp.merge_filtered_variants"
     SCRIPT="$SCRIPTS_DIR/$JOB_NAME.sh"
 
     JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG $DEPEND"
 
     IN_BAM=$BAM
-    IN_VCF=$BQSR_DIR/$ROUND"_filtered_vcf/cohort_"$ROUND"_filteredVariants.g.vcf"
-    OUT_TABLE=$BQSR_DIR/$ROUND"_cov_plots/"$SAMPLE"_recal-"$ROUND"_data.table"
+    IN_VCF=$ROUND"_vcfs/cohort_"$ROUND"_filteredVariants.g.vcf"
+    OUT_TABLE=$BQSR_DIR/$ROUND"_tables/"$SAMPLE"_prerecal-"$ROUND".table"
     
     CMD="$SINGULARITY gatk BaseRecalibrator \
         -R $REFERENCE \
@@ -159,10 +38,10 @@ for BAM in $(ls $MAP_DIR/*_processed.bam); do
     SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
 
     # MOD READS ----------------------------------------------------------------    
-    JOB_NAME="$SAMPLE.recal_modify_reads_r2"
+    JOB_NAME="snp.$SAMPLE.recal_modify_reads_r2"
     THREADS=12
     LOG="$LOGS_DIR/$JOB_NAME.log" 
-    DEPEND="-hold_jid $SAMPLE.recal_score_reads_r2"
+    DEPEND="-hold_jid snp.$SAMPLE.recal_score_reads_r2"
     SCRIPT="$SCRIPTS_DIR/$JOB_NAME.sh"
 
     IN_BAM=$BAM
@@ -183,10 +62,10 @@ for BAM in $(ls $MAP_DIR/*_processed.bam); do
 
     # RECAL SCORE/OBSERVE READS-------------------------------------------------    
 
-    JOB_NAME="$SAMPLE.recal_score_modreads_r2"
+    JOB_NAME="snp.$SAMPLE.recal_score_modreads_r2"
     THREADS=12
     LOG="$LOGS_DIR/$JOB_NAME.log" 
-    DEPEND="-hold_jid $SAMPLE.recal_modify_reads_r2"
+    DEPEND="-hold_jid snp.$SAMPLE.recal_modify_reads_r2"
     SCRIPT="$SCRIPTS_DIR/$JOB_NAME.sh"
 
     IN_BAM=$OUT_BAM
@@ -205,10 +84,10 @@ for BAM in $(ls $MAP_DIR/*_processed.bam); do
     SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB" 
 
     # RECAL ANALYZE COVARIATES -------------------------------------------------    
-    JOB_NAME="$SAMPLE.covariate_r2"
+    JOB_NAME="snp.$SAMPLE.covariate_r2"
     THREADS=12
     LOG="$LOGS_DIR/$JOB_NAME.log" 
-    DEPEND="-hold_jid $SAMPLE.recal_score_reads_r2,$SAMPLE.recal_score_modreads_r2"
+    DEPEND="-hold_jid snp.$SAMPLE.recal_score_reads_r2,snp.$SAMPLE.recal_score_modreads_r2"
     SCRIPT="$SCRIPTS_DIR/$JOB_NAME.sh"
 
     JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG $DEPEND"
