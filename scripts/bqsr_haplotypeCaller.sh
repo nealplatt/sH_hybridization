@@ -8,8 +8,6 @@
 
 # TODO(neal): update comments
 
-source /master/nplatt/sH_hybridization/scripts/set-env.sh
-
 cd $BQSR_DIR/$ROUND"_hc"
 
 for SAMPLE in $(cat $SAMPLE_LIST); do
@@ -39,6 +37,9 @@ for SAMPLE in $(cat $SAMPLE_LIST); do
         DELETE $LOG $SCRIPT
         SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
 
+        #only submit a limited number of jobs at a time...(dont overload queue)
+        LIMIT_RUNNING_JOBS_TO nplatt 3000
+
     done
 done
 
@@ -47,6 +48,7 @@ done
 #
 
 #sleep while all jobs with name SH.* finish running
+echo "waiting for queue to clear"
 WAIT_FOR_CLEAR_QUEUE "Sh."
 #
 #                               <...wait...>
@@ -84,7 +86,8 @@ while [ $FAILED -ne 0 ]; do
             TOTAL=$((TOTAL+1))
         done
     done
-
+    
+    echo "waiting for queue to clear"
     WAIT_FOR_CLEAR_QUEUE "Sh."
  
 done

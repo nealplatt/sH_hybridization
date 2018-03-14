@@ -149,6 +149,7 @@ for INTERVAL in $(cat $INTERVALS_DIR/all_filtered_intervals.list); do
     DELETE $LOG $SCRIPT
 
     #only submit a limited number of jobs at a time...(dont overload queue)
+    echo "waiting for space to clear on the queue"    
     LIMIT_RUNNING_JOBS_TO nplatt 300
         
     SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"    
@@ -160,6 +161,7 @@ done
 #
 
 #sleep while all jobs are running
+echo "waiting for queue to clear"
 WAIT_FOR_CLEAR_QUEUE nplatt
 #
 #                               <...wait...>

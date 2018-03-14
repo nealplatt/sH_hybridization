@@ -48,6 +48,7 @@ done
 #
 
 #sleep while all jobs are running
+echo "waiting for queue to clear"
 WAIT_FOR_CLEAR_QUEUE
 #
 #                               <...wait...>
@@ -90,6 +91,7 @@ while [ $FAILED -ne 0 ]; do
         TOTAL=$((TOTAL+1))
     done
 
+    echo "waiting for queue to clear"
     WAIT_FOR_CLEAR_QUEUE
 
 done
