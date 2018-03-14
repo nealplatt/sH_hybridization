@@ -22,7 +22,7 @@ for SAMPLE in $(cat $SAMPLE_LIST); do
     THREADS=12
     LOG="$LOGS_DIR/$JOB_NAME.log" 
     DEPEND=""
-    SCRIPT="$SCRIPTS_DIR/$JOB_NAME.sh"
+    SCRIPT="$SUB_SCRIPTS_DIR/$JOB_NAME.sh"
 
     IN_LIST=$SAMPLE.list
     OUT_GVCF="tmp_"$SAMPLE".merged.g.vcf"
@@ -40,7 +40,7 @@ for SAMPLE in $(cat $SAMPLE_LIST); do
     THREADS=12
     LOG="$LOGS_DIR/$JOB_NAME.log" 
     DEPEND="-hold_jid $SAMPLE.$ROUND.merge"
-    SCRIPT="$SCRIPTS_DIR/$JOB_NAME.sh"
+    SCRIPT="$SUB_SCRIPTS_DIR/$JOB_NAME.sh"
 
     IN_GVCF=$OUT_GVCF
     OUT_GVCF=$SAMPLE"_bqsr-"$ROUND".g.vcf"
@@ -83,8 +83,8 @@ while [ $FAILED -ne 0 ]; do
         MERGE_LOG="$LOGS_DIR/$MERGE_JOB_NAME.log"  
         SORT_LOG="$LOGS_DIR/$SORT_JOB_NAME.log"
 
-        MERGE_SCRIPT="$SCRIPTS_DIR/$MERGE_JOB_NAME.sh"  
-        SORT_SCRIPT="$SCRIPTS_DIR/$SORT_JOB_NAME.sh"
+        MERGE_SCRIPT="$SUB_SCRIPTS_DIR/$MERGE_JOB_NAME.sh"  
+        SORT_SCRIPT="$SUB_SCRIPTS_DIR/$SORT_JOB_NAME.sh"
 
         MERGE_QSUB="$QSUB -pe mpi $THREADS -N $MERGE_JOB_NAME -o $MERGE_LOG"
         SORT_QSUB="$QSUB -pe mpi $THREADS -N $SORT_JOB_NAME -o $SORT_LOG -hold_jid $MERGE_JOB_NAME"
@@ -131,7 +131,7 @@ for INTERVAL in $(cat $INTERVALS_DIR/all_filtered_intervals.list); do
     THREADS=12
     LOG="$LOGS_DIR/$JOB_NAME.log" 
     DEPEND=""
-    SCRIPT="$SCRIPTS_DIR/$JOB_NAME.sh"
+    SCRIPT="$SUB_SCRIPTS_DIR/$JOB_NAME.sh"
 
     IN_LIST=$ROUND"_individual_VCF"/samples_$ROUND.list  
     OUT_DB=$ROUND"_db"/$SAFE_INTERVAL_NAME
@@ -181,7 +181,7 @@ while [ $FAILED -ne 0 ]; do
         THREADS=12
         LOG="$LOGS_DIR/$JOB_NAME.log" 
         DEPEND=""
-        SCRIPT="$SCRIPTS_DIR/$JOB_NAME.sh"
+        SCRIPT="$SUB_SCRIPTS_DIR/$JOB_NAME.sh"
         JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG $DEPEND"
 
         if [[ $(grep "genomicsdb.GenomicsDBImport done" $LOG) ]]; then

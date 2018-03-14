@@ -20,7 +20,7 @@ for SAMPLE in $(cat $SAMPLE_LIST); do
         THREADS=1
         LOG="$LOGS_DIR/$JOB_NAME.log" 
         DEPEND=""
-        SCRIPT="$SCRIPTS_DIR/$JOB_NAME.sh"
+        SCRIPT="$SUB_SCRIPTS_DIR/$JOB_NAME.sh"
 
         #<CHANGE THE INPUT BAM FOR EACH ROUND>
         IN_BAM=$MAP_DIR/$SAMPLE"_processed.bam"
@@ -66,7 +66,7 @@ while [ $FAILED -ne 0 ]; do
         for INTERVAL in $(seq -w 0 49); do
             JOB_NAME=$SAMPLE".$ROUND."$INTERVAL.hc
             LOG="$LOGS_DIR/$JOB_NAME.log" 
-            SCRIPT="$SCRIPTS_DIR/$JOB_NAME.sh"
+            SCRIPT="$SUB_SCRIPTS_DIR/$JOB_NAME.sh"
 
             if [[ $(grep "HaplotypeCaller done" $LOG) ]]; then
                 PASSED=$((PASSED+1))

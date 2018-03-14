@@ -23,7 +23,7 @@ MAP_DIR="$RESULTS_DIR/map_reads"
 INTERVALS_DIR="$RESULTS_DIR/intervals"
 BQSR_DIR="$RESULTS_DIR/base_recalibration"
 
-SCRIPTS_DIR="$RESULTS_DIR/scripts"
+SUB_SCRIPTS_DIR="$RESULTS_DIR/sub_scripts"
 LOGS_DIR="$RESULTS_DIR/logs"
 
 # SET UP FREQ USED VARS --------------------------------------------------------

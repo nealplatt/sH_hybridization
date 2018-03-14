@@ -21,7 +21,7 @@ for INTERVAL in $(ls $BQSR_DIR/$ROUND"_db"); do
     THREADS=1
     LOG="$LOGS_DIR/$JOB_NAME.log" 
     DEPEND=""
-    SCRIPT="$SCRIPTS_DIR/$JOB_NAME.sh"
+    SCRIPT="$SUB_SCRIPTS_DIR/$JOB_NAME.sh"
 
     #job specific in/out files
     IN_DB=gendb://$BQSR_DIR/$ROUND"_db"/$INTERVAL
@@ -71,7 +71,7 @@ while [ $FAILED -ne 0 ]; do
         THREADS=1
         LOG="$LOGS_DIR/$JOB_NAME.log" 
         DEPEND=""
-        SCRIPT="$SCRIPTS_DIR/$JOB_NAME.sh"
+        SCRIPT="$SUB_SCRIPTS_DIR/$JOB_NAME.sh"
         JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG $DEPEND"
 
         if [[ $(grep "GenotypeGVCFs done" $LOG) ]]; then
