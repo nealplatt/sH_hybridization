@@ -77,7 +77,7 @@ while [ $FAILED -ne 0 ]; do
                 THREADS=12
                 JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG"
 
-                rm $LOG
+                trash-put $LOG
                 cat $SCRIPT | $JOB_QSUB
             fi 
 

@@ -11,13 +11,10 @@
 cd $BQSR_DIR
 
 # CLEANUP ----------------------------------------------------------------------
-rm -r $ROUND"_hc"
-rm -r $ROUND"_individual_vcf"
-rm -r $ROUND"_db"
-rm -r $ROUND"_genotype"
-rm -r $ROUND"_cohort_vcf"
-mkdir $ROUND"_vcfs"
-mkdir $ROUND"_bams"
-mkdir $ROUND"_tables"
+trash-put $ROUND"_hc"
+trash-put $ROUND"_individual_vcf"
+trash-put $ROUND"_db"
+trash-put $ROUND"_genotype"
+trash-put $ROUND"_cohort_vcf"
 
 

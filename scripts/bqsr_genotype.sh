@@ -4,15 +4,12 @@
 # NPlatt
 # Neal.platt@gmail.com
 
-# bqsr-r3_genotype.sh - runs GATK's GenotypeGVCF on each sample/interval 
+# bqsr_genotype.sh - runs GATK's GenotypeGVCF on each sample/interval 
 #   combination
 
 # TODO (nplatt): update comments
 
-#import env variables
-source /master/nplatt/sH_hybridization/scripts/set-env.sh
-
-cd $ROUND"_genotype"
+cd $BQSR_DIR/$ROUND"_genotype"
 
 #genotype each interval in the db_r3 dir (qsub)
 for INTERVAL in $(ls $BQSR_DIR/$ROUND"_db"); do

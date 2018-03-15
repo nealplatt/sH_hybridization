@@ -93,7 +93,7 @@ while [ $FAILED -ne 0 ]; do
         else
             FAILED=$((FAILED+1))
 
-            rm $MERGE_LOG $SORT_LOG
+            trash-put $MERGE_LOG $SORT_LOG
         
             cat $MERGE_SCRIPT | $MERGE_QSUB
             cat $SORT_SCRIPT | $SORT_QSUB
@@ -116,7 +116,7 @@ WAIT_FOR_CLEAR_QUEUE
 
 
 # GDBIMPORT ----------------------------------------------------------------
-rm $ROUND"_individual_vcf"/samples_$ROUND.list
+trash-put $ROUND"_individual_vcf"/samples_$ROUND.list
 
 for SAMPLE in $(cat $SAMPLE_LIST); do
     echo $BQSR_DIR/$ROUND"_individual_vcf"/$SAMPLE"_bqsr-"$ROUND".g.vcf" >>samples_$ROUND.list
@@ -158,7 +158,6 @@ done
 #
 #                               <...wait...>
 #
-
 #sleep while all jobs are running
 echo "waiting for queue to clear"
 WAIT_FOR_CLEAR_QUEUE
@@ -190,8 +189,8 @@ while [ $FAILED -ne 0 ]; do
         else
             FAILED=$((FAILED+1))
        
-            rm -r $DB_DIR/$SAFE_INTERVAL_NAME 
-            rm $LOG
+            trash-put $DB_DIR/$SAFE_INTERVAL_NAME 
+            trash-put $LOG
             cat $SCRIPT | $JOB_QSUB
 
         fi 
