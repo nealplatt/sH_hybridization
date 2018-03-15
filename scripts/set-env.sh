@@ -42,12 +42,12 @@ ls $RAW_READS_DIR >$SAMPLE_LIST
 DELETE () {
     #delete log file    
     if [ -f "$1" ]; then
-        rm $1
+        trash-put $1
     fi
     
     #delete script file
     if [ -f "$2" ]; then
-        rm $2
+        trash-put $2
     fi
 }
 

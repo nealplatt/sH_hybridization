@@ -81,7 +81,7 @@ while [ $FAILED -ne 0 ]; do
             FAILED=$((FAILED+1))
             THREADS=12
     
-            rm $LOG
+            trash-put $LOG
             cat $SCRIPT | $JOB_QSUB
         fi
 
