@@ -34,8 +34,8 @@ for INTERVAL in $(ls $BQSR_DIR/$ROUND"_db"); do
         -new-qual \
         -O $OUT_VCF"
 
-    DELETE $LOG $SCRIPT
-    SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"    
+    #DELETE $LOG $SCRIPT
+    #SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"    
 
 done
 
@@ -64,7 +64,7 @@ while [ $FAILED -ne 0 ]; do
     EXPECTED=$(ls $BQSR_DIR/$ROUND"_db" | wc -l)
 
     #check that each log file has "GenotypeGVCFs done" indicating run to completion
-    for INTERVAL in $(ls $BQSR_DIR/$ROUND"_db"/$INTERVAL); do
+    for INTERVAL in $(ls $BQSR_DIR/$ROUND"_db"); do
         JOB_NAME="snp."$INTERVAL".genotype_"$ROUND
         THREADS=1
         LOG="$LOGS_DIR/$JOB_NAME.log" 
@@ -92,4 +92,6 @@ while [ $FAILED -ne 0 ]; do
     WAIT_FOR_CLEAR_QUEUE
 
 done
+
+
 

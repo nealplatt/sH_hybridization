@@ -150,7 +150,7 @@ for INTERVAL in $(cat $INTERVALS_DIR/all_filtered_intervals.list); do
 
     #only submit a limited number of jobs at a time...(dont overload queue)
     LIMIT_RUNNING_JOBS_TO 300
-        
+    
     SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"    
 done
 
@@ -196,6 +196,7 @@ while [ $FAILED -ne 0 ]; do
         fi 
 
         TOTAL=$((TOTAL+1))
+        echo $TOTAL
     done
 done
 
