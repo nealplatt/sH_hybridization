@@ -20,7 +20,7 @@ for BAM in $(ls $UNMODIFIED_BAM_DIR/*.bam); do
     THREADS=12
     LOG="$LOGS_DIR/$JOB_NAME.log" 
     DEPEND="-hold_jid snp.merge_filtered_variants"
-    SCRIPT="$SCRIPTS_DIR/$JOB_NAME.sh"
+    SCRIPT="$SUB_SCRIPTS_DIR/$JOB_NAME.sh"
 
     JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG $DEPEND"
 
@@ -42,7 +42,7 @@ for BAM in $(ls $UNMODIFIED_BAM_DIR/*.bam); do
     THREADS=12
     LOG="$LOGS_DIR/$JOB_NAME.log" 
     DEPEND="-hold_jid snp.$SAMPLE.recal_score_reads_$ROUND"
-    SCRIPT="$SCRIPTS_DIR/$JOB_NAME.sh"
+    SCRIPT="$SUB_SCRIPTS_DIR/$JOB_NAME.sh"
 
     IN_BAM=$IN_BAM
     IN_VCF=$IN_VCF
@@ -66,7 +66,7 @@ for BAM in $(ls $UNMODIFIED_BAM_DIR/*.bam); do
     THREADS=12
     LOG="$LOGS_DIR/$JOB_NAME.log" 
     DEPEND="-hold_jid snp.$SAMPLE.recal_modify_reads_$ROUND"
-    SCRIPT="$SCRIPTS_DIR/$JOB_NAME.sh"
+    SCRIPT="$SUB_SCRIPTS_DIR/$JOB_NAME.sh"
 
     IN_BAM=$OUT_BAM
     IN_VCF=$IN_VCF
@@ -88,7 +88,7 @@ for BAM in $(ls $UNMODIFIED_BAM_DIR/*.bam); do
     THREADS=12
     LOG="$LOGS_DIR/$JOB_NAME.log" 
     DEPEND="-hold_jid snp.$SAMPLE.recal_score_reads_$ROUND,snp.$SAMPLE.recal_score_modreads_$ROUND"
-    SCRIPT="$SCRIPTS_DIR/$JOB_NAME.sh"
+    SCRIPT="$SUB_SCRIPTS_DIR/$JOB_NAME.sh"
 
     JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG $DEPEND"
 
