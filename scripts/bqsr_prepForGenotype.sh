@@ -116,7 +116,7 @@ WAIT_FOR_CLEAR_QUEUE
 
 
 # GDBIMPORT ----------------------------------------------------------------
-trash-put $ROUND"_individual_vcf"/samples_$ROUND.list
+trash-put samples_$ROUND.list
 
 for SAMPLE in $(cat $SAMPLE_LIST); do
     echo $BQSR_DIR/$ROUND"_individual_vcf"/$SAMPLE"_bqsr-"$ROUND".g.vcf" >>samples_$ROUND.list
