@@ -44,7 +44,7 @@ for BAM in $(ls $UNMODIFIED_BAM_DIR/*.bam); do
     DEPEND="-hold_jid snp.$SAMPLE.recal_score_reads_$ROUND"
     SCRIPT="$SCRIPTS_DIR/$JOB_NAME.sh"
 
-    IN_BAM=$BAM
+    IN_BAM=$IN_BAM
     IN_VCF=$IN_VCF
     IN_TABLE=$OUT_TABLE
     OUT_BAM=$BQSR_DIR/$ROUND"_bqsr_bams"/$SAMPLE"_bqsr-"$ROUND".bam"
@@ -95,7 +95,7 @@ for BAM in $(ls $UNMODIFIED_BAM_DIR/*.bam); do
     #!!! BEFORE_MOD_TABLE set in the pipeline script
     BEFORE_MOD_TABLE=$PREV_RECAL_TABLE_DIR$SAMPLE$PREV_RECAL_TABLE_EXT
     AFTER_MOD_TABLE=$BQSR_DIR/$ROUND"_tables/"$SAMPLE"_POSTrecal.$ROUND.table"
-    OUT_PDF=$BQSR_DIR/$ROUND"_cov_plots/"$SAMPLE"_recalibration_plot."$ROUND".pdf"
+    OUT_PDF=$BQSR_DIR/$ROUND"_tables/"$SAMPLE"_recalibration_plot."$ROUND".pdf"
 
     CMD="$SINGULARITY gatk AnalyzeCovariates \
         -before $BEFORE_MOD_TABLE \

@@ -16,14 +16,15 @@ cd $BQSR_DIR
 
 #<THESE ARE THE MAJOR VARIABLES THAT NEED TO BE CHANGED FOR EACH ROUND>
 export ROUND=r1
+$PREV_ROUND=r1
 
 #where are the raw/unmodified bams coming from
 export UNMODIFIED_BAM_DIR=$MAP_DIR
 
 #ex R1 r1_tables/Sh.TZ_UNG0142.2_PRErecal.r1.table"
 #ex R2 r2_tables/Sh.TZ_UNG0142.2_POSTrecal.r2.table"
-export PREV_RECAL_TABLE_DIR="$BQSR_DIR/r1_tables/"
-export PREV_RECAL_TABLE_EXT="_PRErecal.r1.table"
+export PREV_RECAL_TABLE_DIR="BQSR_DIR/"$PREV_ROUND"_tables/"
+export PREV_RECAL_TABLE_EXT="_PRErecal."$PREV_ROUND".table"
 
 #make major directories
 mkdir $ROUND"_hc"
