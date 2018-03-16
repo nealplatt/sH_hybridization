@@ -319,24 +319,12 @@ SCRIPT="$SCRIPTS_DIR/$JOB_NAME.sh"
 
 JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG $DEPEND"
 
-IN_SNP_VCF=$BQSR_DIR/$ROUND"_vcfs/cohort_"$ROUND"_filteredSNPS.g.vcf"
-IN_INDEL_VCF=$BQSR_DIR/$ROUND"_vcfs/cohort_"$ROUND"_filteredINDELS.g.vcf"
+ls cohort_"$ROUND"_filtered*.vcf >merge_variants.list
+IN_LIST="merge_variants.list"
 OUT_VCF=$BQSR_DIR/$ROUND"_vcfs/cohort_"$ROUND"_filteredVariants.g.vcf"
 
-CMD="$SINGULARITY gatk CombineVariants \
-   -R $REFERENCE \
-   --variant:snps $IN_SNP_VCF \
-   --variant:indels $IN_INDEL_VCF \
-   -O $OUT_VCF \
-   -genotypeMergeOptions PRIORITIZE \
-   -priority snps,indels"
+CMD="$SINGULARITY gatk MergeVcfs -I $IN_LIST -O $OUT_VCF -R $REFERENCE"
 
 DELETE $LOG $SCRIPT
 SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
-
-
-################################################################################
-#                       R E C A L I B R A T I O N 
-################################################################################
-
 

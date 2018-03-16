@@ -17,4 +17,4 @@ trash-put $ROUND"_db"
 trash-put $ROUND"_genotype"
 trash-put $ROUND"_cohort_vcf"
 
-
+#compress and archive scripts and logs

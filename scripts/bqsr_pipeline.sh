@@ -32,7 +32,7 @@ mkdir $ROUND"_db"
 mkdir $ROUND"_genotype"
 mkdir $ROUND"_cohort_vcf"
 mkdir $ROUND"_vcfs"
-mkdir $ROUND"_bams"
+mkdir $ROUND"_bqsr_bams"
 mkdir $ROUND"_tables"
 
 # Workflow
