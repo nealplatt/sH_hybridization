@@ -8,18 +8,18 @@
 #   from haplotype caller to analyzing covariate tables and generating
 #   recalibrated bam files
 
-# TODO(neal): update comments
+# TODO(neal):
 
 source /master/nplatt/sH_hybridization/scripts/set-env.sh
 
 cd $BQSR_DIR
 
 #<THESE ARE THE MAJOR VARIABLES THAT NEED TO BE CHANGED FOR EACH ROUND>
-export ROUND=r1
-$PREV_ROUND=r1
+export ROUND=r2
+PREV_ROUND=r1
 
 #where are the raw/unmodified bams coming from
-export UNMODIFIED_BAM_DIR=$MAP_DIR
+export UNMODIFIED_BAM_DIR=$BQSR_DIR/$PREV_ROUND"_bqsr_bams"
 
 #ex R1 r1_tables/Sh.TZ_UNG0142.2_PRErecal.r1.table"
 #ex R2 r2_tables/Sh.TZ_UNG0142.2_POSTrecal.r2.table"
@@ -39,6 +39,7 @@ mkdir $ROUND"_tables"
 # Workflow
 $SCRIPTS_DIR/bqsr_haplotypeCaller.sh
 $SCRIPTS_DIR/bqsr_prepForGenotype.sh
-#$SCRIPTS_DIR/bqsr_genotype.sh
-#$SCRIPTS_DIR/bqsr_buildCohortVcf.sh
-#$SCRIPTS_DIR/bqsr_recalibration.sh
+$SCRIPTS_DIR/bqsr_genotype.sh
+$SCRIPTS_DIR/bqsr_buildCohortVcf.sh
+$SCRIPTS_DIR/bqsr_recalibration.sh
+$SCRIPTS_DIR/bqsr_cleanUp.sh
