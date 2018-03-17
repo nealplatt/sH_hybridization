@@ -227,7 +227,7 @@ JOB_NAME="snp.cohort_select_snps"
 THREADS=1
 LOG="$LOGS_DIR/$JOB_NAME.log" 
 DEPEND="-hold_jid snp.sort_cohort"
-SCRIPT="$SCRIPTS_DIR/$JOB_NAME.sh"
+SCRIPT="$SUB_SCRIPTS_DIR/$JOB_NAME.sh"
 
 JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG $DEPEND"
 
@@ -248,7 +248,7 @@ JOB_NAME="snp.cohort_filter_snps"
 THREADS=1
 LOG="$LOGS_DIR/$JOB_NAME.log" 
 DEPEND="-hold_jid snp.cohort_select_snps"
-SCRIPT="$SCRIPTS_DIR/$JOB_NAME.sh"
+SCRIPT="$SUB_SCRIPTS_DIR/$JOB_NAME.sh"
 
 JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG $DEPEND"
 
@@ -270,7 +270,7 @@ JOB_NAME="snp.cohort_select_indels"
 THREADS=1
 LOG="$LOGS_DIR/$JOB_NAME.log" 
 DEPEND="-hold_jid snp.sort_cohort"
-SCRIPT="$SCRIPTS_DIR/$JOB_NAME.sh"
+SCRIPT="$SUB_SCRIPTS_DIR/$JOB_NAME.sh"
 
 JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG $DEPEND"
 
@@ -292,7 +292,7 @@ JOB_NAME="snp.cohort_filter_indels"
 THREADS=1
 LOG="$LOGS_DIR/$JOB_NAME.log" 
 DEPEND="-hold_jid snp.cohort_select_indels"
-SCRIPT="$SCRIPTS_DIR/$JOB_NAME.sh"
+SCRIPT="$SUB_SCRIPTS_DIR/$JOB_NAME.sh"
 
 JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG $DEPEND"
 
@@ -315,7 +315,7 @@ JOB_NAME="snp.merge_filtered_variants"
 THREADS=1
 LOG="$LOGS_DIR/$JOB_NAME.log" 
 DEPEND="-hold_jid snp.cohort_filter_indels,snp.cohort_filter_snps"
-SCRIPT="$SCRIPTS_DIR/$JOB_NAME.sh"
+SCRIPT="$SUB_SCRIPTS_DIR/$JOB_NAME.sh"
 
 JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG $DEPEND"
 
