@@ -319,8 +319,10 @@ SCRIPT="$SCRIPTS_DIR/$JOB_NAME.sh"
 
 JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG $DEPEND"
 
-ls cohort_"$ROUND"_filtered*.vcf >merge_variants.list
-IN_LIST="merge_variants.list"
+echo $BQSR_DIR/$ROUND"_vcfs/cohort_"$ROUND"_filteredSNPS.g.vcf" >$BQSR_DIR/$ROUND"_vcfs/merge_variants.list"
+echo $BQSR_DIR/$ROUND"_vcfs/cohort_"$ROUND"_filteredINDELS.g.vcf" >>$BQSR_DIR/$ROUND"_vcfs/merge_variants.list"
+
+IN_LIST=$BQSR_DIR/$ROUND"_vcfs/merge_variants.list"
 OUT_VCF=$BQSR_DIR/$ROUND"_vcfs/cohort_"$ROUND"_filteredVariants.g.vcf"
 
 CMD="$SINGULARITY gatk MergeVcfs -I $IN_LIST -O $OUT_VCF -R $REFERENCE"

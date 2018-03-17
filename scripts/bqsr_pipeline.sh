@@ -43,3 +43,5 @@ $SCRIPTS_DIR/bqsr_genotype.sh
 $SCRIPTS_DIR/bqsr_buildCohortVcf.sh
 $SCRIPTS_DIR/bqsr_recalibration.sh
 $SCRIPTS_DIR/bqsr_cleanUp.sh
+
+
