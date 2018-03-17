@@ -22,7 +22,7 @@ for INTERVAL in $(ls $BQSR_DIR/$ROUND"_db"); do
 
     #job specific in/out files
     IN_DB=gendb://$BQSR_DIR/$ROUND"_db"/$INTERVAL
-    OUT_VCF=$ROUND"_genotype"/$INTERVAL.vcf
+    OUT_VCF=$BQSR_DIR/$ROUND"_genotype"/$INTERVAL.vcf
     
     #job specific qsub    
     JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG $DEPEND"
