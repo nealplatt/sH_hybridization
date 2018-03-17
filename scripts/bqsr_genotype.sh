@@ -34,8 +34,8 @@ for INTERVAL in $(ls $BQSR_DIR/$ROUND"_db"); do
         -new-qual \
         -O $OUT_VCF"
 
-    #DELETE $LOG $SCRIPT
-    #SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"    
+    DELETE $LOG $SCRIPT
+    SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"    
 
 done
 
