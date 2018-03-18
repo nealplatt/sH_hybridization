@@ -9,6 +9,8 @@
 
 # TODO(nplatt): first pass
 
+WAIT_FOR_CLEAR_QUEUE
+
 cd $BQSR_DIR/$ROUND"_individual_vcf"
 
 for SAMPLE in $(cat $SAMPLE_LIST); do

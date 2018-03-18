@@ -8,6 +8,8 @@
 
 # TODO(nplatt): update comments
 
+WAIT_FOR_CLEAR_QUEUE
+
 cd $BQSR_DIR
 
 #!!! UNMODIFIED_BAM_DIR set in the pipeline script
