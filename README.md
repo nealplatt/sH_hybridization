@@ -64,5 +64,6 @@ sudo singularity build scripts/Singularity <image name>
 
 ### To Do
 TODO: (neal) modify BQSR scripts to run within failed=1 loop
+
 TODO: (neal) take in command line arguments for round, prevRound
 
