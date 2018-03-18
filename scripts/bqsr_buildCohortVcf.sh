@@ -214,10 +214,10 @@ SCRIPT="$SUB_SCRIPTS_DIR/$JOB_NAME.sh"
 
 JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG $DEPEND"
 
-IN_GVCF="tmp_cohort.vcf"
+IN_GVCF=$BQSR_DIR/$ROUND"_cohort_vcf/tmp_cohort.vcf"
 OUT_GVCF=$BQSR_DIR/$ROUND"_vcfs/cohort_raw_"$ROUND.vcf
 
-CMD="$SINGULARITY gatk --java-options "'"-Xmx8G"'" SortVcf -I $IN_GVCF -O $OUT_GVCF"
+CMD="$SINGULARITY gatk --java-options "'"-Xmx8G"'" SortVcf --MAX_RECORDS_IN_RAM 500000 -I $IN_GVCF -O $OUT_GVCF"
 
 DELETE $LOG $SCRIPT
 SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
@@ -329,4 +329,6 @@ CMD="$SINGULARITY gatk MergeVcfs -I $IN_LIST -O $OUT_VCF -R $REFERENCE"
 
 DELETE $LOG $SCRIPT
 SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
+
+
 
