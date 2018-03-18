@@ -20,4 +20,8 @@ Warning Messages (GATK)
     WARNING: No valid combination operation found for INFO field DS - the field will NOT be part of INFO fields in the generated VCF records
     WARNING: No valid combination operation found for INFO field InbreedingCoeff - the field will NOT be part of INFO fields in the generated VCF records
 
+### ANY SORTING STEP
+htsjdk.samtools.util.RuntimeIOException: java.io.IOException: No space left on device
+Caused by: java.io.IOException: No space left on device
 
+These cause the job to fail and seem to be remedied by adding a tmp_dir to the gatk options.  probably something to do with running out of space on the compute nodes themselves
