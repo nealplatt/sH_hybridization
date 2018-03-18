@@ -29,8 +29,8 @@ for SAMPLE in $(cat $SAMPLE_LIST); do
 
     CMD="$SINGULARITY gatk MergeVcfs -I $IN_LIST -O $OUT_GVCF"
 
-    #DELETE $LOG $SCRIPT
-    #SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
+    DELETE $LOG $SCRIPT
+    SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
 
 
     # SORT_INDIV_GVCF ----------------------------------------------------------
