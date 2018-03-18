@@ -9,8 +9,6 @@
 
 # TODO (nplatt): update comments
 
-WAIT_FOR_CLEAR_QUEUE
-
 cd $BQSR_DIR/$ROUND"_genotype"
 
 #genotype each interval in the db_r3 dir (qsub)

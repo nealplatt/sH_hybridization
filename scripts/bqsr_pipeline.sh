@@ -15,8 +15,8 @@ source /master/nplatt/sH_hybridization/scripts/set-env.sh
 cd $BQSR_DIR
 
 #<THESE ARE THE MAJOR VARIABLES THAT NEED TO BE CHANGED FOR EACH ROUND>
-export ROUND=r2
-PREV_ROUND=r1
+export ROUND=r3
+PREV_ROUND=r2
 
 #where are the raw/unmodified bams coming from
 export UNMODIFIED_BAM_DIR=$BQSR_DIR/$PREV_ROUND"_bqsr_bams"
@@ -38,10 +38,16 @@ mkdir $ROUND"_tables"
 
 # Workflow
 $SCRIPTS_DIR/bqsr_haplotypeCaller.sh
+WAIT_FOR_CLEAR_QUEUE
 $SCRIPTS_DIR/bqsr_prepForGenotype.sh
+WAIT_FOR_CLEAR_QUEUE
 $SCRIPTS_DIR/bqsr_genotype.sh
+WAIT_FOR_CLEAR_QUEUE
 $SCRIPTS_DIR/bqsr_buildCohortVcf.sh
+WAIT_FOR_CLEAR_QUEUE
 $SCRIPTS_DIR/bqsr_recalibration.sh
+
+
 $SCRIPTS_DIR/bqsr_cleanUp.sh
 
 

@@ -8,8 +8,6 @@
 
 # TODO(nplatt): 
 
-WAIT_FOR_CLEAR_QUEUE
-
 cd $BQSR_DIR
 
 # CLEANUP ----------------------------------------------------------------------
