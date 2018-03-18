@@ -31,8 +31,8 @@ for SAMPLE in $(cat $SAMPLE_LIST); do
 
     CMD="$SINGULARITY gatk MergeVcfs -I $IN_LIST -O $OUT_GVCF"
 
-    DELETE $LOG $SCRIPT
-    SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
+    #DELETE $LOG $SCRIPT
+    #SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
 
 
     # SORT_INDIV_GVCF ----------------------------------------------------------
@@ -47,7 +47,7 @@ for SAMPLE in $(cat $SAMPLE_LIST); do
     
     JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG $DEPEND"
 
-    CMD="$SINGULARITY gatk SortVcf -I $IN_GVCF -O $OUT_GVCF"
+    CMD="$SINGULARITY gatk SortVcf -TMP-DIR ./tmp_$SAMPLE -I $IN_GVCF -O $OUT_GVCF"
 
     DELETE $LOG $SCRIPT
     SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"    
