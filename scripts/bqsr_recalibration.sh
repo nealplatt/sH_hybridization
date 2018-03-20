@@ -34,8 +34,8 @@ for BAM in $(ls $UNMODIFIED_BAM_DIR/*.bam); do
         --known-sites $IN_VCF \
         -O $OUT_TABLE"
 
-    #DELETE $LOG $SCRIPT
-    #SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
+    DELETE $LOG $SCRIPT
+    SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
 
     # MODIFY THE BAM FILES -----------------------------------------------------    
     JOB_NAME="snp.$SAMPLE.recal_modify_reads_$ROUND"
@@ -57,8 +57,8 @@ for BAM in $(ls $UNMODIFIED_BAM_DIR/*.bam); do
         --bqsr-recal-file $IN_TABLE \
         -O $OUT_BAM"
 
-    #DELETE $LOG $SCRIPT
-    #SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB" 
+    DELETE $LOG $SCRIPT
+    SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB" 
 
     # SCORE THE RECALIBRATED BAM FILES -----------------------------------------    
 
@@ -80,8 +80,8 @@ for BAM in $(ls $UNMODIFIED_BAM_DIR/*.bam); do
         --known-sites $IN_VCF \
         -O $OUT_TABLE"
 
-    #DELETE $LOG $SCRIPT
-    #SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB" 
+    DELETE $LOG $SCRIPT
+    SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB" 
 
     # ANALYZE THE RECALIBRATED DATA --------------------------------------------    
     JOB_NAME="snp.$SAMPLE.covariate_$ROUND"
