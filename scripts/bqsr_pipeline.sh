@@ -46,7 +46,7 @@ WAIT_FOR_CLEAR_QUEUE
 $SCRIPTS_DIR/bqsr_buildCohortVcf.sh
 WAIT_FOR_CLEAR_QUEUE
 $SCRIPTS_DIR/bqsr_recalibration.sh
-WAIT_FOR_CLEAR_QUEU
+WAIT_FOR_CLEAR_QUEUE
 #$SCRIPTS_DIR/bqsr_cleanUp.sh
 
 
