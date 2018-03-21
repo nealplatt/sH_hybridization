@@ -28,11 +28,11 @@ $SINGULARITY gatk SelectVariants \
 
 
 for INDIVIDUAL in $(cat ../sample.list); do
-    #$SINGULARITY gatk SelectVariants \
-    #    -R $REFERENCE \
-    #    -V mito_variants.vcf  \
-    #    -sn $INDIVIDUAL \
-    #    -O $INDIVIDUAL.mito.vcf
+    $SINGULARITY gatk SelectVariants \
+        -R $REFERENCE \
+        -V mito_variants.vcf  \
+        -sn $INDIVIDUAL \
+        -O $INDIVIDUAL.mito.vcf
 
 
     java -jar ~/bin/gatk-3.8.0.jar \
@@ -42,7 +42,7 @@ for INDIVIDUAL in $(cat ../sample.list); do
         -V mito_variants.vcf
 
     #change the sequence header name
-    sed 's/>.*/>'$INDIVIDUAL'##AMPZ01026399.1/'
+    sed -i 's/>.*/>'$INDIVIDUAL'##AMPZ01026399.1/'
 
 done
 
@@ -61,5 +61,14 @@ rm all_mito_reads.bed
 for BAM in $(ls ../map_reads/*processed.bam); do
     $SINGULARITY bedtools bamtobed -i $BAM | grep AMPZ01026399.1 >>all_mito_reads.bed
 done
+
+
+
+$SINGULARITY bedtools sort -i all_mito_reads.bed >tmp
+$SINGULARITY bedtools merge -i tmp >all_mito_reads_merged.bed 
+$SINGULARITY bedtools complement -i all_mito_reads_merged.bed -g schHae_v1_mt.fa.fai >mito_to_exclude_no_baits.bed
+#have to physically make a genome file 
+#AMPZ01026399.1  17526
+$SINGULARITY bedtools complement -i all_mito_reads_merged.bed -g test >exclude 
 
 
