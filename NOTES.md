@@ -25,3 +25,8 @@ htsjdk.samtools.util.RuntimeIOException: java.io.IOException: No space left on d
 Caused by: java.io.IOException: No space left on device
 
 These cause the job to fail and seem to be remedied by adding a tmp_dir to the gatk options.  probably something to do with running out of space on the compute nodes themselves
+
+
+Other
+==========
+Mitochondira is likely AMPZ01026399.1
