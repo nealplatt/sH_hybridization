@@ -1,5 +1,6 @@
 # split cohort_r3_filteredVariants.g.vcf into indels and snps
 
+source /master/nplatt/sH_hybridization/scripts/set-env.sh
 
 IN_RAW_VCF=../base_recalibration/r3_vcfs/cohort_raw_r3.vcf
 
@@ -9,6 +10,8 @@ REFERENCE=/master/nplatt/sH_hybridization/data/genome/schHae_v1.fa
 
 FILTERED_INDELS_VCF=cohort_filtered_INDELs_r3.vcf
 FILTERED_SNPS_VCF=cohort_filtered_SNPs_r3.vcf
+
+MERGED_VARIANTS_VCF=cohort_filtered_variants_r3.vcf
 
 #split vcfs into indels and snps
 $SINGULARITY gatk SplitVcfs \
@@ -34,8 +37,8 @@ $SINGULARITY gatk VariantFiltration \
    --filter-expression "QD < 5.0" \
    --filter-name "snp_FS_gt_55" \
    --filter-expression "FS > 55.0" \
-   --filter-name "snp_MQ_lt_50" \
-   --filter-expression "MQ < 50.0" \
+   --filter-name "snp_MQ_lt_40" \
+   --filter-expression "MQ < 40.0" \
    --filter-name "snp_MQRankSum_lt_-12.5" \
    --filter-expression "MQRankSum < -12.5" \
    --filter-name "snp_ReadPosRankSum_lt_-8" \
@@ -60,10 +63,10 @@ $SINGULARITY gatk VariantFiltration \
 wait
 
 #merge back together
-$SINGULARITY gatk MergeVcfs \
-    -I $FILTERED_INDELS_VCF,$FILTERED_SNPS_VCF \
-    -O $MERGED_VARIANTS_VCF \
-    -R $REFERENCE
+ls cohort_filtered_*.vcf >merge.list
 
+$SINGULARITY gatk MergeVcfs \
+    -I merge.list \
+    -O $MERGED_VARIANTS_VCF 
 
 
