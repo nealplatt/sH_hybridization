@@ -107,5 +107,21 @@ for BAM in $(ls $UNMODIFIED_BAM_DIR/*.bam); do
 
 done
 
-#check for convergence in recal data
+
+# ANALYZE ALL RECAL DATA -------------------------------------------------------    
+PRE_LIST=all_PRE_$ROUND.list
+POST_LIST=all_POST_$ROUND.list
+PRE_TABLE=all_PRE_$ROUND.table
+POST_TABLE=all_POST_$ROUND.table
+ALL_PDF=all_recalibration_plot.$ROUND.pdf
+
+ls *"_PRErecal.$ROUND.table" >$PRE_LIST
+ls *"_POSTrecal.$ROUND.table" >$POST_LIST
+
+$SINGULARITY gatk GatherBQSRReports --input $PRE_LIST --output $PRE_TABLE &
+$SINGULARITY gatk GatherBQSRReports --input $POST_LIST --output $POST_TABLE &
+wait
+$SINGULARITY gatk AnalyzeCovariates -before $PRE_TABLE -after $POST_TABLE -plots $ALL_PDF
+
+#check for convergence in recal data - analysis done directly
 
