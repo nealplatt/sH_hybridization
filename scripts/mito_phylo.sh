@@ -20,14 +20,14 @@ samtools faidx schHae_v1_mt.fa
 #find a way to exclude sites that weren't in the vcf file
 $SINGULARITY bedtools sort -i all_mito_reads.bed >tmp
 $SINGULARITY bedtools merge -i tmp >all_mito_reads_merged.bed 
-$SINGULARITY bedtools complement -i all_mito_reads_merged.bed -g schHae_v1_mt.fa.fai >mito_to_exclude_no_baits.bed
-
 #have to physically make a genome file 
 #AMPZ01026399.1  17526
-$SINGULARITY bedtools complement -i all_mito_reads_merged.bed -g schHae_v1_mt.fa.fai >mito_to_exclude_no_baits.bed
+$SINGULARITY bedtools complement -i all_mito_reads_merged.bed -g schHae_v1_mt.fa.fai >exclude.bed
+
+#mask
+$SINGULARITY bedtools maskfasta -fi schHae_v1_mt.fa -fo schHae_v1_mt.masked.fa -bed exclude.bed
 
 #now mask file and create necessary indecies
-$SINGULARITY bedtools maskfasta -fi schHae_v1_mt.fa -fo schHae_v1_mt.masked.fa -bed mito_to_exclude_no_baits.bed
 $SINGULARITY gatk CreateSequenceDictionary --REFERENCE schHae_v1_mt.masked.fa
 samtools faidx schHae_v1_mt.masked.fa 
 
@@ -46,12 +46,13 @@ for INDIVIDUAL in $(cat ../sample.list); do
         -sn $INDIVIDUAL \
         -O $INDIVIDUAL.mito.vcf
 
+    python vcf2fasta.py -v $INDIVIDUAL.mito.vcf -o $INDIVIDUAL.mito.fas -c AMPZ01026399.1
 
-    java -jar ~/bin/gatk-3.8.0.jar \
-        -T FastaAlternateReferenceMaker \
-        -R schHae_v1_mt.masked.fa  \
-        -o $INDIVIDUAL.mito.fas \
-        -V mito_variants.vcf
+    #java -jar ~/bin/gatk-3.8.0.jar \
+    #   -T FastaAlternateReferenceMaker \
+    #   -R schHae_v1_mt.masked.fa  \
+    #   -o $INDIVIDUAL.mito.fas \
+    #   -V mito_variants.vcf
 
     #change the sequence header name
     sed -i 's/>.*/>'$INDIVIDUAL'##AMPZ01026399.1/' $INDIVIDUAL.mito.fas
@@ -63,6 +64,11 @@ cat *mito.fas >sh.mito.fas
 
 
 #get samples form ncbi as outgroups
+#bovis
+#mansoni
+#curasoni
+#japonicum
+#haem
 
 #bovis genome
 wget ftp://ftp.sanger.ac.uk/pub/project/pathogens/HGI/Schistosoma_bovis_v1.0.fa.gz
