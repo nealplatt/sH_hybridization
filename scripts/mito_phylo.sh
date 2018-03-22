@@ -40,11 +40,11 @@ $SINGULARITY gatk SelectVariants \
 
 
 for INDIVIDUAL in $(cat ../sample.list); do
-    $SINGULARITY gatk SelectVariants \
-        -R $REFERENCE \
-        -V mito_variants.vcf \
-        -sn $INDIVIDUAL \
-        -O $INDIVIDUAL.mito.vcf
+    #$SINGULARITY gatk SelectVariants \
+    #    -R $REFERENCE \
+    #    -V mito_variants.vcf \
+    #    -sn $INDIVIDUAL \
+    #    -O $INDIVIDUAL.mito.vcf
 
     python vcf2fasta.py -v $INDIVIDUAL.mito.vcf -o $INDIVIDUAL.mito.fas -c AMPZ01026399.1
 
