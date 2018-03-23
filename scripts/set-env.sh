@@ -16,6 +16,7 @@ export DATA_DIR="$HOME_DIR/data"
 export RESULTS_DIR="$HOME_DIR/results"
 
 export RAW_READS_DIR="$DATA_DIR/raw_exome_seq_reads"
+export SRA_DIR="$DATA_DIR/sra_reads"
 export GENOME_DIR="$DATA_DIR/genome"
 
 export FILTER_READS_DIR="$RESULTS_DIR/filter_reads"
@@ -31,7 +32,7 @@ export REFERENCE="$GENOME_DIR/schHae_v1.fa"
 export QSUB="qsub -V -cwd -j y -S /bin/bash -q all.q"
 
 # SINGULARITY  -----------------------------------------------------------------
-export SINGULARITY_IMG="$HOME_DIR/snpCalling_v0.0.6.img"
+export SINGULARITY_IMG="$HOME_DIR/snpCalling_v0.0.7.img"
 export SINGULARITY="singularity exec $SINGULARITY_IMG"
 
 # CREATE DOWNSTREAM LISTS ------------------------------------------------------
