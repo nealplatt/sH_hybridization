@@ -1,5 +1,126 @@
 source /master/nplatt/sH_hybridization/scripts/set-env.sh
 
+mkdir mito_phylo
+
+cd mito_phylo
+
+
+#FILTER AND MERGE VARIANTS FROM MITOCHONDRIA
+for SAMPLE in $(cat $SAMPLE_LIST); do
+    # SELECT SNPS --------------------------------------------------------------
+    JOB_NAME="mito_"$SAMPLE"_select_snps"
+    THREADS=1
+    LOG="$LOGS_DIR/$JOB_NAME.log" 
+    DEPEND=""
+    SCRIPT="$SUB_SCRIPTS_DIR/$JOB_NAME.sh"
+
+    JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG $DEPEND"
+
+    IN_VCF="../haplotype_caller/"$SAMPLE"_final.g.vcf"
+    OUT_VCF=$SAMPLE"_mito_raw-snps.g.vcf"
+    
+    CMD="$SINGULARITY gatk SelectVariants \
+        -V $IN_VCF \
+        -select-type SNP \
+        -L AMPZ01026399.1 \
+        -O $OUT_VCF \
+        -R $REFERENCE"
+
+    DELETE $LOG $SCRIPT
+    SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
+
+    # FILTER SNPS --------------------------------------------------------------
+    JOB_NAME="mito_"$SAMPLE"_filter_snps"
+    THREADS=1
+    LOG="$LOGS_DIR/$JOB_NAME.log" 
+    DEPEND="-hold_jid mito_"$SAMPLE"_select_snps"
+    SCRIPT="$SUB_SCRIPTS_DIR/$JOB_NAME.sh"
+
+    JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG $DEPEND"
+
+    IN_VCF=$OUT_VCF
+    OUT_VCF=$SAMPLE"_mito_filtered-snps.g.vcf"
+
+    CMD="$SINGULARITY gatk VariantFiltration \
+        -R $REFERENCE \
+        -V $IN_VCF \
+        --filter-expression "'"QD < 2.0 || FS > 60.0 || MQ < 40.0 || MQRankSum < -12.5 || ReadPosRankSum < -8.0"'" \
+        --filter-name "'"recommended_snp_filter"'" \
+        -O $OUT_VCF"
+
+    #DELETE $LOG $SCRIPT
+    #SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
+
+    # SELECT INDELS ------------------------------------------------------------
+    JOB_NAME="mito_"$SAMPLE"_select_indels"
+    THREADS=1
+    LOG="$LOGS_DIR/$JOB_NAME.log" 
+    DEPEND=""
+    SCRIPT="$SUB_SCRIPTS_DIR/$JOB_NAME.sh"
+
+    JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG $DEPEND"
+
+    IN_VCF="../haplotype_caller/"$SAMPLE"_final.g.vcf"
+    OUT_VCF=$SAMPLE"_mito_raw-indels.g.vcf"
+    
+    CMD="$SINGULARITY gatk SelectVariants \
+        -V $IN_VCF \
+        -select-type INDEL \
+        -L AMPZ01026399.1 \
+        -O $OUT_VCF \
+        -R $REFERENCE"
+
+    DELETE $LOG $SCRIPT
+    SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
+
+
+    # FILTER INDELS ------------------------------------------------------------
+    JOB_NAME="mito_"$SAMPLE"_filter_indels"
+    THREADS=1
+    LOG="$LOGS_DIR/$JOB_NAME.log" 
+    DEPEND="-hold_jid mito_"$SAMPLE"_select_indels"
+    SCRIPT="$SUB_SCRIPTS_DIR/$JOB_NAME.sh"
+
+    JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG $DEPEND"
+
+    IN_VCF=$OUT_VCF
+    OUT_VCF=$SAMPLE"_mito_filtered-indels.g.vcf"
+
+    CMD="$SINGULARITY gatk VariantFiltration \
+        -R $REFERENCE \
+        -V $IN_VCF \
+        --filter-expression "'"QD < 2.0 || FS > 200.0 || ReadPosRankSum < -20.0"'" \
+        --filter-name "'"recommended_indel_filter"'" \
+        -O $OUT_VCF"
+
+    #DELETE $LOG $SCRIPT
+    #SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
+
+
+    # MERGE VARIANTS------------------------------------------------------------
+    JOB_NAME="snp.merge_filtered_variants"
+    THREADS=1
+    LOG="$LOGS_DIR/$JOB_NAME.log" 
+    DEPEND="-hold_jid mito_"$SAMPLE"_select_indels,mito_"$SAMPLE"_select_snps"
+    SCRIPT="$SUB_SCRIPTS_DIR/$JOB_NAME.sh"
+
+    JOB_QSUB="$QSUB -pe mpi $THREADS -N $JOB_NAME -o $LOG $DEPEND"
+
+    echo -e $SAMPLE"_mito_filtered-indels.g.vcf\n"$SAMPLE"_mito_filtered-indels.g.vcf" >$SAMPLE.list
+
+    IN_LIST=$SAMPLE.list
+    OUT_VCF=$SAMPLE"_mito_variants.vcf"
+
+    CMD="$SINGULARITY gatk MergeVcfs -I $IN_LIST -O $OUT_VCF -R $REFERENCE"
+
+    #DELETE $LOG $SCRIPT
+    #SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
+done
+
+
+
+
+
 IN_RAW_VCF=../base_recalibration/r3_vcfs/cohort_raw_r3.vcf
 
 SNP_VCF=cohort_raw_SNPs_r3.vcf

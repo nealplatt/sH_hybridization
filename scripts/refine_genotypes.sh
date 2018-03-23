@@ -70,3 +70,26 @@ $SINGULARITY gatk MergeVcfs \
     -O $MERGED_VARIANTS_VCF 
 
 
+$SINGULARITY gatk SelectVariants \
+     -R $REFERENCE \
+     -V cohort_filtered_SNPs_r3.vcf  \
+     -L AMPZ01026399.1 \
+     -O mito_variants.vcf
+
+#create list of individuals with a lot of missing data
+vcftools --remove-filtered all --min-alleles 2 --max-alleles 2 --max-missing 0.51 --vcf cohort_filtered_SNPs_r3_env.vcf --out cohort_filtered_SNPS_biallelic --recode --recode-INFO-all
+
+
+#create list of individuals with a lot of missing data
+--missing-indv
+
+#exclude those
+
+
+
+
+--SNPdensity <integer>
+
+
+
+
