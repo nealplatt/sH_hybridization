@@ -46,22 +46,14 @@ while [ $FAILED -gt 0 ] || [ $ITERATION -le 1 ] ; do
                 -L $IN_BED \
                 -ERC GVCF"
 
-            #
-            if [ ! -f $LOG ] || ! grep -q "HaplotypeCaller done" $LOG ; then
+            if [ ! -f $LOG ] || ! grep -q "HaplotypeCaller done" $LOG; then
                 FAILED=$((FAILED+1))
-
                 if [ $ITERATION -gt 2 ]; then 
                     THREADS=12;
                 fi
-
+                
                 DELETE $LOG $SCRIPT
                 SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
-
-                #only submit a limited number of jobs at a time
-                #  ...(dont overload queue)
-                LIMIT_RUNNING_JOBS_TO 3000
-
-            fi #closes failed sample loop
         
         done #closes interval loop
     done  #closes sample loop
@@ -97,7 +89,7 @@ while [ $FAILED -ne 0 ]; do
 
             CMD="$SINGULARITY gatk MergeVcfs -I $IN_LIST -O $OUT_GVCF"
 
-            if [ ! grep -q "picard.vcf.MergeVcfs done" $MERGE_LOG ]; then
+            if [ ! -f $LOG ] || ! grep -q "picard.vcf.MergeVcfs done" $LOG; then
                 FAILED=$((FAILED+1))
                 DELETE $LOG $SCRIPT
                 SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
@@ -117,7 +109,7 @@ while [ $FAILED -ne 0 ]; do
 
             CMD="$SINGULARITY gatk SortVcf -I $IN_GVCF -O $OUT_GVCF"
             
-            if [ ! grep -q "picard.vcf.SortVcf done" $SORT_LOG ]; then
+            if [ ! -f $LOG ] || ! grep -q "picard.vcf.SortVcf done" $LOG; then
                 FAILED=$((FAILED+1))
                 DELETE $LOG $SCRIPT
                 SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
@@ -130,8 +122,20 @@ while [ $FAILED -ne 0 ]; do
 done
 
 
+
+#clean up real quick
+rm tmp_*.merged.g.vcf* *.list
+
+mkdir hc_vcfs
+mv *_interval_??.final.g.vcf* hc_vcfs
+tar -czf hc_vcfs.tgz hc_vcfs
+rm -r hc_vcfs
+
+
+
 # GDBIMPORT --------------------------------------------------------------------
-ls $(pwd)/*"_final.g.vcf" >>final.gvcf.list
+ls $(pwd)/*"_final.g.vcf" >final.gvcf.list
+mkdir db
 
 # loop for submission
 FAILED="1"
@@ -161,13 +165,14 @@ while [ $FAILED -ne 0 ]; do
                 --reader-threads $THREADS \
                 --batch-size 24"
 
-        if [ ! grep -q "genomicsdb.GenomicsDBImport done" $LOG ]; then
-            #only submit a limited number of jobs at a time...(dont overload queue)
+        if [ ! -f $LOG ] || ! grep -q "genomicsdb.GenomicsDBImport done" $LOG; then
+
             LIMIT_RUNNING_JOBS_TO 300
 
+            FAILED=$((FAILED+1))
             DELETE $LOG $SCRIPT
-            SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"   
-        fi 
+            SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
+        fi
     done
     
     #sleep while all jobs are running   
@@ -203,10 +208,12 @@ while [ $FAILED -ne 0 ]; do
         -new-qual \
         -O $OUT_VCF"
 
-        if [ ! grep -q "GenotypeGVCFs done" $LOG ]; then
+        if [ ! -f $LOG ] || ! grep -q "GenotypeGVCFs done" $LOG; then
+
+            FAILED=$((FAILED+1))
             DELETE $LOG $SCRIPT
             SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
-        fi    
+        fi  
     done
     
     #sleep while all jobs are running   
