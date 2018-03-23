@@ -146,7 +146,7 @@ while [ $FAILED -ne 0 ]; do
 
         SAFE_INTERVAL_NAME=$(echo $INTERVAL | sed 's/:/-/')
 
-        JOB_NAME="snp."$SAFE_INTERVAL_NAME"_final"
+        JOB_NAME="snp.import."$SAFE_INTERVAL_NAME"_final"
         THREADS=12
         LOG="$LOGS_DIR/$JOB_NAME.log" 
         DEPEND=""
