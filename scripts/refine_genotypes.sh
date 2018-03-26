@@ -2,7 +2,20 @@
 
 source /master/nplatt/sH_hybridization/scripts/set-env.sh
 
-IN_RAW_VCF=../base_recalibration/r3_vcfs/cohort_raw_r3.vcf
+rm m1*.vcf* m2*.vcf*
+rm tmp_cohort.vcf*
+rm *.list
+
+mkdir contig_vcfs
+mv AMP*.vcf* contig_vcfs 
+mv KL*.vcf* contig_vcfs
+
+mkdir individual_vcfs
+mv Sh.*final.g.vcf* individual_vcfs/
+
+cd /master/nplatt/sH_hybridization/results/filter_cohort_vcf
+
+IN_RAW_VCF=/master/nplatt/sH_hybridization/results/haplotype_caller/cohort_raw_postBQSR.vcf
 
 SNP_VCF=cohort_raw_SNPs_r3.vcf
 INDEL_VCF=cohort_raw_INDELs_r3.vcf
@@ -70,22 +83,27 @@ $SINGULARITY gatk MergeVcfs \
     -O $MERGED_VARIANTS_VCF 
 
 
-$SINGULARITY gatk SelectVariants \
-     -R $REFERENCE \
-     -V cohort_filtered_SNPs_r3.vcf  \
-     -L AMPZ01026399.1 \
-     -O mito_variants.vcf
+#$SINGULARITY gatk SelectVariants \
+#     -R $REFERENCE \
+#     -V cohort_filtered_SNPs_r3.vcf  \
+#     -L AMPZ01026399.1 \
+#     -O mito_variants.vcf
 
 #create list of individuals with a lot of missing data
-vcftools --remove-filtered all --min-alleles 2 --max-alleles 2 --max-missing 0.51 --vcf cohort_filtered_SNPs_r3_env.vcf --out cohort_filtered_SNPS_biallelic --recode --recode-INFO-all
+vcftools --remove-filtered all --min-alleles 2 --max-alleles 2 --max-missing 0.51 --mac 3 --vcf cohort_filtered_SNPs_r3_env.vcf --out cohort_filtered_SNPS_biallelic --recode --recode-INFO-all
 
 
 #create list of individuals with a lot of missing data
---missing-indv
+vcftools --vcf cohort_filtered_SNPS_biallelic --missing-indv
 
-#exclude those
+cat out.imiss | awk '$5 >0.5 (print $1}' >data_poor_indivs.list
 
+vcftools --vcf cohort_filtered_SNPS_biallelic.vcf --remove data_poor_indivs.list --recode --recode-INFO-all --out cohort_filtered_SNPS_biallelic_gt50P.vcf
 
+#high proportion called variants:
+vcftools --vcf cohort_filtered_SNPS_biallelic_gt50P.vcf.vcf --max-missing 0.95 --maf 0.05 --recode --recode-INFO-all --out cohort_filtered_SNPS_biallelic_gt50P_maf05_miss95 --min-meanDP 10
+
+--thin
 
 
 --SNPdensity <integer>
