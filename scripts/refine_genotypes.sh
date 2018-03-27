@@ -34,12 +34,8 @@ $SINGULARITY gatk SplitVcfs \
       --STRICT=false
 
 #i am thinking it may be worth removing
-#1) multiallelic sites
 #2) sites that are NOT snps or indels
-#3) should we remove low coverage samples
-#4) frequent SNPS in dense regions (possibly pseudo gene)
-#5) SNPs within X bp of an indel --mask --maskExtensions --maskName
-#6) max no call samples per site
+
 
 #filter SNPs
 $SINGULARITY gatk VariantFiltration \
@@ -83,30 +79,52 @@ $SINGULARITY gatk MergeVcfs \
     -O $MERGED_VARIANTS_VCF 
 
 
-#$SINGULARITY gatk SelectVariants \
-#     -R $REFERENCE \
-#     -V cohort_filtered_SNPs_r3.vcf  \
-#     -L AMPZ01026399.1 \
-#     -O mito_variants.vcf
 
 #create list of individuals with a lot of missing data
-vcftools --remove-filtered all --min-alleles 2 --max-alleles 2 --max-missing 0.51 --mac 3 --vcf cohort_filtered_SNPs_r3_env.vcf --out cohort_filtered_SNPS_biallelic --recode --recode-INFO-all
+vcftools \
+    --remove-filtered-all \
+    --min-alleles 2 \
+    --max-alleles 2 \
+    --max-missing 0.51 \
+    --mac 3 \
+    --vcf cohort_filtered_variants_r3.vcf \
+    --out cohort_filtered_variants_biallelic \
+    --recode \
+    --recode-INFO-all
 
 
 #create list of individuals with a lot of missing data
-vcftools --vcf cohort_filtered_SNPS_biallelic --missing-indv
+vcftools \
+    --vcf cohort_filtered_variants_biallelic.recode.vcf \
+    --missing-indv \
 
-cat out.imiss | awk '$5 >0.5 (print $1}' >data_poor_indivs.list
+#remove individuals missing more than 25% of the data    
+cat out.imiss | awk '$5 >0.25 {print $1}' >data_poor_indivs.list
 
-vcftools --vcf cohort_filtered_SNPS_biallelic.vcf --remove data_poor_indivs.list --recode --recode-INFO-all --out cohort_filtered_SNPS_biallelic_gt50P.vcf
+vcftools --vcf cohort_filtered_variants_biallelic.recode.vcf --remove data_poor_indivs.list --recode --recode-INFO-all --out cohort_filtered_SNPS_biallelic_gt75P
 
+#remove sites where 95% are genotyped
 #high proportion called variants:
-vcftools --vcf cohort_filtered_SNPS_biallelic_gt50P.vcf.vcf --max-missing 0.95 --maf 0.05 --recode --recode-INFO-all --out cohort_filtered_SNPS_biallelic_gt50P_maf05_miss95 --min-meanDP 10
+vcftools \
+    --vcf cohort_filtered_SNPS_biallelic_gt75P.recode.vcf \
+    --max-missing 0.95 \
+    --maf 0.025 \
+    --recode \
+    --recode-INFO-all \
+    --out cohort_filtered_SNPS_biallelic_gt75P_miss95 \
+    --min-meanDP 10
 
---thin
 
+#remove snps close to indels and clumps of indels
+bcftools filter \
+    --SnpGap 50 \
+    --IndelGap 100 \
+    --output cohort_filtered_SNPS_biallelic_gt75P_miss95_100bpfilt.vcf \
+    -O v \
+    cohort_filtered_SNPS_biallelic_gt75P_miss95.recode.vcf
 
---SNPdensity <integer>
+#add unique identifer to ID field (replace "."
+bcftools annotate --set-id +'%CHROM\:%POS' cohort_filtered_SNPS_biallelic_gt75P_miss95_100bpfilt.vcf >sHaem_filtered.vcf
 
 
 
