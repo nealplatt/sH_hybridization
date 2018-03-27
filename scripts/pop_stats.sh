@@ -15,7 +15,6 @@ vcftools \
     --out NE_vs_TZ
 
 
-
 # filter "linked" snps for population assignment/pca
 # see file:///C:/Users/nplatt/Dropbox/work/projects/sH_hybridization/docs/congenomics_plink_tutorial_davey.pdf
 plink \
@@ -24,11 +23,21 @@ plink \
     --indep-pairwise 25 5 0.2 \
     --out LDprunedout
 
-singularity shell gatk SelectVariants -V sHaem_filtered_cohort_named.vcf -R $REFERENCE -O sHaem_filtered_cohort_named_LDpruned.vcf --exclude-ids LDprunedout.prune.out
+singularity exec ../../snpCalling_v0.0.7.img \
+    gatk SelectVariants \
+        -V ../filter_cohort_vcf/sHaem_filtered.vcf \
+        -R $REFERENCE \
+        -O sHaem_filtered_LDpruned.vcf \
+        --exclude-ids LDprunedout.prune.out  
+
+vcftools \
+    --vcf sHaem_filtered_LDpruned.vcf \
+    --weir-fst-pop lists/Sh.NE.list \
+    --weir-fst-pop lists/Sh.TZ.list \
+    --out NE_vs_TZ-LDpruned
 
 
-
-plink --vcf sHaem_filtered_cohort_named.vcf --allow-extra-chr --recode structure --out sHaem_filtered_cohort_named
+plink --vcf sHaem_filtered_LDpruned.vcf --allow-extra-chr --recode structure --out sHaem_filtered_LDpruned
 
 
 
