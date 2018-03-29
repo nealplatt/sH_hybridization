@@ -34,17 +34,15 @@ cd $SRA_DIR
 #SRR433865
 
 for SRA in ERR119622 ERR103048 ERR119622 ERR310937 ERR119623 ERR084970 ERR037800 SRR433865; do
-    $SINGULARITY fastq-dump -I --split-files --gzip $SRA &
+    $SINGULARITY fastq-dump --split-files --gzip $SRA &
 done
-
-wait
 
 #get fred's exome data
 cp /data/infectious/schistosome/04\ -\ Population\ genetics\ \(Sm\ -\ Sro\)/2017-01-20\ Make\ Analysis\ Global\ Again/v7/1-Alignment/data/Sm.BR_0447.1/*.fastq.gz . 
 cp /data/infectious/schistosome/04\ -\ Population\ genetics\ \(Sm\ -\ Sro\)/2017-01-20\ Make\ Analysis\ Global\ Again/v7/1-Alignment/data/Sm.BR_2039.1/*.fastq.gz . 
 cp /data/infectious/schistosome/04\ -\ Population\ genetics\ \(Sm\ -\ Sro\)/2017-01-20\ Make\ Analysis\ Global\ Again/v7/1-Alignment/data/Sm.BR_1278.1/*.fastq.gz . 
 
-#
-#for SRA in ERR119622 ERR103048 ERR119622 ERR310937 ERR119623 ERR084970 ERR037800 SRR433865; do
-#    ~/bin/sratoolkit.2.8.2-1-centos_linux64/bin/fastq-dump -I --split-files --gzip $SRA &
-#done
+wait 
+
+rename _1.fastq.gz _R1.fastq.gz *_1.fastq.gz
+rename _2.fastq.gz _R2.fastq.gz *_2.fastq.gzls -lh
