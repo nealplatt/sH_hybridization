@@ -126,6 +126,8 @@ bcftools filter \
 #add unique identifer to ID field (replace "."
 bcftools annotate --set-id +'%CHROM\:%POS' cohort_filtered_SNPS_biallelic_gt75P_miss95_100bpfilt.vcf >sHaem_filtered.vcf
 
-
-
+#index for downstream analyses
+singularity exec ../../snpCalling_v0.0.7.img \
+    gatk IndexFeatureFile \
+        -F sHaem_filtered.vcf
 

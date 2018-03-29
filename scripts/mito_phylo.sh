@@ -4,6 +4,22 @@ mkdir mito_phylo
 
 cd mito_phylo
 
+singularity exec ../../snpCalling_v0.0.7.img \
+    gatk SelectVariants \
+        -R $REFERENCE \
+        -V ../filter_cohort_vcf/sHaem_filtered.vcf  \
+        -L AMPZ01026399.1 \
+        -O mito_variants.vcf
+#only 2 -- probably not worth doing unless re-filtering
+
+
+for INDIVIDUAL in $(cat ../sample.list); do
+    $SINGULARITY gatk SelectVariants \
+        -R $REFERENCE \
+        -V ../filter_cohort_vcf/sHaem_filtered.vcf \
+        -sn $INDIVIDUAL \
+        -O $INDIVIDUAL"_filtered.vcf"
+done
 
 #FILTER AND MERGE VARIANTS FROM MITOCHONDRIA
 for SAMPLE in $(cat $SAMPLE_LIST); do
@@ -21,13 +37,12 @@ for SAMPLE in $(cat $SAMPLE_LIST); do
     
     CMD="$SINGULARITY gatk SelectVariants \
         -V $IN_VCF \
-        -select-type SNP \
         -L AMPZ01026399.1 \
         -O $OUT_VCF \
         -R $REFERENCE"
 
-    DELETE $LOG $SCRIPT
-    SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
+    #DELETE $LOG $SCRIPT
+    #SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
 
     # FILTER SNPS --------------------------------------------------------------
     JOB_NAME="mito_"$SAMPLE"_filter_snps"
@@ -44,12 +59,22 @@ for SAMPLE in $(cat $SAMPLE_LIST); do
     CMD="$SINGULARITY gatk VariantFiltration \
         -R $REFERENCE \
         -V $IN_VCF \
-        --filter-expression "'"QD < 2.0 || FS > 60.0 || MQ < 40.0 || MQRankSum < -12.5 || ReadPosRankSum < -8.0"'" \
+        --filter-name "MIN_DP" \
+        --filter-expression "DP > 100" \
+        --filter-expression "QD < 2.0" \
+        --filter-expression "MQ < 40.0" \
+        --filter-expression "MQRankSum < -12.5" \
+        --filter-expression "ReadPosRankSum" \
+        --filter-expression "DP > 100" \
+        --filter-expression "DP > 100" \
+
+
+--filter-expression "'"DP > 100 && QD < 2.0 && FS > 60.0 && MQ < 40.0 && MQRankSum < -12.5 && ReadPosRankSum < -8.0"'" \
         --filter-name "'"recommended_snp_filter"'" \
         -O $OUT_VCF"
 
-    #DELETE $LOG $SCRIPT
-    #SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
+    DELETE $LOG $SCRIPT
+    SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
 
     # SELECT INDELS ------------------------------------------------------------
     JOB_NAME="mito_"$SAMPLE"_select_indels"
@@ -70,8 +95,8 @@ for SAMPLE in $(cat $SAMPLE_LIST); do
         -O $OUT_VCF \
         -R $REFERENCE"
 
-    DELETE $LOG $SCRIPT
-    SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
+    #DELETE $LOG $SCRIPT
+    #SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
 
 
     # FILTER INDELS ------------------------------------------------------------
@@ -93,8 +118,8 @@ for SAMPLE in $(cat $SAMPLE_LIST); do
         --filter-name "'"recommended_indel_filter"'" \
         -O $OUT_VCF"
 
-    #DELETE $LOG $SCRIPT
-    #SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
+    DELETE $LOG $SCRIPT
+    SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
 
 
     # MERGE VARIANTS------------------------------------------------------------
@@ -113,8 +138,8 @@ for SAMPLE in $(cat $SAMPLE_LIST); do
 
     CMD="$SINGULARITY gatk MergeVcfs -I $IN_LIST -O $OUT_VCF -R $REFERENCE"
 
-    #DELETE $LOG $SCRIPT
-    #SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
+    DELETE $LOG $SCRIPT
+    SUBMIT "$CMD" "$SCRIPT" "$JOB_QSUB"
 done
 
 
@@ -161,22 +186,22 @@ $SINGULARITY gatk SelectVariants \
 
 
 for INDIVIDUAL in $(cat ../sample.list); do
-    #$SINGULARITY gatk SelectVariants \
-    #    -R $REFERENCE \
-    #    -V mito_variants.vcf \
-    #    -sn $INDIVIDUAL \
-    #    -O $INDIVIDUAL.mito.vcf
+    $SINGULARITY gatk SelectVariants \
+        -R $REFERENCE \
+        -V mito_variants.vcf \
+        -sn $INDIVIDUAL \
+        -O $INDIVIDUAL.mito.vcf
+done
+    #python vcf2fasta.py -v $INDIVIDUAL.mito.vcf -o $INDIVIDUAL.mito.fas -c AMPZ01026399.1
 
-    python vcf2fasta.py -v $INDIVIDUAL.mito.vcf -o $INDIVIDUAL.mito.fas -c AMPZ01026399.1
-
-    #java -jar ~/bin/gatk-3.8.0.jar \
-    #   -T FastaAlternateReferenceMaker \
-    #   -R schHae_v1_mt.masked.fa  \
-    #   -o $INDIVIDUAL.mito.fas \
-    #   -V mito_variants.vcf
+    java -jar ~/bin/gatk-3.8.0.jar \
+       -T FastaAlternateReferenceMaker \
+       -R schHae_v1_mt.masked.fa  \
+       -o $INDIVIDUAL.mito.fas \
+       -V mito_variants.vcf
 
     #change the sequence header name
-    sed -i 's/>.*/>'$INDIVIDUAL'##AMPZ01026399.1/' $INDIVIDUAL.mito.fas
+    #sed -i 's/>.*/>'$INDIVIDUAL'##AMPZ01026399.1/' $INDIVIDUAL.mito.fas
 
 done
 
