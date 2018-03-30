@@ -26,114 +26,63 @@
 #   6] whatup with all the snakejob* files
 #   7] download genome and raw data from ncbi
 #   8] sub-workflows for major stages
-#   9] set the directories using python variables
 #  10] Param errors on samse/pe_sort
-#  11] MOVE "SAMPLES" to config file
 #-------------------------------------------------------------------------------
 
-#setting work directory
+#setting up snakemake 
+configfile: "config.yaml"
 HOME_DIR = "/master/nplatt/schisto_hybridization/"
+CONTIG_CHUNKS=50
+ASSEMBLY = "schHae_v1.fa"
+
+#setting work directory
 RESULTS_DIR = HOME_DIR + "results/"
 DATA_DIR = HOME_DIR + "data/"
-ENV_DIR = HOME_DIR + "envs/"
-LOG_DIR = HOME_DIR + "logs/"
-
+LOG_DIR = RESULTS_DIR + "logs/"
 GENOME_DIR = DATA_DIR + "genome/"
-GENOME = GENOME_DIR + "schHae_v1.fa"
-
+GENOME = GENOME_DIR + ASSEMBLY
 SEQ_DIR = DATA_DIR + "sequence_data/"
-
-FILTER_READS_DIR = RESULTS_DIR + "01-filtered_reads/" 
-
+FILTER_READS_DIR = RESULTS_DIR + "01-filtered_reads/"
 MAP_DIR = RESULTS_DIR + "02-mapped_reads/" 
-
 BQSR_DIR = RESULTS_DIR + "03-gatk_bqsr/" 
 BQSR_R1_DIR = BQSR_DIR + "r1/"
 BQSR_R2_DIR = BQSR_DIR + "r2/"
-
 WGA_DIR = RESULTS_DIR + "06-wga/" 
-
-
 
 #setting work directory
 workdir: HOME_DIR
-configfile: "test_config.yaml"
+
+#setting up local rules to be run on the head node
 localrules: all
-localrules: clean
 localrules: create_list_of_contigs
-            
+localrules: bqsr_r1_prep_gdbimport
+localrules: bqsr_r2_prep_gdbimport
 
-#list of all the sample IDs to be processed
-HAE_SAMPLES = [ "Sh.NE_Dai-002.1",      "Sh.NE_Dai-010.1",      "Sh.NE_Dai-013.3",      
-#            	"Sh.NE_Dai-031.1",      "Sh.NE_Dai-033.1",      "Sh.NE_Dai-044.1",
-#            	"Sh.NE_Dai-045.1",      "Sh.NE_Dai-051.1",      "Sh.NE_Dai-074.1",      
-#            	"Sh.NE_Dai-146.1",      "Sh.NE_DaiCP-233.1",    "Sh.NE_DaiCP-276.1", 
-#            	"Sh.NE_DaiCP-277.2",    "Sh.NE_Doki-029.1",     "Sh.NE_Kar-001.1",      
-#            	"Sh.NE_Kar-002.1",      "Sh.NE_Kar-076.1",      "Sh.NE_Kar-096.2",      
-#            	"Sh.NE_Kar-241.1",      "Sh.NE_Kar-241.2",      "Sh.NE_Kar-281.1",
-#            	"Sh.NE_Kar-37.2",       "Sh.NE_Lata-007.3",     "Sh.NE_Lata-033.1", 
-#            	"Sh.NE_Lata-078.1",     "Sh.NE_Lata-253.1",     "Sh.NE_Lata-275.2",
-#            	"Sh.NE_Lata-293.1",     "Sh.NE_Lata-294.1",     "Sh.NE_LibTB-009.2",
-#            	"Sh.NE_LibTB-010.1",    "Sh.NE_LibTB-022.1",    "Sh.NE_LibTB-028.1",    
-#            	"Sh.NE_LibTB-031.1",    "Sh.NE_NG-011.1",       "Sh.NE_NG-06.2", 
-#            	"Sh.NE_NG-089.1",       "Sh.NE_NG-236.1",       "Sh.NE_Seb-076.1",
-#            	"Sh.NE_Seb-078.2",      "Sh.NE_Seb-081.2",      "Sh.NE_Tiag-272.1",
-#            	"Sh.NE_YK-029.2",       "Sh.NE_YK-069.1",       "Sh.NE_YK-099.2",
-#            	"Sh.NE_YK-248.2",       "Sh.NE_Youri-069.2",    "Sh.NE_Youri-091.3", 
-#            	"Sh.TZ_PEM0063.1",      "Sh.TZ_PEM0075.1",      "Sh.TZ_PEM0076.1",
-#            	"Sh.TZ_PEM0079.1",      "Sh.TZ_PEM0089.2",      "Sh.TZ_PEM0094.2",      
-#            	"Sh.TZ_PEM0099.2",      "Sh.TZ_PEM0103.1",      "Sh.TZ_PEM0104.1",
-#            	"Sh.TZ_PEM0106.2",      "Sh.TZ_PEM0108.1",      "Sh.TZ_PEM0110.1", 
-#            	"Sh.TZ_PEM0114.3",      "Sh.TZ_PEM0115.4",      "Sh.TZ_PEM0120.1",
-#            	"Sh.TZ_PEM0125.1",      "Sh.TZ_PEM0126.1",      "Sh.TZ_PEM0127.1",
-#            	"Sh.TZ_PEM0128.1",      "Sh.TZ_PEM0130.1",      "Sh.TZ_PEM0133.1",
-#            	"Sh.TZ_PEM0139.2",      "Sh.TZ_PEM0145.3",      "Sh.TZ_PEM0154.1", 
-#            	"Sh.TZ_PEM0157.3",      "Sh.TZ_PEM0166.1",      "Sh.TZ_PEM0171.1",
-#            	"Sh.TZ_UNG0006.1",      "Sh.TZ_UNG0038.1",      "Sh.TZ_UNG0076.1",
-#            	"Sh.TZ_UNG0077.1",      "Sh.TZ_UNG0078.1",      "Sh.TZ_UNG0087.2",
-#           	"Sh.TZ_UNG0089.3",      "Sh.TZ_UNG0092.3",      "Sh.TZ_UNG0099.1", 
-#            	"Sh.TZ_UNG0102.1",      "Sh.TZ_UNG0111.1",      "Sh.TZ_UNG0117.1",
-#            	"Sh.TZ_UNG0121.1",      "Sh.TZ_UNG0125.3",      "Sh.TZ_UNG0127.1",
-#            	"Sh.TZ_UNG0129.2",      "Sh.TZ_UNG0134.1",      "Sh.TZ_UNG0137.3",
-            	"Sh.TZ_UNG0139.1",      "Sh.TZ_UNG0142.2",      "Sh.TZ_UNG0146.1"]
+#list of all the sample IDs to be processed - in config file
+EXOME_SAMPLES = config["haematobium_samples"] + config["mansoni_samples"]
+SRA_SAMPLES = config["haematobium_SRA_samples"] + config["currasoni_samples"] + config["bovis_samples"]
+SAMPLES = EXOME_SAMPLES + SRA_SAMPLES
 
-HAE_SRA_SAMPLES = ["ERR084970", "ERR037800", "SRR433865"]
-MAN_SAMPLES     = ["Sm.BR_1278.1", "Sm.BR_0447.1", "Sm.BR_2039.1"]
-BOV_SAMPLES     = ["ERR119622", "ERR103048"]
-CUR_SAMPLES     = ["ERR119623"]
-#Curassoni samples ERR310937 download constantly fails
-
-
-EXOME_SAMPLES = HAE_SAMPLES + MAN_SAMPLES
-SRA_SAMPLES = HAE_SRA_SAMPLES + CUR_SAMPLES + BOV_SAMPLES
-SAMPLES = HAE_SAMPLES + HAE_SRA_SAMPLES + MAN_SAMPLES + CUR_SAMPLES + BOV_SAMPLES
-
-#list the number of chuchks to split genome.  Should imrpove this in future versions
-CONTIG_CHUNKS=50
+#prep array to split genome
 NUMBERS=list(range(1, CONTIG_CHUNKS))
-
 NUMS_2D=[]
 for NUM in NUMBERS:
     NUMS_2D.append("%02d" % NUM)
 
-
 #get genomes - sman_v7 ftp://ftp.sanger.ac.uk/pub/project/pathogens/Schistosoma/mansoni/v7/sequence/Smansoni_v7.fa.gz
-
 shell.prefix("source ~/.bash_profile; ")
-
-#-------------------------------------------------------------------------------
-# initializing rule - these files need to be generated...initiates the pipeline
-
-rule all:
-    input: 
-        expand("{dir}all_recalibration_plot_r2.pdf", dir=BQSR_DIR), 
-        WGA_DIR + "schMan7_vs_schMan1.hal"
 
 #-------------------------------------------------------------------------------
 # clean all of the snake files created from previous run
 onstart:
     shell("rm snakejob.*")
 
+#-------------------------------------------------------------------------------
+# initializing rule - these files need to be generated...initiates the pipeline
+rule all:
+    input: 
+        expand("{dir}all_recalibration_plot_r2.pdf", dir=BQSR_DIR), 
+        WGA_DIR + "schMan7_vs_schMan1.hal"
 
 #-------------------------------------------------------------------------------
 # Filter reads
@@ -151,7 +100,7 @@ rule filter_reads:
     threads:
         12
     conda:
-        ENV_DIR + "snp_calling.yaml"
+        "environment.yaml"
     log:
         LOG_DIR + "{sample}.filter_reads.log"    
     shell:
@@ -183,7 +132,7 @@ rule index_genome:
     output:
         expand(GENOME_DIR + "schHae_v1.fa{ext}", ext=["", ".pac", ".ann", ".amb", ".bwt", ".sa"])
     conda:
-        ENV_DIR + "snp_calling.yaml"
+        "environment.yaml"
     log:
         LOG_DIR + "index_genome.log"
     params:
@@ -203,7 +152,7 @@ rule bwa_map_R1:
     output:
         temp(MAP_DIR + "{sample}_R1.sai")
     conda:
-        ENV_DIR + "snp_calling.yaml"
+        "environment.yaml"
     threads:
         12
     log:
@@ -221,7 +170,7 @@ rule bwa_map_R2:
     output:
         temp(MAP_DIR + "{sample}_R2.sai")
     conda:
-        ENV_DIR + "snp_calling.yaml"
+        "environment.yaml"
     threads:
         12
     log:
@@ -239,7 +188,7 @@ rule bwa_map_RX:
     output:
         temp(MAP_DIR + "{sample}_RX.sai")
     conda:
-        ENV_DIR + "snp_calling.yaml"
+        "environment.yaml"
     threads:
         12
     log:
@@ -259,7 +208,7 @@ rule bwa_sampe:
     output:
         temp(MAP_DIR + "{sample}_samPE.bam")
     conda:
-        ENV_DIR + "snp_calling.yaml"
+        "environment.yaml"
     threads:
         12
     log:
@@ -277,7 +226,7 @@ rule bwa_samse:
     output:
         temp(MAP_DIR + "{sample}_samSE.bam")
     conda:
-        ENV_DIR + "snp_calling.yaml"
+        "environment.yaml"
     threads:
         12
     log:
@@ -293,7 +242,7 @@ rule sort_sampe:
     output:
         temp(MAP_DIR + "{sample}_samPE_sorted.bam")
     conda:
-        ENV_DIR + "snp_calling.yaml"
+        "environment.yaml"
     threads:
         12
     log:
@@ -309,7 +258,7 @@ rule sort_samse:
     output:
         temp(MAP_DIR + "{sample}_samSE_sorted.bam")
     conda:
-        ENV_DIR + "snp_calling.yaml"
+        "environment.yaml"
     threads:
         12
     log:
@@ -331,7 +280,7 @@ rule process_bam:
         METRICS = MAP_DIR + "{sample}_noDupes.metrics",
         INDEX = MAP_DIR + "{sample}_processed.bam.bai"
     conda:
-        ENV_DIR + "snp_calling.yaml"
+        "environment.yaml"
     threads:
         12
     log:
@@ -344,7 +293,7 @@ rule process_bam:
         """
         samtools merge {output.MERGED} {input}
 
-        singularity exec snpCalling_v0.0.7.img \
+        singularity exec snpCalling_v0.0.8.img \
             gatk AddOrReplaceReadGroups \
                 --INPUT={output.MERGED} \
                 --OUTPUT={output.RGS} \
@@ -354,13 +303,13 @@ rule process_bam:
                 --RGPU={params.CELL}.{params.INDEX}.{params.LANE} \
                 --RGSM={wildcards.sample}
 
-        singularity exec snpCalling_v0.0.7.img \
+        singularity exec snpCalling_v0.0.8.img \
             gatk SortSam \
                 --INPUT {output.RGS} \
                 --OUTPUT {output.RG_SORTED} \
                 --SORT_ORDER=coordinate
 
-        singularity exec snpCalling_v0.0.7.img \
+        singularity exec snpCalling_v0.0.8.img \
             gatk MarkDuplicates \
                 --INPUT {output.RG_SORTED} \
                 --OUTPUT {output.BAM} \
@@ -383,7 +332,7 @@ rule seqdict_genome:
         LOG_DIR + "seqdict_genome.log"
     shell:
         """
-        singularity exec snpCalling_v0.0.7.img \
+        singularity exec snpCalling_v0.0.8.img \
             gatk CreateSequenceDictionary -R {input}
         """
 
@@ -393,7 +342,7 @@ rule faidx_genome:
     output:
         GENOME_DIR + "schHae_v1.fa.fai"
     conda:
-        ENV_DIR + "snp_calling.yaml"
+        "environment.yaml"
     threads:
         1
     log:
@@ -408,18 +357,18 @@ rule create_list_of_contigs:
     input: 
         GENOME_DIR + "schHae_v1.fa"
     output:
-        CONTIG_LIST = (expand("{dir}contigs.{number}.list", dir=BQSR_R1_DIR, number=NUMS_2D)),
-        GENOME_LIST = BQSR_R1_DIR + "schHae_v1_contigs.list"
+        CONTIG_LIST = (expand("{dir}contigs.{number}.list", dir=BQSR_DIR, number=NUMS_2D)),
+        GENOME_LIST = BQSR_DIR + "schHae_v1_contigs.list"
     threads:
         1
     log:
         LOG_DIR + "create_list_of_contigs.log"
     params:
-        PREFIX = BQSR_R1_DIR + "contigs."
+        PREFIX = BQSR_DIR + "contigs."
     shell:
         """
         grep ">" {input} | cut -f1 -d" " | sed 's/>//' | shuf >{output.GENOME_LIST}
-        singularity exec snpCalling_v0.0.7.img \
+        singularity exec snpCalling_v0.0.8.img \
             split -n l/{CONTIG_CHUNKS} \
                 --numeric-suffixes=1 \
                 --additional-suffix .list \
@@ -435,7 +384,7 @@ rule bqsr_r1_haplotype_caller:
         MAP_DIR + "{sample}_processed.bam.bai",
         BAM = MAP_DIR + "{sample}_processed.bam",
         REFERENCE = GENOME,
-        LIST = BQSR_R1_DIR + "contigs.{chunk}.list"
+        LIST = BQSR_DIR + "contigs.{chunk}.list"
     output:
         temp(BQSR_R1_DIR + "{sample}_n{chunk}.g.vcf")
     threads:
@@ -444,7 +393,7 @@ rule bqsr_r1_haplotype_caller:
         LOG_DIR + "{sample}_{chunk}.bqsr_r1_haplotype_caller.log"
     shell:
         """
-        singularity exec snpCalling_v0.0.7.img \
+        singularity exec snpCalling_v0.0.8.img \
             gatk HaplotypeCaller \
                 -I {input.BAM} \
                 -O {output} \
@@ -466,12 +415,12 @@ rule bqsr_r1_build_indiv_vcfs:
         """
         ls {input} >results/03-gatk_bqsr/r1/{wildcards.sample}.list
     
-        singularity exec snpCalling_v0.0.7.img \
+        singularity exec snpCalling_v0.0.8.img \
            gatk MergeVcfs \
                 -I results/03-gatk_bqsr/{wildcards.sample}.list \
                 -O results/03-gatk_bqsr/tmp_{wildcards.sample}.merged.g.vcf
         
-        singularity exec snpCalling_v0.0.7.img \
+        singularity exec snpCalling_v0.0.8.img \
             gatk SortVcf \
                 -I results/03-gatk_bqsr/tmp_{wildcards.sample}.merged.g.vcf \
                 -O {output}
@@ -507,7 +456,7 @@ rule bqsr_r1_gdbimport:
     #    CONTIG=config["contigs"]
     shell:
         """
-        singularity exec snpCalling_v0.0.7.img \
+        singularity exec snpCalling_v0.0.8.img \
             gatk --java-options \"-Xmx4g -Xms4g\" GenomicsDBImport \
                 -V {input} \
                 --genomicsdb-workspace-path {output} \
@@ -528,7 +477,7 @@ rule bqsr_r1_genotype:
         LOG_DIR + "{wildcards.contig}.bqsr_r1_genotype.log"
     shell:
         """
-        singularity exec snpCalling_v0.0.7.img \
+        singularity exec snpCalling_v0.0.8.img \
             gatk GenotypeGVCFs \
                 -R {input.REFERENCE} \
                 -V gendb://{input.DB} \
@@ -552,12 +501,12 @@ rule bqsr_r1_build_cohort_vcf:
         """        
         ls {input} >{params.LIST}
     
-        singularity exec snpCalling_v0.0.7.img \
+        singularity exec snpCalling_v0.0.8.img \
            gatk MergeVcfs \
                 -I {params.LIST} \
                 -O {params.TMP_VCF}
         
-        singularity exec snpCalling_v0.0.7.img \
+        singularity exec snpCalling_v0.0.8.img \
             gatk SortVcf \
                 -I {params.TMP_VCF} \
                 -O {output}
@@ -578,14 +527,14 @@ rule bqsr_r1_filter_snps:
         TMP_VCF = temp(BQSR_R1_DIR + "cohort_SNPs.vcf")
     shell:
         """
-        singularity exec snpCalling_v0.0.7.img \
+        singularity exec snpCalling_v0.0.8.img \
             gatk SelectVariants \
             -V {input.VCF} \
             -select-type SNP \
             -O {params.TMP_VCF} \
             -R {input.REFERENCE}"
 
-        singularity exec snpCalling_v0.0.7.img \
+        singularity exec snpCalling_v0.0.8.img \
             gatk VariantFiltration \
             -R {input.REFERENCE} \
             -V {params.TMP_VCF} \
@@ -612,14 +561,14 @@ rule bqsr_r1_filter_indels:
         TMP_VCF = temp(BQSR_R1_DIR + "cohort_INDELs.vcf")
     shell:
         """
-        singularity exec snpCalling_v0.0.7.img \
+        singularity exec snpCalling_v0.0.8.img \
             gatk SelectVariants \
             -V {input.VCF} \
             -select-type INDEL \
             -O {params.TMP_VCF} \
             -R {input.REFERENCE}"
 
-        singularity exec snpCalling_v0.0.7.img \
+        singularity exec snpCalling_v0.0.8.img \
             gatk VariantFiltration \
             -R {input.REFERENCE} \
             -V {params.TMP_VCF} \
@@ -645,7 +594,7 @@ rule bqsr_r1_merge_variants:
         """
         ls {input.SNPS} {input.INDELS} >{params.LIST}
         
-        singularity exec snpCalling_v0.0.7.img \
+        singularity exec snpCalling_v0.0.8.img \
             gatk MergeVcfs \
             -I {params.LIST} \
             -O {output} \
@@ -667,7 +616,7 @@ rule bqsr_r1_score_pre_recal:
         LOG_DIR + "{sample}bqsr_r1_score_pre_recal.log"
     shell:
         """
-        singularity exec snpCalling_v0.0.7.img \
+        singularity exec snpCalling_v0.0.8.img \
             gatk BaseRecalibrator \
             -R {input.REFERENCE} \
             -I {input.BAM} \
@@ -689,7 +638,7 @@ rule bqsr_r1_recalibrate_bams:
         LOG_DIR + "{sample}bqsr_r1_score_pre_recal.log"
     shell:
         """
-        singularity exec snpCalling_v0.0.7.img \
+        singularity exec snpCalling_v0.0.8.img \
             gatk BaseRecalibrator \
             -R {input.REFERENCE} \
             -I {input.BAM} \
@@ -710,7 +659,7 @@ rule bqsr_r1_score_post_recal:
         LOG_DIR + "{sample}.bqsr_r1_score_pre_recal.log"
     shell:
         """
-        singularity exec snpCalling_v0.0.7.img \
+        singularity exec snpCalling_v0.0.8.img \
             gatk BaseRecalibrator \
             -R {input.REFERENCE} \
             -I {input.BAM} \
@@ -730,7 +679,7 @@ rule bqsr_r1_analyze_covariates_by_sample:
         LOG_DIR + "bqsr_r1_build_cohort_vcf.log"
     shell:
         """
-        singularity exec snpCalling_v0.0.7.img \
+        singularity exec snpCalling_v0.0.8.img \
             gatk AnalyzeCovariates \
             -before {input.PRE_TABLE} \
             -after {input.POST_TABLE} \
@@ -757,17 +706,17 @@ rule bqsr_r1_analyze_covariates_all:
         ls {input.PRE_TABLES} >{params.PRE_LIST}
         ls {input.POST_TABLES} >{params.POST_LIST} 
 
-        singularity exec snpCalling_v0.0.7.img \
+        singularity exec snpCalling_v0.0.8.img \
             gatk GatherBQSRReports \
                 --input {params.PRE_LIST} \
                 --output {params.PRE_TABLE}
 
-        singularity exec snpCalling_v0.0.7.img \
+        singularity exec snpCalling_v0.0.8.img \
             gatk GatherBQSRReports \
                 --input {params.POST_LIST}  \
                 --output {params.POST_TABLE}
         
-        singularity exec snpCalling_v0.0.7.img \
+        singularity exec snpCalling_v0.0.8.img \
             gatk AnalyzeCovariates \
                 -before {params.PRE_TABLE} \
                 -after {params.POST_TABLE} \
@@ -791,7 +740,7 @@ rule bqsr_r2_haplotype_caller:
         LOG_DIR + "{sample}_{chunk}.bqsr_r2_haplotype_caller.log"
     shell:
         """
-        singularity exec snpCalling_v0.0.7.img \
+        singularity exec snpCalling_v0.0.8.img \
             gatk HaplotypeCaller \
                 -I {input.BAM} \
                 -O {output} \
@@ -816,12 +765,12 @@ rule bqsr_r2_build_indiv_vcfs:
         """
         ls {input} >{params.LIST}
     
-        singularity exec snpCalling_v0.0.7.img \
+        singularity exec snpCalling_v0.0.8.img \
            gatk MergeVcfs \
                 -I {params.LIST} \
                 -O {params.TMP_VCF}
         
-        singularity exec snpCalling_v0.0.7.img \
+        singularity exec snpCalling_v0.0.8.img \
             gatk SortVcf \
                 -I {params.TMP_VCF} \
                 -O {output}
@@ -857,7 +806,7 @@ rule bqsr_r2_gdbimport:
     #    CONTIG=config["contigs"]
     shell:
         """
-        singularity exec snpCalling_v0.0.7.img \
+        singularity exec snpCalling_v0.0.8.img \
             gatk --java-options \"-Xmx4g -Xms4g\" GenomicsDBImport \
                 -V {input} \
                 --genomicsdb-workspace-path {output} \
@@ -878,7 +827,7 @@ rule bqsr_r2_genotype:
         LOG_DIR + "{wildcards.contig}.bqsr_r2_genotype.log"
     shell:
         """
-        singularity exec snpCalling_v0.0.7.img \
+        singularity exec snpCalling_v0.0.8.img \
             gatk GenotypeGVCFs \
                 -R {input.REFERENCE} \
                 -V gendb://{input.DB} \
@@ -902,12 +851,12 @@ rule bqsr_r2_build_cohort_vcf:
         """        
         ls {input} >{params.LIST}
     
-        singularity exec snpCalling_v0.0.7.img \
+        singularity exec snpCalling_v0.0.8.img \
            gatk MergeVcfs \
                 -I {params.LIST} \
                 -O {params.TMP_VCF}
         
-        singularity exec snpCalling_v0.0.7.img \
+        singularity exec snpCalling_v0.0.8.img \
             gatk SortVcf \
                 -I {params.TMP_VCF} \
                 -O {output}
@@ -928,14 +877,14 @@ rule bqsr_r2_filter_snps:
         TMP_VCF=temp(BQSR_R2_DIR + "cohort_SNPs.vcf")
     shell:
         """
-        singularity exec snpCalling_v0.0.7.img \
+        singularity exec snpCalling_v0.0.8.img \
             gatk SelectVariants \
             -V {input.VCF} \
             -select-type SNP \
             -O {params.TMP_VCF} \
             -R {input.REFERENCE}"
 
-        singularity exec snpCalling_v0.0.7.img \
+        singularity exec snpCalling_v0.0.8.img \
             gatk VariantFiltration \
             -R {input.REFERENCE} \
             -V {params.TMP_VCF} \
@@ -960,14 +909,14 @@ rule bqsr_r2_filter_indels:
         TMP_VCF = temp(BQSR_R2_DIR + "cohort_INDELs.vcf")
     shell:
         """
-        singularity exec snpCalling_v0.0.7.img \
+        singularity exec snpCalling_v0.0.8.img \
             gatk SelectVariants \
             -V {input.VCF} \
             -select-type INDEL \
             -O {params.TMP_VCF} \
             -R {input.REFERENCE}"
 
-        singularity exec snpCalling_v0.0.7.img \
+        singularity exec snpCalling_v0.0.8.img \
             gatk VariantFiltration \
             -R {input.REFERENCE} \
             -V {params.TMP_VCF} \
@@ -993,7 +942,7 @@ rule bqsr_r2_merge_variants:
         """
         ls {input.SNPS} {input.INDELS} >{params.LIST}
         
-        singularity exec snpCalling_v0.0.7.img \
+        singularity exec snpCalling_v0.0.8.img \
             gatk MergeVcfs \
             -I {params.LIST} \
             -O {output} \
@@ -1015,7 +964,7 @@ rule bqsr_r2_score_pre_recal:
         LOG_DIR + "{sample}bqsr_r2_score_pre_recal.log"
     shell:
         """
-        singularity exec snpCalling_v0.0.7.img \
+        singularity exec snpCalling_v0.0.8.img \
             gatk BaseRecalibrator \
             -R {input.REFERENCE} \
             -I {input.BAM} \
@@ -1037,7 +986,7 @@ rule bqsr_r2_recalibrate_bams:
         LOG_DIR + "{sample}bqsr_r2_score_pre_recal.log"
     shell:
         """
-        singularity exec snpCalling_v0.0.7.img \
+        singularity exec snpCalling_v0.0.8.img \
             gatk BaseRecalibrator \
             -R {input.REFERENCE} \
             -I {input.BAM} \
@@ -1058,7 +1007,7 @@ rule bqsr_r2_score_post_recal:
         LOG_DIR + "{sample}bqsr_r2_score_pre_recal.log"
     shell:
         """
-        singularity exec snpCalling_v0.0.7.img \
+        singularity exec snpCalling_v0.0.8.img \
             gatk BaseRecalibrator \
             -R {input.REFERENCE} \
             -I {input.BAM} \
@@ -1078,7 +1027,7 @@ rule bqsr_r2_analyze_covariates_by_sample:
         LOG_DIR + "bqsr_r2_build_cohort_vcf.log"
     shell:
         """
-        singularity exec snpCalling_v0.0.7.img \
+        singularity exec snpCalling_v0.0.8.img \
             gatk AnalyzeCovariates \
             -before {input.PRE_TABLE} \
             -after {input.POST_TABLE} \
@@ -1105,17 +1054,17 @@ rule bqsr_r2_analyze_covariates_all:
         ls {input.PRE_TABLES} >{params.PRE_LIST}
         ls {input.POST_TABLES} >{params.POST_LIST} 
 
-        singularity exec snpCalling_v0.0.7.img \
+        singularity exec snpCalling_v0.0.8.img \
             gatk GatherBQSRReports \
                 --input {params.PRE_LIST} \
                 --output {params.PRE_TABLE}
 
-        singularity exec snpCalling_v0.0.7.img \
+        singularity exec snpCalling_v0.0.8.img \
             gatk GatherBQSRReports \
                 --input {params.POST_LIST}  \
                 --output {params.POST_TABLE}
         
-        singularity exec snpCalling_v0.0.7.img \
+        singularity exec snpCalling_v0.0.8.img \
             gatk AnalyzeCovariates \
                 -before {params.PRE_TABLE} \
                 -after {params.POST_TABLE} \
