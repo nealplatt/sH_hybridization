@@ -47,6 +47,7 @@ MAP_DIR = RESULTS_DIR + "02-mapped_reads/"
 BQSR_DIR = RESULTS_DIR + "03-gatk_bqsr/" 
 BQSR_R1_DIR = BQSR_DIR + "r1/"
 BQSR_R2_DIR = BQSR_DIR + "r2/"
+GENO_DIR = RESULTS_DIR + "04-genotype/" 
 WGA_DIR = RESULTS_DIR + "06-wga/" 
 
 #setting work directory
@@ -538,13 +539,18 @@ rule bqsr_r1_filter_snps:
             gatk VariantFiltration \
             -R {input.REFERENCE} \
             -V {params.TMP_VCF} \
-            --filter-expression "'"QD < 2.0 || FS > 60.0 || MQ < 40.0 || MQRankSum < -12.5 || ReadPosRankSum < -8.0"'" \
-            --filter-name "'"recommended_snp_filter"'" \
-            -O {output}"
-
+            --filter-name "'"QD_lt_2"'" \
+            --filter-expression "'"QD < 2.0"'" \
+            --filter-name "'"FS_gt_60"'" \
+            --filter-expression "'"FS > 60.0"'" \
+            --filter-name "'"MQ_lt_40"'" \
+            --filter-expression "'"MQ < 40.0"'" \
+            --filter-name "'"MQRankSum_lt_-12.5"'" \
+            --filter-expression "'"MQRankSum < -12.5"'" \
+            --filter-name "'"ReadPosRankSum_lt_-8"'" \
+            --filter-expression "'"ReadPosRankSum < -8.0"'" \
+            -O {output}
         """
-
-
 
 # SELECT and FILTER INDELS -----------------------------------------------------
 rule bqsr_r1_filter_indels:
@@ -572,7 +578,12 @@ rule bqsr_r1_filter_indels:
             gatk VariantFiltration \
             -R {input.REFERENCE} \
             -V {params.TMP_VCF} \
-            --filter-expression "'"QD < 2.0 || FS > 200.0 || ReadPosRankSum < -20.0"'" \
+            --filter-name "'"QD_lt_2"'" \
+            --filter-expression "'"QD < 2.0"'" \
+            --filter-name "'"FS_gt_200"'" \
+            --filter-expression "'"FS > 200.0"'" \
+            --filter-name "'"ReadPosRankSum_lt_-20"'" \
+            --filter-expression "'"ReadPosRankSum < -20.0"'" \
             --filter-name "'"recommended_indel_filter"'" \
             -O {output}
         """
@@ -888,10 +899,17 @@ rule bqsr_r2_filter_snps:
             gatk VariantFiltration \
             -R {input.REFERENCE} \
             -V {params.TMP_VCF} \
-            --filter-expression "'"QD < 2.0 || FS > 60.0 || MQ < 40.0 || MQRankSum < -12.5 || ReadPosRankSum < -8.0"'" \
-            --filter-name "'"recommended_snp_filter"'" \
-            -O {output}"
-
+            --filter-name "'"QD_lt_2"'" \
+            --filter-expression "'"QD < 2.0"'" \
+            --filter-name "'"FS_gt_60"'" \
+            --filter-expression "'"FS > 60.0"'" \
+            --filter-name "'"MQ_lt_40"'" \
+            --filter-expression "'"MQ < 40.0"'" \
+            --filter-name "'"MQRankSum_lt_-12.5"'" \
+            --filter-expression "'"MQRankSum < -12.5"'" \
+            --filter-name "'"ReadPosRankSum_lt_-8"'" \
+            --filter-expression "'"ReadPosRankSum < -8.0"'" \
+            -O {output}
         """
 
 # SELECT and FILTER INDELS -----------------------------------------------------
@@ -920,7 +938,12 @@ rule bqsr_r2_filter_indels:
             gatk VariantFiltration \
             -R {input.REFERENCE} \
             -V {params.TMP_VCF} \
-            --filter-expression "'"QD < 2.0 || FS > 200.0 || ReadPosRankSum < -20.0"'" \
+            --filter-name "'"QD_lt_2"'" \
+            --filter-expression "'"QD < 2.0"'" \
+            --filter-name "'"FS_gt_200"'" \
+            --filter-expression "'"FS > 200.0"'" \
+            --filter-name "'"ReadPosRankSum_lt_-20"'" \
+            --filter-expression "'"ReadPosRankSum < -20.0"'" \
             --filter-name "'"recommended_indel_filter"'" \
             -O {output}
         """
@@ -1088,7 +1111,8 @@ rule whole_genome_alignment:
         SEQ_FILE = WGA_DIR + "seqFile"
     shell:
         """
-        echo -e "*schMan_v7 {input.MAN_GENOME}\nschHae_v1 {input.HAE_GENOME}" >{params.SEQ_FILE}
+        echo -e "*schMan_v7 {input.MAN_GENOME}" >{params.SEQ_FILE}
+        echo -e "schHae_v1 {input.HAE_GENOME}" >>{params.SEQ_FILE}
 
         singularity exec snpCalling_v0.0.8.img \       
             /usr/software/progressiveCactus/bin/runProgressiveCactus.sh \
