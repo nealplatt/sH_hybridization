@@ -1,35 +1,16 @@
-#snakemake --use-singularity --cluster 'qsub -V -cwd -j y -S /bin/bash -pe mpi {threads} -o {log}' --jobs 10 --latency-wait 20
-
+# snakemake -p --use-singularity --use-conda --cluster 'qsub -V -cwd -j y -S /bin/bash -pe mpi {threads} -o {log}' --jobs 120 --latency-wait 200
 # File:     Snakefile
 # Name:     Neal Platt
-# Date:     26 Feb 2018
+# Date:     26 March 2018
 # Desc:     This Snake file is used to filter, map, and call SNPs on exome data from
 #           Schistosoma Haemotobium made available through the Anderson lab at Texas
 #           Biomedical Research Institute.  
-# Usage:    snakemake --cluster "qsub -pe mpi {threads} -j y -o {log}" -j 75 --latency-wait 30
+# Usage:    snakemake -p --use-conda --cluster 'qsub -V -cwd -j y -S /bin/bash -pe mpi {threads} -o {log}' --jobs 10 --latency-wait 200
 # Reqs:     BWA
 #           Trimmomatic
 #           SAMtools
 #           GATK
 # Comments: 
-#
-# General Workflow:
-#
-#                           Raw Reads
-#                               |
-#                               V
-#                            Filtered
-#                               |        
-#        Index genome           |               
-#            |                  V
-#            --------------> Map reads
-#                               |
-#                               |
-#                               V    
-#                           Call SNPs
-#                           
-#
-#
 #
 #       VERY IMPORTANT NOTE:
 #       Sometimes the cluster has a difficult time with latency issues
@@ -43,163 +24,190 @@
 # To Do:
 #   4] fix messages - seem to crash when running 
 #   6] whatup with all the snakejob* files
-#   7] download genome from ncbi
+#   7] download genome and raw data from ncbi
 #   8] sub-workflows for major stages
-#   9]
+#   9] set the directories using python variables
+#  10] Param errors on samse/pe_sort
+#  11] MOVE "SAMPLES" to config file
 #-------------------------------------------------------------------------------
 
 #setting work directory
-workdir: "/master/nplatt/sH_hybridization"
+HOME_DIR = "/master/nplatt/schisto_hybridization/"
+RESULTS_DIR = HOME_DIR + "results/"
+DATA_DIR = HOME_DIR + "data/"
+ENV_DIR = HOME_DIR + "envs/"
+LOG_DIR = HOME_DIR + "logs/"
+
+GENOME_DIR = DATA_DIR + "genome/"
+GENOME = GENOME_DIR + "schHae_v1.fa"
+
+SEQ_DIR = DATA_DIR + "sequence_data/"
+
+FILTER_READS_DIR = RESULTS_DIR + "01-filtered_reads/" 
+
+MAP_DIR = RESULTS_DIR + "02-mapped_reads/" 
+
+BQSR_DIR = RESULTS_DIR + "03-gatk_bqsr/" 
+BQSR_R1_DIR = BQSR_DIR + "r1/"
+BQSR_R2_DIR = BQSR_DIR + "r2/"
+
+WGA_DIR = RESULTS_DIR + "06-wga/" 
 
 
+
+#setting work directory
+workdir: HOME_DIR
+configfile: "test_config.yaml"
+localrules: all
+localrules: clean
+localrules: create_list_of_contigs
+            
 
 #list of all the sample IDs to be processed
-SAMPLES = [ "Sh.NE_Dai-002.1",      "Sh.NE_Dai-010.1",      "Sh.NE_Dai-013.3",      
-            "Sh.NE_Dai-031.1",      "Sh.NE_Dai-033.1",      "Sh.NE_Dai-044.1",
-            "Sh.NE_Dai-045.1",      "Sh.NE_Dai-051.1",      "Sh.NE_Dai-074.1",      
-            "Sh.NE_Dai-146.1",      "Sh.NE_DaiCP-233.1",    "Sh.NE_DaiCP-276.1", 
-            "Sh.NE_DaiCP-277.2",    "Sh.NE_Doki-029.1",     "Sh.NE_Kar-001.1",      
-            "Sh.NE_Kar-002.1",      "Sh.NE_Kar-076.1",      "Sh.NE_Kar-096.2",      
-            "Sh.NE_Kar-241.1",      "Sh.NE_Kar-241.2",      "Sh.NE_Kar-281.1",
-            "Sh.NE_Kar-37.2",       "Sh.NE_Lata-007.3",     "Sh.NE_Lata-033.1", 
-            "Sh.NE_Lata-078.1",     "Sh.NE_Lata-253.1",     "Sh.NE_Lata-275.2",
-            "Sh.NE_Lata-293.1",     "Sh.NE_Lata-294.1",     "Sh.NE_LibTB-009.2",
-            "Sh.NE_LibTB-010.1",    "Sh.NE_LibTB-022.1",    "Sh.NE_LibTB-028.1",    
-            "Sh.NE_LibTB-031.1",    "Sh.NE_NG-011.1",       "Sh.NE_NG-06.2", 
-            "Sh.NE_NG-089.1",       "Sh.NE_NG-236.1",       "Sh.NE_Seb-076.1",
-            "Sh.NE_Seb-078.2",      "Sh.NE_Seb-081.2",      "Sh.NE_Tiag-272.1",
-            "Sh.NE_YK-029.2",       "Sh.NE_YK-069.1",       "Sh.NE_YK-099.2",
-            "Sh.NE_YK-248.2",       "Sh.NE_Youri-069.2",    "Sh.NE_Youri-091.3", 
-            "Sh.TZ_PEM0063.1",      "Sh.TZ_PEM0075.1",      "Sh.TZ_PEM0076.1",
-            "Sh.TZ_PEM0079.1",      "Sh.TZ_PEM0089.2",      "Sh.TZ_PEM0094.2",      
-            "Sh.TZ_PEM0099.2",      "Sh.TZ_PEM0103.1",      "Sh.TZ_PEM0104.1",
-            "Sh.TZ_PEM0106.2",      "Sh.TZ_PEM0108.1",      "Sh.TZ_PEM0110.1", 
-            "Sh.TZ_PEM0114.3",      "Sh.TZ_PEM0115.4",      "Sh.TZ_PEM0120.1",
-            "Sh.TZ_PEM0125.1",      "Sh.TZ_PEM0126.1",      "Sh.TZ_PEM0127.1",
-            "Sh.TZ_PEM0128.1",      "Sh.TZ_PEM0130.1",      "Sh.TZ_PEM0133.1",
-            "Sh.TZ_PEM0139.2",      "Sh.TZ_PEM0145.3",      "Sh.TZ_PEM0154.1", 
-            "Sh.TZ_PEM0157.3",      "Sh.TZ_PEM0166.1",      "Sh.TZ_PEM0171.1",
-            "Sh.TZ_UNG0006.1",      "Sh.TZ_UNG0038.1",      "Sh.TZ_UNG0076.1",
-            "Sh.TZ_UNG0077.1",      "Sh.TZ_UNG0078.1",      "Sh.TZ_UNG0087.2",
-            "Sh.TZ_UNG0089.3",      "Sh.TZ_UNG0092.3",      "Sh.TZ_UNG0099.1", 
-            "Sh.TZ_UNG0102.1",      "Sh.TZ_UNG0111.1",      "Sh.TZ_UNG0117.1",
-            "Sh.TZ_UNG0121.1",      "Sh.TZ_UNG0125.3",      "Sh.TZ_UNG0127.1",
-            "Sh.TZ_UNG0129.2",      "Sh.TZ_UNG0134.1",      "Sh.TZ_UNG0137.3",
-            "Sh.TZ_UNG0139.1",      "Sh.TZ_UNG0142.2",      "Sh.TZ_UNG0146.1"]
+HAE_SAMPLES = [ "Sh.NE_Dai-002.1",      "Sh.NE_Dai-010.1",      "Sh.NE_Dai-013.3",      
+#            	"Sh.NE_Dai-031.1",      "Sh.NE_Dai-033.1",      "Sh.NE_Dai-044.1",
+#            	"Sh.NE_Dai-045.1",      "Sh.NE_Dai-051.1",      "Sh.NE_Dai-074.1",      
+#            	"Sh.NE_Dai-146.1",      "Sh.NE_DaiCP-233.1",    "Sh.NE_DaiCP-276.1", 
+#            	"Sh.NE_DaiCP-277.2",    "Sh.NE_Doki-029.1",     "Sh.NE_Kar-001.1",      
+#            	"Sh.NE_Kar-002.1",      "Sh.NE_Kar-076.1",      "Sh.NE_Kar-096.2",      
+#            	"Sh.NE_Kar-241.1",      "Sh.NE_Kar-241.2",      "Sh.NE_Kar-281.1",
+#            	"Sh.NE_Kar-37.2",       "Sh.NE_Lata-007.3",     "Sh.NE_Lata-033.1", 
+#            	"Sh.NE_Lata-078.1",     "Sh.NE_Lata-253.1",     "Sh.NE_Lata-275.2",
+#            	"Sh.NE_Lata-293.1",     "Sh.NE_Lata-294.1",     "Sh.NE_LibTB-009.2",
+#            	"Sh.NE_LibTB-010.1",    "Sh.NE_LibTB-022.1",    "Sh.NE_LibTB-028.1",    
+#            	"Sh.NE_LibTB-031.1",    "Sh.NE_NG-011.1",       "Sh.NE_NG-06.2", 
+#            	"Sh.NE_NG-089.1",       "Sh.NE_NG-236.1",       "Sh.NE_Seb-076.1",
+#            	"Sh.NE_Seb-078.2",      "Sh.NE_Seb-081.2",      "Sh.NE_Tiag-272.1",
+#            	"Sh.NE_YK-029.2",       "Sh.NE_YK-069.1",       "Sh.NE_YK-099.2",
+#            	"Sh.NE_YK-248.2",       "Sh.NE_Youri-069.2",    "Sh.NE_Youri-091.3", 
+#            	"Sh.TZ_PEM0063.1",      "Sh.TZ_PEM0075.1",      "Sh.TZ_PEM0076.1",
+#            	"Sh.TZ_PEM0079.1",      "Sh.TZ_PEM0089.2",      "Sh.TZ_PEM0094.2",      
+#            	"Sh.TZ_PEM0099.2",      "Sh.TZ_PEM0103.1",      "Sh.TZ_PEM0104.1",
+#            	"Sh.TZ_PEM0106.2",      "Sh.TZ_PEM0108.1",      "Sh.TZ_PEM0110.1", 
+#            	"Sh.TZ_PEM0114.3",      "Sh.TZ_PEM0115.4",      "Sh.TZ_PEM0120.1",
+#            	"Sh.TZ_PEM0125.1",      "Sh.TZ_PEM0126.1",      "Sh.TZ_PEM0127.1",
+#            	"Sh.TZ_PEM0128.1",      "Sh.TZ_PEM0130.1",      "Sh.TZ_PEM0133.1",
+#            	"Sh.TZ_PEM0139.2",      "Sh.TZ_PEM0145.3",      "Sh.TZ_PEM0154.1", 
+#            	"Sh.TZ_PEM0157.3",      "Sh.TZ_PEM0166.1",      "Sh.TZ_PEM0171.1",
+#            	"Sh.TZ_UNG0006.1",      "Sh.TZ_UNG0038.1",      "Sh.TZ_UNG0076.1",
+#            	"Sh.TZ_UNG0077.1",      "Sh.TZ_UNG0078.1",      "Sh.TZ_UNG0087.2",
+#           	"Sh.TZ_UNG0089.3",      "Sh.TZ_UNG0092.3",      "Sh.TZ_UNG0099.1", 
+#            	"Sh.TZ_UNG0102.1",      "Sh.TZ_UNG0111.1",      "Sh.TZ_UNG0117.1",
+#            	"Sh.TZ_UNG0121.1",      "Sh.TZ_UNG0125.3",      "Sh.TZ_UNG0127.1",
+#            	"Sh.TZ_UNG0129.2",      "Sh.TZ_UNG0134.1",      "Sh.TZ_UNG0137.3",
+            	"Sh.TZ_UNG0139.1",      "Sh.TZ_UNG0142.2",      "Sh.TZ_UNG0146.1"]
+
+HAE_SRA_SAMPLES = ["ERR084970", "ERR037800", "SRR433865"]
+MAN_SAMPLES     = ["Sm.BR_1278.1", "Sm.BR_0447.1", "Sm.BR_2039.1"]
+BOV_SAMPLES     = ["ERR119622", "ERR103048"]
+CUR_SAMPLES     = ["ERR119623"]
+#Curassoni samples ERR310937 download constantly fails
+
+
+EXOME_SAMPLES = HAE_SAMPLES + MAN_SAMPLES
+SRA_SAMPLES = HAE_SRA_SAMPLES + CUR_SAMPLES + BOV_SAMPLES
+SAMPLES = HAE_SAMPLES + HAE_SRA_SAMPLES + MAN_SAMPLES + CUR_SAMPLES + BOV_SAMPLES
 
 #list the number of chuchks to split genome.  Should imrpove this in future versions
-NUMBERS=["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29"]
+CONTIG_CHUNKS=50
+NUMBERS=list(range(1, CONTIG_CHUNKS))
+
+NUMS_2D=[]
+for NUM in NUMBERS:
+    NUMS_2D.append("%02d" % NUM)
 
 
-#from snakemake.remote.NCBI import RemoteProvider as NCBIRemoteProvider
-#NCBI = NCBIRemoteProvider(email="neal.platt@gmail.com")
+#get genomes - sman_v7 ftp://ftp.sanger.ac.uk/pub/project/pathogens/Schistosoma/mansoni/v7/sequence/Smansoni_v7.fa.gz
 
+shell.prefix("source ~/.bash_profile; ")
 
-#initializing rule - these files need to be generated...initiates the pipeline
+#-------------------------------------------------------------------------------
+# initializing rule - these files need to be generated...initiates the pipeline
+
 rule all:
     input: 
-        expand("results/recal_0/{sample}_interval_{number}.g.vcf", sample=SAMPLES, number=NUMBERS),
-        expand("results/recal_0/{sample}_individual.g.vcf", sample=SAMPLES),
-        "results/map_reads/filtered_interval.list"
-        #"results/recal_0/sH_recal_0_cohort.g.vcf"
+        expand("{dir}all_recalibration_plot_r2.pdf", dir=BQSR_DIR), 
+        WGA_DIR + "schMan7_vs_schMan1.hal"
+
+#-------------------------------------------------------------------------------
+# clean all of the snake files created from previous run
+onstart:
+    shell("rm snakejob.*")
+
 
 #-------------------------------------------------------------------------------
 # Filter reads
 #
 rule filter_reads:
     input:
-        protected("data/raw_exome_seq_reads/{sample}/{sample}_R1.fastq.gz"),
-        protected("data/raw_exome_seq_reads/{sample}/{sample}_R2.fastq.gz")
+        R1 = SEQ_DIR + "{sample}_R1.fastq.gz",
+        R2 = SEQ_DIR + "{sample}_R2.fastq.gz"
     output:
-        temp("results/map_reads/{sample}_filtered_paired_R1.fastq.gz"),
-        temp("results/map_reads/{sample}_filtered_unpaired_R1.fastq.gz"),
-        temp("results/map_reads/{sample}_filtered_paired_R2.fastq.gz"),
-        temp("results/map_reads/{sample}_filtered_unpaired_R2.fastq.gz")
+        R1_PE = FILTER_READS_DIR + "{sample}_filtered_paired_R1.fastq.gz",
+        R1_SE = temp(FILTER_READS_DIR + "{sample}_filtered_unpaired_R1.fastq.gz"),
+        R2_PE = FILTER_READS_DIR + "{sample}_filtered_paired_R2.fastq.gz",
+        R2_SE = temp(FILTER_READS_DIR + "{sample}_filtered_unpaired_R2.fastq.gz"),
+        RX = FILTER_READS_DIR + "{sample}_filtered_unpaired_RX.fastq.gz"
     threads:
         12
-    singularity:
-        "file://snpCalling_v0.0.4.simg"
-    log: 
-        "logs/{sample}.{rule}.log"    
-    shell: 
+    conda:
+        ENV_DIR + "snp_calling.yaml"
+    log:
+        LOG_DIR + "{sample}.filter_reads.log"    
+    shell:
         """
-        java -jar ~/bin/Trimmomatic-0.36/trimmomatic-0.36.jar \
+        trimmomatic \
             PE \
             -threads {threads} \
             -phred33 \
-            {input} \
-            {output} \
+            {input.R1} \
+            {input.R2} \
+            {output.R1_PE} \
+            {output.R1_SE} \
+            {output.R2_PE} \
+            {output.R2_SE} \
             LEADING:10 \
             TRAILING:10 \
             SLIDINGWINDOW:4:15 \
             MINLEN:36
-        """
 
-rule combine_SE:
-    input:
-        "results/map_reads/{sample}_filtered_unpaired_R1.fastq.gz",
-        "results/map_reads/{sample}_filtered_unpaired_R2.fastq.gz"
-    output:
-        "results/map_reads/{sample}_filtered_unpaired_RX.fastq.gz"
-    singularity:
-        "file://snpCalling_v0.0.4.simg"
-    log: 
-        "logs/{sample}.{rule}.log"     
-    shell: 
-        """
-        zcat {input} | gzip >{output}
+        zcat {output.R1_SE} {output.R2_SE} | gzip >{output.RX} 
         """
 
 #-------------------------------------------------------------------------------
-# Get and Prep Genome
+# MAPPING FILTERED READS TO THE GENOME
 #
-
-#rule get_genome:
-#    input:
-#        NCBI.remote("KY785484.1.fasta", db="nuccore")
-#    output:
-#        "data/genome/schHae_v1.fa"
-#    singularity:
-#        "file://snpCalling_v0.0.4.simg"
-#    log:
-#        "logs/{rule}.log"
-#    run:
-#        shell("wc -c {input} > {output}")
-
-#genome was previously downloaded
-rule get_and_index_genome:
+rule index_genome:
     input:
-        "data/genome/GCA_000699445.1_SchHae_1.0_genomic.fna"
+        GENOME_DIR + "GCA_000699445.1_SchHae_1.0_genomic.fna"
     output:
-        "data/genome/schHae_v1.fa",
-        "data/genome/schHae_v1.fa.pac",
-        "data/genome/schHae_v1.fa.ann",
-        "data/genome/schHae_v1.fa.amb",
-        "data/genome/schHae_v1.fa.bwt",
-        "data/genome/schHae_v1.fa.sa"
-    singularity:
-        "file://snpCalling_v0.0.4.simg"
+        expand(GENOME_DIR + "schHae_v1.fa{ext}", ext=["", ".pac", ".ann", ".amb", ".bwt", ".sa"])
+    conda:
+        ENV_DIR + "snp_calling.yaml"
     log:
-        "logs/{rule}.log"
+        LOG_DIR + "index_genome.log"
+    params:
+        SOFT_LINK = GENOME
     shell:
         """
-        ln -s data/genome/GCA_000699445.1_SchHae_1.0_genomic.fna data/genome/schHae_v1.fa
-        bwa index data/genome/schHae_v1.fa
+        ln -s {input} {params.SOFT_LINK}
+                
+        bwa index {params.SOFT_LINK}
         """
 
 rule bwa_map_R1:
     input:
-        rules.get_and_index_genome.output,
-        PE_R1="results/map_reads/{sample}_filtered_paired_R1.fastq.gz",
-        REFERENCE="data/genome/schHae_v1.fa"
+        rules.index_genome.output,
+        PE_R1 = rules.filter_reads.output.R1_PE,
+        REFERENCE = GENOME
     output:
-        temp("results/map_reads/{sample}_R1.sai")
-    singularity:
-        "file://snpCalling_v0.0.4.simg"
+        temp(MAP_DIR + "{sample}_R1.sai")
+    conda:
+        ENV_DIR + "snp_calling.yaml"
     threads:
         12
     log:
-        "logs/{sample}.{rule}.log"
+        LOG_DIR + "{sample}.bwa_map_R1.log"
     shell:
         """
         bwa aln -t {threads} -f {output} {input.REFERENCE} {input.PE_R1}
@@ -207,35 +215,35 @@ rule bwa_map_R1:
 
 rule bwa_map_R2:
     input:
-        rules.get_and_index_genome.output,        
-        PE_R2="results/map_reads/{sample}_filtered_paired_R2.fastq.gz",
-        REFERENCE="data/genome/schHae_v1.fa"
+        rules.index_genome.output,
+        PE_R2 = rules.filter_reads.output.R2_PE,
+        REFERENCE = GENOME
     output:
-        temp("results/map_reads/{sample}_R2.sai")
-    singularity:
-        "file://snpCalling_v0.0.4.simg"
+        temp(MAP_DIR + "{sample}_R2.sai")
+    conda:
+        ENV_DIR + "snp_calling.yaml"
     threads:
         12
     log:
-        "logs/{sample}.{rule}.log"
+        LOG_DIR + "{sample}.bwa_map_R2.log"
     shell:
         """
         bwa aln -t {threads} -f {output} {input.REFERENCE} {input.PE_R2}
-	"""
+	    """
 
 rule bwa_map_RX:
     input:
-        rules.get_and_index_genome.output,
-        SE_RX="results/map_reads/{sample}_filtered_unpaired_RX.fastq.gz",
-        REFERENCE="data/genome/schHae_v1.fa"
+        rules.index_genome.output,
+        SE_RX = rules.filter_reads.output.RX,
+        REFERENCE = GENOME
     output:
-        temp("results/map_reads/{sample}_RX.sai")
-    singularity:
-        "file://snpCalling_v0.0.4.simg"
+        temp(MAP_DIR + "{sample}_RX.sai")
+    conda:
+        ENV_DIR + "snp_calling.yaml"
     threads:
         12
     log:
-        "logs/{sample}.{rule}.log"
+         LOG_DIR + "{sample}.bwa_map_RX.log"
     shell:
         """
         bwa aln -t {threads} -f {output} {input.REFERENCE} {input.SE_RX}
@@ -243,19 +251,19 @@ rule bwa_map_RX:
 
 rule bwa_sampe:
     input:
-        REFERENCE="data/genome/schHae_v1.fa",        
-        SAI_R1="results/map_reads/{sample}_R1.sai",
-        SAI_R2="results/map_reads/{sample}_R2.sai",
-        PE_R1="results/map_reads/{sample}_filtered_paired_R1.fastq.gz",
-        PE_R2="results/map_reads/{sample}_filtered_paired_R2.fastq.gz",
+        REFERENCE = GENOME,
+        SAI_R1 = rules.bwa_map_R1.output,
+        SAI_R2 = rules.bwa_map_R2.output,
+        PE_R1 = rules.filter_reads.output.R1_PE,
+        PE_R2 = rules.filter_reads.output.R2_PE,
     output:
-        temp("results/map_reads/{sample}_samPE.bam")
-    singularity:
-        "file://snpCalling_v0.0.4.simg"
+        temp(MAP_DIR + "{sample}_samPE.bam")
+    conda:
+        ENV_DIR + "snp_calling.yaml"
     threads:
         12
     log:
-        "logs/{sample}.{rule}.log"
+        LOG_DIR + "{sample}.bwa_sampe.log"
     shell:
         """
         bwa sampe {input} | samtools view -Sb -F 4 - >{output}       
@@ -263,349 +271,882 @@ rule bwa_sampe:
 
 rule bwa_samse:
     input:
-        REFERENCE="data/genome/schHae_v1.fa",        
-        SAI_RX="results/map_reads/{sample}_RX.sai",
-        SE_RX="results/map_reads/{sample}_filtered_unpaired_RX.fastq.gz"
+        REFERENCE = GENOME,
+        SAI_RX = rules.bwa_map_RX.output,
+        SE_RX = rules.filter_reads.output.RX
     output:
-        temp("results/map_reads/{sample}_samSE.bam")
-    singularity:
-        "file://snpCalling_v0.0.4.simg"
+        temp(MAP_DIR + "{sample}_samSE.bam")
+    conda:
+        ENV_DIR + "snp_calling.yaml"
     threads:
         12
     log:
-        "logs/{sample}.{rule}.log"
+        LOG_DIR + "{sample}.bwa_samse.log"
     shell:
         """
         bwa samse {input} | samtools view -Sb -F 4 - >{output}       
         """
 
-#using 12 threads to maximize memory
 rule sort_sampe:
     input:
-        "results/map_reads/{sample}_samPE.bam"
+        rules.bwa_sampe.output
     output:
-        temp("results/map_reads/{sample}_samPE_sorted.bam")
-    singularity:
-        "file://snpCalling_v0.0.4.simg"
+        temp(MAP_DIR + "{sample}_samPE_sorted.bam")
+    conda:
+        ENV_DIR + "snp_calling.yaml"
     threads:
         12
     log:
-        "logs/{sample}.{rule}.log"
+        LOG_DIR + "{sample}.sort_sampe.log"
     shell:
         """
-    	samtools sort {input} results/map_reads/{wildcards.sample}_samPE_sorted
+        samtools sort -o {output} {input} 
         """
 
-#using 12 threads to maximize memory
 rule sort_samse:
     input:
-        "results/map_reads/{sample}_samSE.bam"
+        rules.bwa_samse.output
     output:
-        temp("results/map_reads/{sample}_samSE_sorted.bam")
-    singularity:
-        "file://snpCalling_v0.0.4.simg"
+        temp(MAP_DIR + "{sample}_samSE_sorted.bam")
+    conda:
+        ENV_DIR + "snp_calling.yaml"
     threads:
         12
     log:
-        "logs/{sample}.{rule}.log"
+        LOG_DIR + "{sample}.sort_samse.log"
     shell:
         """
-        samtools sort {input} results/map_reads/{wildcards.sample}_samSE_sorted
+        samtools sort -o {output} {input} 
         """
 
-rule merge_bams:
+rule process_bam:
     input:
-        "results/map_reads/{sample}_samSE_sorted.bam",
-        "results/map_reads/{sample}_samPE_sorted.bam"
+        rules.sort_sampe.output,
+        rules.sort_samse.output
     output:
-        temp("results/map_reads/{sample}_merged.bam")
-    singularity:
-        "file://snpCalling_v0.0.4.simg"
+        MERGED = temp(MAP_DIR + "{sample}_merged.bam"),
+        RGS = temp(MAP_DIR + "{sample}_merged_RGs.bam"),
+        RG_SORTED = temp(MAP_DIR + "{sample}_merged_RGs_sorted.bam"),
+        BAM = protected(MAP_DIR + "{sample}_processed.bam"),
+        METRICS = MAP_DIR + "{sample}_noDupes.metrics",
+        INDEX = MAP_DIR + "{sample}_processed.bam.bai"
+    conda:
+        ENV_DIR + "snp_calling.yaml"
     threads:
         12
     log:
-        "logs/{sample}.{rule}.log"
+        LOG_DIR + "{sample}.process_bam.log"
+    params:
+        CELL = lambda wildcards: config['rg_cell'][wildcards.sample],
+        LANE = lambda wildcards: config['rg_lane'][wildcards.sample],
+        INDEX = lambda wildcards: config['rg_index'][wildcards.sample]
     shell:
         """
-        samtools merge {output} {input}
-        """
-#need to add readgroups here:
-############################################>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-rule add_readgroups:
-    input:
-        BAM="results/map_reads/{sample}_merged.bam",
-        FASTQ="data/raw_exome_seq_reads/{sample}/{sample}_R1.fastq.gz"
-    output:
-        temp("results/map_reads/{sample}_merged_RGs.bam")
-    singularity:
-        "file://snpCalling_v0.0.4.simg"
-    threads:
-        12
-    log:
-        "logs/{sample}.{rule}.log"
-    shell:
-        """
-        HEADER_LINE=$(zcat {input.FASTQ})
+        samtools merge {output.MERGED} {input}
 
-        CELL=$(echo $HEADER_LINE | cut -f3 -d":")
-        LANE=$(echo $HEADER_LINE | cut -f4 -d":")
-        INDEX=$(echo $HEADER_LINE | cut -f10 -d":")
+        singularity exec snpCalling_v0.0.7.img \
+            gatk AddOrReplaceReadGroups \
+                --INPUT={output.MERGED} \
+                --OUTPUT={output.RGS} \
+                --RGID={params.CELL}.{params.LANE} \
+                --RGLB=library1 \
+                --RGPL=illumina \
+                --RGPU={params.CELL}.{params.INDEX}.{params.LANE} \
+                --RGSM={wildcards.sample}
 
-        GATK_RG_CMD="gatk AddOrReplaceReadGroups \
-            --INPUT={input.BAM} \
-            --OUTPUT={output} \
-            --RGID=$CELL.$LANE \
-            --RGLB=library1 \
-            --RGPL=illumina \
-            --RGPU=$CELL.$INDEX.$LANE \
-            --RGSM={wildcards.sample}
-        """
+        singularity exec snpCalling_v0.0.7.img \
+            gatk SortSam \
+                --INPUT {output.RGS} \
+                --OUTPUT {output.RG_SORTED} \
+                --SORT_ORDER=coordinate
 
-#using 12 threads to maximize memory
-rule sort_merged_bam:
-    input:
-        "results/map_reads/{sample}_merged_RGs.bam"
-    output:
-        temp("results/map_reads/{sample}_merged_RGs_sorted.bam")
-    singularity:
-        "file://snpCalling_v0.0.4.simg"
-    threads:
-        12
-    log:
-        "logs/{sample}.{rule}.log"
-    shell:
-        """
-        gatk SortSam \
-            --INPUT {input} \
-            --OUTPUT {output} \
-            --SORT_ORDER=coordinate
-        """  
+        singularity exec snpCalling_v0.0.7.img \
+            gatk MarkDuplicates \
+                --INPUT {output.RG_SORTED} \
+                --OUTPUT {output.BAM} \
+                --METRICS_FILE {output.METRICS} \
+                --MAX_FILE_HANDLES_FOR_READ_ENDS_MAP 900
 
-rule mark_duplicates:
-    input:
-        "results/map_reads/{sample}_merged_RGs_sorted.bam"
-    output:
-        BAM="results/map_reads/{sample}_processed.bam",
-        METRICS="results/map_reads/{sample}_noDupes.metrics"
-    singularity:
-        "file://snpCalling_v0.0.4.simg"
-    threads:
-        12
-    log:
-        "logs/{sample}.{rule}.log"
-    shell:
+        samtools index {output.BAM}
         """
-        gatk MarkDuplicates \
-            --INPUT {input} \
-            --OUTPUT {output.BAM} \
-            --METRICS_FILE {output.METRICS} \
-            --MAX_FILE_HANDLES_FOR_READ_ENDS_MAP 900
-        """
-
 
 #-------------------------------------------------------------------------------
-# faidx genome
-rule faidx_genome:
+# GATK INDEXING
+rule seqdict_genome:
     input: 
-        "data/genome/schHae_v1.fa"
+        GENOME
     output:
-        "data/genome/schHae_v1.fa.fai"
-    singularity:
-        "file://snpCalling_v0.0.4.simg"
+        GENOME_DIR + "schHae_v1.dict"
     threads:
         1
     log:
-        "logs/{rule}.log"
+        LOG_DIR + "seqdict_genome.log"
+    shell:
+        """
+        singularity exec snpCalling_v0.0.7.img \
+            gatk CreateSequenceDictionary -R {input}
+        """
+
+rule faidx_genome:
+    input: 
+        GENOME
+    output:
+        GENOME_DIR + "schHae_v1.fa.fai"
+    conda:
+        ENV_DIR + "snp_calling.yaml"
+    threads:
+        1
+    log:
+        LOG_DIR + "faidx_genome.log"
     shell:
         """
         samtools faidx {input}
         """
 
-#-------------------------------------------------------------------------------
-# Create a list of mapping intervals rather than whole contigs
-rule build_indiv_merged_intervals:
-    input: 
-        REFERENCE="data/genome/schHae_v1.fa",
-        BAM="results/map_reads/{sample}_processed.bam"
-    output:
-        temp("results/map_reads/tmp_{sample}.merged.bed")
-    singularity:
-        "file://snpCalling_v0.0.4.simg"
-    threads:
-        1
-    log:
-        "logs/{rule}.log"
-    shell:
-        """
-        bedtools bamToBed \
-            -i {input.BAM} \
-            | bedtools slopBed \
-                -g {input.REFERENCE} \
-                -b 100  \
-                | bedtools mergeBed  \
-                    >{output}"    
-
-        """
-
-rule build_merged_filtered_interval_list:
-    input: 
-        expand("results/map_reads/tmp_{sample}.merged.bed", sample=SAMPLES)
-    output:
-        TMP=temp("results/map_reads/tmp")
-        FILTERED_LIST=("results/map_reads/filtered_interval.list")
-    singularity:
-        "file://snpCalling_v0.0.4.simg"
-    threads:
-        1
-    log:
-        "logs/{rule}.log"
-    shell:
-        """
-        cat {input} | bedtools sortBed  >{output.TMP}
-        bedtools mergeBed -d 200 -n -i tmp | awk '$4 >= 24 {{print $1":"$2"-"$3}}'>{output.FITLERED_LIST}
-        """
-
-#-------------------------------------------------------------------------------
 # Create list of contigs for Sh.  this will be used frequently for gatk
 rule create_list_of_contigs:
     input: 
-        "data/genome/schHae_v1.fa.fai"
+        GENOME_DIR + "schHae_v1.fa"
     output:
-        expand("results/contig_lists/schHae_v1_contigs.{number}.list", number=NUMBERS),
-        "results/contig_lists/schHae_v1_contigs.list"
-    singularity:
-        "file://snpCalling_v0.0.4.simg"
+        CONTIG_LIST = (expand("{dir}contigs.{number}.list", dir=BQSR_R1_DIR, number=NUMS_2D)),
+        GENOME_LIST = BQSR_R1_DIR + "schHae_v1_contigs.list"
     threads:
         1
     log:
-        "logs/{rule}.log"
+        LOG_DIR + "create_list_of_contigs.log"
+    params:
+        PREFIX = BQSR_R1_DIR + "contigs."
     shell:
         """
-        python scripts/create_list_of_contigs.py
+        grep ">" {input} | cut -f1 -d" " | sed 's/>//' | shuf >{output.GENOME_LIST}
+        singularity exec snpCalling_v0.0.7.img \
+            split -n l/{CONTIG_CHUNKS} \
+                --numeric-suffixes=1 \
+                --additional-suffix .list \
+                {output.GENOME_LIST} \
+                {params.PREFIX}
         """
 
 #-------------------------------------------------------------------------------
 # initial SNPs with haplotype caller
-rule recal_0_HC:
+rule bqsr_r1_haplotype_caller:
     input: 
-        BAM="results/map_reads/{sample}_processed.bam",
-        REFERENCE="data/genome/schHae_v1.fa",
-        INTERVAL_LIST="results/contig_lists/schHae_v1_contigs.{interval_number}.list"
+        rules.seqdict_genome.output,
+        MAP_DIR + "{sample}_processed.bam.bai",
+        BAM = MAP_DIR + "{sample}_processed.bam",
+        REFERENCE = GENOME,
+        LIST = BQSR_R1_DIR + "contigs.{chunk}.list"
     output:
-        temp("results/recal_0/{sample}_interval_{interval_number}.g.vcf")
-    singularity:
-        "snpCalling_v0.0.4.simg"
+        temp(BQSR_R1_DIR + "{sample}_n{chunk}.g.vcf")
     threads:
         1
     log:
-        "logs/{sample}_interval_{interval_number}.{rule}.log"
+        LOG_DIR + "{sample}_{chunk}.bqsr_r1_haplotype_caller.log"
     shell:
         """
-        gatk HaplotypeCaller \
-            -I {input.BAM} \
-            -O {output} \
-            -R {input.REFERENCE} \
-            -L {input.INTERVAL_LIST} \
-            -ERC GVCF 
+        singularity exec snpCalling_v0.0.7.img \
+            gatk HaplotypeCaller \
+                -I {input.BAM} \
+                -O {output} \
+                -R {input.REFERENCE} \
+                -L {input.LIST} \
+                -ERC GVCF
         """
 
-##!!!!!!!!!!!!!!
-rule recal_0_indiv_gvcf:
+rule bqsr_r1_build_indiv_vcfs:
     input: 
-        expand("results/recal_0/{{sample}}_interval_{number}.g.vcf", number=NUMBERS) 
+        expand(BQSR_R1_DIR + "{{sample}}_n{number}.g.vcf", number=NUMS_2D) 
     output:
-        temp("results/recal_0/tmp_{sample}.merged.g.vcf"),
-        GVCF="results/recal_0/{sample}_individual.g.vcf"
-    singularity:
-        "snpCalling_v0.0.4.simg"
+        temp(BQSR_R1_DIR + "{sample}.sorted.g.vcf")
+    threads:
+       1
+    log:
+        LOG_DIR + "{sample}.bqsr_r1_build_indiv_vcfs.log"
+    shell:
+        """
+        ls {input} >results/03-gatk_bqsr/r1/{wildcards.sample}.list
+    
+        singularity exec snpCalling_v0.0.7.img \
+           gatk MergeVcfs \
+                -I results/03-gatk_bqsr/{wildcards.sample}.list \
+                -O results/03-gatk_bqsr/tmp_{wildcards.sample}.merged.g.vcf
+        
+        singularity exec snpCalling_v0.0.7.img \
+            gatk SortVcf \
+                -I results/03-gatk_bqsr/tmp_{wildcards.sample}.merged.g.vcf \
+                -O {output}
+
+        """
+#-------------------------------------------------------------------------------
+
+rule bqsr_r1_prep_gdbimport:
+    input:
+        expand(BQSR_R1_DIR + "{sample}.sorted.g.vcf", sample=SAMPLES)
+    output:
+        temp(BQSR_R1_DIR + "bqsr_r1_hc_samples.list")
+    threads:
+        1
+    log:
+       LOG_DIR + "bqsr_r1_prep_gdbimport.log"
+    shell:
+        """
+        ls {input} >{output}
+        mkdir results/03-gatk_bqsr/r1/db
+        """
+
+rule bqsr_r1_gdbimport:
+    input:
+        BQSR_R1_DIR + "bqsr_r1_hc_samples.list",
+    output:
+        temp(BQSR_R1_DIR + "db/{contig}")
     threads:
         12
     log:
-        "logs/{sample}.{rule}.log"
+        LOG_DIR + "{wildcards.CONTIG}.bqsr_r1_gdbimport.log"
+    #params:
+    #    CONTIG=config["contigs"]
     shell:
         """
-        ls {input} >/resuls/recal_0/{wildcards.sample}.list
-    
-        gatk MergeVcfs \
-            -I /resuls/recal_0/{wildcards.sample}.list \
-            -O tmp_{wildcards.sample}.merged.g.vcf
- 
-        gatk SortVcf \
-            -I tmp_{wildcards.sample}.merged.g.vcf \
-            -O {output.GVCF}
+        singularity exec snpCalling_v0.0.7.img \
+            gatk --java-options \"-Xmx4g -Xms4g\" GenomicsDBImport \
+                -V {input} \
+                --genomicsdb-workspace-path {output} \
+                -L {wildcards.contig} \
+                --reader-threads {threads} \
+                --batch-size 24"
+        """
+  
+rule bqsr_r1_genotype:
+    input:
+        REFERENCE = GENOME_DIR + "schHae_v1.fa",
+        DB = BQSR_R1_DIR + "db/{contig}"     
+    output:
+        temp(BQSR_R1_DIR + "geno/{contig}.vcf")
+    threads:
+        1
+    log:
+        LOG_DIR + "{wildcards.contig}.bqsr_r1_genotype.log"
+    shell:
+        """
+        singularity exec snpCalling_v0.0.7.img \
+            gatk GenotypeGVCFs \
+                -R {input.REFERENCE} \
+                -V gendb://{input.DB} \
+                -new-qual \
+                -O {output}
         """
 
-#rule recal_0_gdbimport:
-#    input:
-#        expand("results/recal_0/{sample}_individual.g.vcf", sample in SAMPLES)
-#    output:
-#        #temp{results/db/{contig}
-#    singularity:
-#        "snpCalling_v0.0.4.simg"
-#    threads:
-#        12
-#    log:
-#        "logs/{sample}_interval_{interval_number}.{rule}.log"
-#    shell:
-#        """
-#        gatk --java-options \"-Xmx4g -Xms4g\" GenomicsDBImport \
-#            -V samples.list \
-#            --genomicsdb-workspace-path {output} \
-#            -L <SOMETHING HERE TO EXPAND LIST>
-#            --reader-threads {threads}
-#            --batch-size 24"
-#        """
+rule bqsr_r1_build_cohort_vcf:
+    input:
+        VCF = expand(BQSR_R1_DIR + "geno/{contig}.vcf", contig=config['contigs']),
+    output:
+        temp(BQSR_R1_DIR + "cohort.vcf")
+    threads:
+        12
+    log:
+        LOG_DIR + "bqsr_r1_build_cohort_vcf.log"
+    params: 
+        LIST = temp(BQSR_R1_DIR + "geno/contig.list"),
+        TMP_VCF = temp(BQSR_R1_DIR + "all.merged.g.vcf")
+    shell:
+        """        
+        ls {input} >{params.LIST}
+    
+        singularity exec snpCalling_v0.0.7.img \
+           gatk MergeVcfs \
+                -I {params.LIST} \
+                -O {params.TMP_VCF}
+        
+        singularity exec snpCalling_v0.0.7.img \
+            gatk SortVcf \
+                -I {params.TMP_VCF} \
+                -O {output}
+        """
+      
+# SELECT and FILTER SNPS ------------------------------------------------------------------
+rule bqsr_r1_filter_snps:
+    input:
+        REFERENCE = GENOME_DIR + "schHae_v1.fa",
+        VCF = BQSR_R1_DIR + "cohort.vcf"
+    output:
+        temp(BQSR_R1_DIR + "cohort_filtered_SNPs.vcf")
+    threads:
+        1
+    log:
+        LOG_DIR + "bqsr_r1_filter_snps.log"
+    params:
+        TMP_VCF = temp(BQSR_R1_DIR + "cohort_SNPs.vcf")
+    shell:
+        """
+        singularity exec snpCalling_v0.0.7.img \
+            gatk SelectVariants \
+            -V {input.VCF} \
+            -select-type SNP \
+            -O {params.TMP_VCF} \
+            -R {input.REFERENCE}"
+
+        singularity exec snpCalling_v0.0.7.img \
+            gatk VariantFiltration \
+            -R {input.REFERENCE} \
+            -V {params.TMP_VCF} \
+            --filter-expression "'"QD < 2.0 || FS > 60.0 || MQ < 40.0 || MQRankSum < -12.5 || ReadPosRankSum < -8.0"'" \
+            --filter-name "'"recommended_snp_filter"'" \
+            -O {output}"
+
+        """
+
+
+
+# SELECT and FILTER INDELS -----------------------------------------------------
+rule bqsr_r1_filter_indels:
+    input:
+        REFERENCE = GENOME_DIR + "schHae_v1.fa",
+        VCF = BQSR_R1_DIR + "cohort.vcf"
+    output:
+        temp(BQSR_R1_DIR + "cohort_filtered_INDELs.vcf")
+    threads:
+        1
+    log:
+        LOG_DIR + "bqsr_r1_filter_indels.log"
+    params:
+        TMP_VCF = temp(BQSR_R1_DIR + "cohort_INDELs.vcf")
+    shell:
+        """
+        singularity exec snpCalling_v0.0.7.img \
+            gatk SelectVariants \
+            -V {input.VCF} \
+            -select-type INDEL \
+            -O {params.TMP_VCF} \
+            -R {input.REFERENCE}"
+
+        singularity exec snpCalling_v0.0.7.img \
+            gatk VariantFiltration \
+            -R {input.REFERENCE} \
+            -V {params.TMP_VCF} \
+            --filter-expression "'"QD < 2.0 || FS > 200.0 || ReadPosRankSum < -20.0"'" \
+            --filter-name "'"recommended_indel_filter"'" \
+            -O {output}
+        """
+
+rule bqsr_r1_merge_variants:
+    input:
+        INDELS = BQSR_R1_DIR + "cohort_filtered_INDELs.vcf",
+        SNPS = BQSR_R1_DIR + "cohort_filtered_SNPs.vcf",
+        REFERENCE = GENOME_DIR + "schHae_v1.fa"
+    output:
+        protected(BQSR_DIR + "cohort_filtered_variants_r1.vcf")
+    threads:
+        12
+    log:
+        LOG_DIR + "bqsr_r1_merge_variants.log"
+    params:
+        LIST=temp(BQSR_R1_DIR + "variant.list")
+    shell:
+        """
+        ls {input.SNPS} {input.INDELS} >{params.LIST}
+        
+        singularity exec snpCalling_v0.0.7.img \
+            gatk MergeVcfs \
+            -I {params.LIST} \
+            -O {output} \
+            -R {input.REFERENCE}
+        """
     
 
-#rule recal_0_genotype_gvcf:
-#    input:
-#        #temp{results/db/{contig} --expand to list of contigs
-#        REFERENCE=
-#        REFERENCE-indexes        
-#    output:
-#        temp("{contig}.gvcf")
-#    singularity:
-#        "snpCalling_v0.0.4.simg"
-#    threads:
-#        1
-#    log:
-#        "logs/{sample}_contig_{CONTIG}.{rule}.log"
-#    shell:
-#        """
-#        gatk GenotypeGVCFs \
-#            -R {input.REFERENCE} \i
-#            -V gendb://{CONTIG} \
-#            -new-qual \
-#            -O {output}
-#        """
+#-------------------------------------------------------------------------------
+rule bqsr_r1_score_pre_recal:
+    input:
+        BAM = MAP_DIR + "{sample}_processed.bam",
+        VCF = BQSR_DIR + "cohort_filtered_variants_r1.vcf",
+        REFERENCE = GENOME_DIR + "schHae_v1.fa"        
+    output:
+        BQSR_R1_DIR + "{sample}_PRErecal_r1.table"
+    threads:
+        1
+    log:
+        LOG_DIR + "{sample}bqsr_r1_score_pre_recal.log"
+    shell:
+        """
+        singularity exec snpCalling_v0.0.7.img \
+            gatk BaseRecalibrator \
+            -R {input.REFERENCE} \
+            -I {input.BAM} \
+            --known-sites {input.VCF} \
+            -O {output}
+        """
 
-#rule recal_0_merge_cohort_gvcf:
-#    input:
-#        {contig}.vcf (expand to all)
-#        REFERENCE="data/genome/schHae_v1.fa",
-#        rules.get_and_index_genome.output
-#    output:
-#        protected(COHORT_GVCF="results/recal_0/sH_recal_0_cohort.g.vcf"),
-#        temp(GVCF_LIST="results/recal_0/gvcfs.list"),
-#        temp(TMP="results/recal_0/tmp_cohort.g.vcf")
-#    singularity:
-#        "snpCalling_v0.0.4.simg"
-#    threads:
-#        12
-#    log:
-#        "logs/{rule}.log"
-#    shell:
-#        """        
-#        ls {input.VCFS}>{output.GVCF_LIST}
-#
-#        gatk MergeVcfs \
-#            -I {output.GVCF_LIST} \
-#            -O {output.TMP} \
-#            -R {input.REFERENCE}
-#
-#        gatk SortVcf \
-#            -I {output.TMP} \
-#            -O {output.COHORT_GVCF}
-#        """
+rule bqsr_r1_recalibrate_bams:
+    input:
+        BAM = MAP_DIR + "{sample}_processed.bam",
+        VCF = BQSR_DIR + "cohort_filtered_variants_r1.vcf",
+        REFERENCE = GENOME_DIR + "schHae_v1.fa",
+        PRE_TABLE = BQSR_R1_DIR + "{sample}_PRErecal_r1.table"       
+    output:
+        BQSR_R1_DIR + "{sample}_recal_r1.bam"
+    threads:
+        1
+    log:
+        LOG_DIR + "{sample}bqsr_r1_score_pre_recal.log"
+    shell:
+        """
+        singularity exec snpCalling_v0.0.7.img \
+            gatk BaseRecalibrator \
+            -R {input.REFERENCE} \
+            -I {input.BAM} \
+            --bqsr-recal-file {input.VCF} \
+            -O {output}
+        """
+
+rule bqsr_r1_score_post_recal:
+    input:
+        BAM  = BQSR_R1_DIR + "{sample}_recal_r1.bam",
+        VCF = BQSR_DIR + "cohort_filtered_variants_r1.vcf",
+        REFERENCE = GENOME_DIR + "schHae_v1.fa"        
+    output:
+        BQSR_R1_DIR + "{sample}_POSTrecal_r1.table"
+    threads:
+        1
+    log:
+        LOG_DIR + "{sample}.bqsr_r1_score_pre_recal.log"
+    shell:
+        """
+        singularity exec snpCalling_v0.0.7.img \
+            gatk BaseRecalibrator \
+            -R {input.REFERENCE} \
+            -I {input.BAM} \
+            --known-sites {input.VCF} \
+            -O {output}
+        """
+
+rule bqsr_r1_analyze_covariates_by_sample:
+    input:
+        PRE_TABLE = BQSR_R1_DIR + "{sample}_PRErecal_r1.table",
+        POST_TABLE = BQSR_R1_DIR + "{sample}_POSTrecal_r1.table"
+    output:
+        BQSR_R1_DIR + "{sample}_recalibration_plot_r1.pdf"
+    threads:
+        1
+    log:
+        LOG_DIR + "bqsr_r1_build_cohort_vcf.log"
+    shell:
+        """
+        singularity exec snpCalling_v0.0.7.img \
+            gatk AnalyzeCovariates \
+            -before {input.PRE_TABLE} \
+            -after {input.POST_TABLE} \
+            -plots {output}
+        """
+
+rule bqsr_r1_analyze_covariates_all:
+    input:
+        PRE_TABLES = expand(BQSR_R1_DIR + "{sample}_PRErecal_r1.table", sample=SAMPLES),
+        POST_TABLES = expand(BQSR_R1_DIR + "{sample}_POSTrecal_r1.table", sample=SAMPLES)
+    output:
+        protected(BQSR_DIR + "all_recalibration_plot_r1.pdf")
+    threads:
+        1
+    log:
+        LOG_DIR + "bqsr_r1_build_cohort_vcf.log"
+    params:
+        PRE_LIST = temp(BQSR_R1_DIR + "pre.list"),
+        POST_LIST = temp(BQSR_R1_DIR + "post.list"),
+        PRE_TABLE = temp(BQSR_R1_DIR + "pre.table"),
+        POST_TABLE = temp(BQSR_R1_DIR + "pre.table")
+    shell:
+        """
+        ls {input.PRE_TABLES} >{params.PRE_LIST}
+        ls {input.POST_TABLES} >{params.POST_LIST} 
+
+        singularity exec snpCalling_v0.0.7.img \
+            gatk GatherBQSRReports \
+                --input {params.PRE_LIST} \
+                --output {params.PRE_TABLE}
+
+        singularity exec snpCalling_v0.0.7.img \
+            gatk GatherBQSRReports \
+                --input {params.POST_LIST}  \
+                --output {params.POST_TABLE}
+        
+        singularity exec snpCalling_v0.0.7.img \
+            gatk AnalyzeCovariates \
+                -before {params.PRE_TABLE} \
+                -after {params.POST_TABLE} \
+                -plots {output}
+        """
+
+################################################################################
+#-------------------------------------------------------------------------------
+# BQR_ROUND 2
+rule bqsr_r2_haplotype_caller:
+    input: 
+        GENOME_DIR + "schHae_v1.dict",
+        BAM = BQSR_R1_DIR + "{sample}_recal_r1.bam",
+        REFERENCE = GENOME_DIR + "schHae_v1.fa",
+        LIST = BQSR_DIR + "contigs.{chunk}.list"
+    output:
+        temp(BQSR_R2_DIR + "{sample}_n{chunk}.g.vcf")
+    threads:
+        1
+    log:
+        LOG_DIR + "{sample}_{chunk}.bqsr_r2_haplotype_caller.log"
+    shell:
+        """
+        singularity exec snpCalling_v0.0.7.img \
+            gatk HaplotypeCaller \
+                -I {input.BAM} \
+                -O {output} \
+                -R {input.REFERENCE} \
+                -L {input.LIST} \
+                -ERC GVCF
+        """
+
+rule bqsr_r2_build_indiv_vcfs:
+    input: 
+        expand(BQSR_R2_DIR + "{{sample}}_n{number}.g.vcf", number=NUMS_2D) 
+    output:
+        temp(BQSR_R2_DIR + "{sample}.sorted.g.vcf")
+    threads:
+       1
+    log:
+        LOG_DIR + "{sample}.bqsr_r2_build_indiv_vcfs.log"
+    params:
+        LIST = temp(BQSR_R2_DIR + "{wildcards.sample}.list"),
+        TMP_VCF = temp(BQSR_R2_DIR + "tmp_{wildcards.sample}.merged.g.vcf")
+    shell:
+        """
+        ls {input} >{params.LIST}
+    
+        singularity exec snpCalling_v0.0.7.img \
+           gatk MergeVcfs \
+                -I {params.LIST} \
+                -O {params.TMP_VCF}
+        
+        singularity exec snpCalling_v0.0.7.img \
+            gatk SortVcf \
+                -I {params.TMP_VCF} \
+                -O {output}
+
+        """
+#-------------------------------------------------------------------------------
+
+rule bqsr_r2_prep_gdbimport:
+    input:
+        expand(BQSR_R2_DIR + "{sample}.sorted.g.vcf", sample=SAMPLES)
+    output:
+        temp(BQSR_R2_DIR + "bqsr_r2_hc_samples.list")
+    threads:
+        1
+    log:
+       LOG_DIR + "bqsr_r2_prep_gdbimport.log"
+    shell:
+        """
+        ls {input} >{output}
+        mkdir results/03-gatk_bqsr/r2/db
+        """
+
+rule bqsr_r2_gdbimport:
+    input:
+        BQSR_R2_DIR + "bqsr_r2_hc_samples.list",
+    output:
+        temp(BQSR_R2_DIR + "db/{contig}")
+    threads:
+        12
+    log:
+        LOG_DIR + "{wildcards.CONTIG}.bqsr_r2_gdbimport.log"
+    #params:
+    #    CONTIG=config["contigs"]
+    shell:
+        """
+        singularity exec snpCalling_v0.0.7.img \
+            gatk --java-options \"-Xmx4g -Xms4g\" GenomicsDBImport \
+                -V {input} \
+                --genomicsdb-workspace-path {output} \
+                -L {wildcards.contig} \
+                --reader-threads {threads} \
+                --batch-size 24"
+        """
+  
+rule bqsr_r2_genotype:
+    input:
+        REFERENCE = GENOME_DIR + "schHae_v1.fa",
+        DB = BQSR_R2_DIR + "db/{contig}"     
+    output:
+        temp(BQSR_R2_DIR + "geno/{contig}.vcf")
+    threads:
+        1
+    log:
+        LOG_DIR + "{wildcards.contig}.bqsr_r2_genotype.log"
+    shell:
+        """
+        singularity exec snpCalling_v0.0.7.img \
+            gatk GenotypeGVCFs \
+                -R {input.REFERENCE} \
+                -V gendb://{input.DB} \
+                -new-qual \
+                -O {output}
+        """
+
+rule bqsr_r2_build_cohort_vcf:
+    input:
+        VCF = expand(BQSR_R2_DIR + "geno/{contig}.vcf", contig=config['contigs']),
+    output:
+        temp(BQSR_R2_DIR + "cohort.vcf")
+    threads:
+        12
+    log:
+        LOG_DIR + "bqsr_r2_build_cohort_vcf.log"
+    params:
+        LIST = temp(BQSR_R2_DIR + "geno/contig.list"),
+        TMP_VCF = temp(BQSR_R2_DIR + "all.merged.g.vcf")
+    shell:
+        """        
+        ls {input} >{params.LIST}
+    
+        singularity exec snpCalling_v0.0.7.img \
+           gatk MergeVcfs \
+                -I {params.LIST} \
+                -O {params.TMP_VCF}
+        
+        singularity exec snpCalling_v0.0.7.img \
+            gatk SortVcf \
+                -I {params.TMP_VCF} \
+                -O {output}
+        """
+      
+# SELECT and FILTER SNPS ------------------------------------------------------------------
+rule bqsr_r2_filter_snps:
+    input:
+        REFERENCE = GENOME_DIR + "schHae_v1.fa",
+        VCF = BQSR_R2_DIR + "cohort.vcf"
+    output:
+        temp(BQSR_R2_DIR + "cohort_filtered_SNPs.vcf")
+    threads:
+        1
+    log:
+        LOG_DIR + "bqsr_r2_filter_snps.log"
+    params:
+        TMP_VCF=temp(BQSR_R2_DIR + "cohort_SNPs.vcf")
+    shell:
+        """
+        singularity exec snpCalling_v0.0.7.img \
+            gatk SelectVariants \
+            -V {input.VCF} \
+            -select-type SNP \
+            -O {params.TMP_VCF} \
+            -R {input.REFERENCE}"
+
+        singularity exec snpCalling_v0.0.7.img \
+            gatk VariantFiltration \
+            -R {input.REFERENCE} \
+            -V {params.TMP_VCF} \
+            --filter-expression "'"QD < 2.0 || FS > 60.0 || MQ < 40.0 || MQRankSum < -12.5 || ReadPosRankSum < -8.0"'" \
+            --filter-name "'"recommended_snp_filter"'" \
+            -O {output}"
+
+        """
+
+# SELECT and FILTER INDELS -----------------------------------------------------
+rule bqsr_r2_filter_indels:
+    input:
+        REFERENCE = GENOME_DIR + "schHae_v1.fa",
+        VCF=BQSR_R2_DIR + "cohort.vcf"
+    output:
+        temp(BQSR_R2_DIR + "cohort_filtered_INDELs.vcf")
+    threads:
+        1
+    log:
+        LOG_DIR + "bqsr_r2_filter_indels.log"
+    params:
+        TMP_VCF = temp(BQSR_R2_DIR + "cohort_INDELs.vcf")
+    shell:
+        """
+        singularity exec snpCalling_v0.0.7.img \
+            gatk SelectVariants \
+            -V {input.VCF} \
+            -select-type INDEL \
+            -O {params.TMP_VCF} \
+            -R {input.REFERENCE}"
+
+        singularity exec snpCalling_v0.0.7.img \
+            gatk VariantFiltration \
+            -R {input.REFERENCE} \
+            -V {params.TMP_VCF} \
+            --filter-expression "'"QD < 2.0 || FS > 200.0 || ReadPosRankSum < -20.0"'" \
+            --filter-name "'"recommended_indel_filter"'" \
+            -O {output}
+        """
+
+rule bqsr_r2_merge_variants:
+    input:
+        INDELS = BQSR_R2_DIR + "cohort_filtered_INDELs.vcf",
+        SNPS = BQSR_R2_DIR + "cohort_filtered_SNPs.vcf",
+        REFERENCE = GENOME_DIR + "schHae_v1.fa"
+    output:
+        protected(BQSR_R2_DIR + "cohort_filtered_variants_r2.vcf")
+    threads:
+        12
+    log:
+        LOG_DIR + "bqsr_r2_merge_variants.log"
+    params:
+        LIST=temp(BQSR_R2_DIR + "variant.list")
+    shell:
+        """
+        ls {input.SNPS} {input.INDELS} >{params.LIST}
+        
+        singularity exec snpCalling_v0.0.7.img \
+            gatk MergeVcfs \
+            -I {params.LIST} \
+            -O {output} \
+            -R {input.REFERENCE}
+        """
+    
+#-------------------------------------------------------------------------------
+rule bqsr_r2_score_pre_recal:
+    input:
+        BAM = BQSR_R1_DIR + "{sample}_recal_r1.bam",
+        VCF = BQSR_R2_DIR + "cohort_filtered_variants_r2.vcf",
+        REFERENCE = GENOME_DIR + "schHae_v1.fa"        
+    output:
+        BQSR_R2_DIR + "{sample}_PRErecal_r2.table"
+
+    threads:
+        1
+    log:
+        LOG_DIR + "{sample}bqsr_r2_score_pre_recal.log"
+    shell:
+        """
+        singularity exec snpCalling_v0.0.7.img \
+            gatk BaseRecalibrator \
+            -R {input.REFERENCE} \
+            -I {input.BAM} \
+            --known-sites {input.VCF} \
+            -O {output}
+        """
+
+rule bqsr_r2_recalibrate_bams:
+    input:
+        BAM = BQSR_R1_DIR + "{sample}_recal_r1.bam",
+        VCF = BQSR_R2_DIR + "cohort_filtered_variants_r2.vcf",
+        REFERENCE = GENOME_DIR + "schHae_v1.fa",
+        PRE_TABLE = BQSR_R2_DIR + "{sample}_PRErecal_r2.table"       
+    output:
+        BQSR_R2_DIR + "{sample}_recal_r2.bam"
+    threads:
+        1
+    log:
+        LOG_DIR + "{sample}bqsr_r2_score_pre_recal.log"
+    shell:
+        """
+        singularity exec snpCalling_v0.0.7.img \
+            gatk BaseRecalibrator \
+            -R {input.REFERENCE} \
+            -I {input.BAM} \
+            --bqsr-recal-file {input.VCF} \
+            -O {output}
+        """
+
+rule bqsr_r2_score_post_recal:
+    input:
+        BAM = BQSR_R2_DIR + "{sample}_recal_r2.bam",
+        VCF = BQSR_R2_DIR + "cohort_filtered_variants_r2.vcf",
+        REFERENCE = GENOME        
+    output:
+        BQSR_R2_DIR + "{sample}_POSTrecal_r2.table"
+    threads:
+        1
+    log:
+        LOG_DIR + "{sample}bqsr_r2_score_pre_recal.log"
+    shell:
+        """
+        singularity exec snpCalling_v0.0.7.img \
+            gatk BaseRecalibrator \
+            -R {input.REFERENCE} \
+            -I {input.BAM} \
+            --known-sites {input.VCF} \
+            -O {output}
+        """
+
+rule bqsr_r2_analyze_covariates_by_sample:
+    input:
+        PRE_TABLE = BQSR_R2_DIR + "{sample}_PRErecal_r2.table",       
+        POST_TABLE = BQSR_R2_DIR + "{sample}_POSTrecal_r2.table"
+    output:
+        BQSR_R2_DIR + "{sample}_recalibration_plot_r2.pdf"
+    threads:
+        1
+    log:
+        LOG_DIR + "bqsr_r2_build_cohort_vcf.log"
+    shell:
+        """
+        singularity exec snpCalling_v0.0.7.img \
+            gatk AnalyzeCovariates \
+            -before {input.PRE_TABLE} \
+            -after {input.POST_TABLE} \
+            -plots {output}
+        """
+
+rule bqsr_r2_analyze_covariates_all:
+    input:
+        PRE_TABLES = expand(BQSR_R2_DIR + "{sample}_PRErecal_r2.table", sample=SAMPLES),
+        POST_TABLES = expand(BQSR_R2_DIR + "{sample}_POSTrecal_r2.table", sample=SAMPLES)
+    output:
+        BQSR_DIR + "all_recalibration_plot_r2.pdf"
+    threads:
+        1
+    log:
+        LOG_DIR + "bqsr_r2_build_cohort_vcf.log"
+    params:
+        PRE_LIST = temp(BQSR_R2_DIR + "pre.list"),
+        POST_LIST = temp(BQSR_R2_DIR + "post.list"),
+        PRE_TABLE = temp(BQSR_R2_DIR + "pre.table"),
+        POST_TABLE = temp(BQSR_R2_DIR + "pre.table")
+    shell:
+        """
+        ls {input.PRE_TABLES} >{params.PRE_LIST}
+        ls {input.POST_TABLES} >{params.POST_LIST} 
+
+        singularity exec snpCalling_v0.0.7.img \
+            gatk GatherBQSRReports \
+                --input {params.PRE_LIST} \
+                --output {params.PRE_TABLE}
+
+        singularity exec snpCalling_v0.0.7.img \
+            gatk GatherBQSRReports \
+                --input {params.POST_LIST}  \
+                --output {params.POST_TABLE}
+        
+        singularity exec snpCalling_v0.0.7.img \
+            gatk AnalyzeCovariates \
+                -before {params.PRE_TABLE} \
+                -after {params.POST_TABLE} \
+                -plots {output}
+        """
+
+
+#-------------------------------------------------------------------------------
+rule whole_genome_alignment:
+    input: 
+        HAE_GENOME = GENOME_DIR + "schHae_v1.fa",
+        MAN_GENOME = GENOME_DIR + "schMan_v7.fa"
+    output:
+        HAL = WGA_DIR + "schMan7_vs_schMan1.hal"
+    threads:
+        12
+    log:
+        LOG_DIR + "whole_genome_alignment.log"
+    params:
+        OUT_DIR = WGA_DIR + "cactus",
+        SEQ_FILE = WGA_DIR + "seqFile"
+    shell:
+        """
+        echo -e "*schMan_v7 {input.MAN_GENOME}\nschHae_v1 {input.HAE_GENOME}" >{params.SEQ_FILE}
+
+        singularity exec snpCalling_v0.0.8.img \       
+            /usr/software/progressiveCactus/bin/runProgressiveCactus.sh \
+                --maxThreads {threads} \
+                results/05-wga/seqFile \
+                {params.OUT_DIR} \
+                {output.HAL}
+        """
 
 
