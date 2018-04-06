@@ -1,0 +1,629 @@
+# File:     02.2-bqsr_r2.snake
+# Name:     Neal Platt
+# Date:     04 April 2018
+# Desc:     This Snake file is used to genotype sH samples through the first
+#           round of base qualisty score recalibration in the gatk pipeline.
+#           Schistosoma Haemotobium made available through the Anderson lab at 
+#           Texas Biomedical Research Institute.  
+
+# Reccomended
+# Usage:    snakemake \
+#               --printshellcmds \
+#               --use-conda \
+#               --cluster 'qsub -V -cwd -S /bin/bash -pe mpi {threads} -o {log}.log -e {log}.stderr' \
+#               --jobs 300 \
+#               --latency-wait 200 \
+#               --snake \
+#               --keep-going
+#               --restart-times 2
+
+# Reqs:     All required software should be installed/available through the inc.
+#            singularity image or the packaged conda env.
+
+# Comments: This portion of the workflow exectures just after mapping and
+#           and filtering and just before the second round of bqsr
+#           
+# To Do:
+#   4] fix messages - seem to crash when running 
+#   5] general cleanup of remaining files
+#   6] Add samples to config file
+#   8] modularize snake files
+#   9] update rule requirements to speed up dag
+#-------------------------------------------------------------------------------
+
+#setting up snakemake 
+configfile: "config.yaml"
+HOME_DIR = "/master/nplatt/schisto_hybridization/"
+CONTIG_CHUNKS=50
+ASSEMBLY = "schHae_v1.fa"
+
+#setting work directory
+RESULTS_DIR = HOME_DIR + "results/"
+DATA_DIR = HOME_DIR + "data/"
+LOG_DIR = RESULTS_DIR + "logs/"
+GENOME_DIR = DATA_DIR + "genome/"
+GENOME = GENOME_DIR + ASSEMBLY
+SEQ_DIR = DATA_DIR + "sequence_data/"
+FILTER_READS_DIR = RESULTS_DIR + "01-filtered_reads/"
+MAP_DIR = RESULTS_DIR + "02-mapped_reads/" 
+
+BQSR_DIR = RESULTS_DIR + "03-gatk_bqsr/" 
+BQSR_R1_DIR = BQSR_DIR + "r1/"
+R1_HC = BQSR_R1_DIR + "hc/"
+R1_DB = BQSR_R1_DIR + "db/"
+R1_GENO = BQSR_R1_DIR + "geno/"
+R1_MERGE = BQSR_R1_DIR + "merge/"
+R1_FILTER = BQSR_R1_DIR + "filter/"
+R1_BAM = BQSR_R1_DIR + "bams/"
+R1_TABLE = BQSR_R1_DIR + "tables/"
+
+BQSR_R2_DIR = BQSR_DIR + "r2/"
+R2_HC = BQSR_R2_DIR + "hc/"
+R2_DB = BQSR_R2_DIR + "db/"
+R2_GENO = BQSR_R2_DIR + "geno/"
+R2_MERGE = BQSR_R2_DIR + "merge/"
+R2_FILTER = BQSR_R2_DIR + "filter/"
+R2_BAM = BQSR_R2_DIR + "bams/"
+R2_TABLE = BQSR_R2_DIR + "tables/"
+
+GENO_DIR = RESULTS_DIR + "04-genotype/" 
+WGA_DIR = RESULTS_DIR + "06-wga/" 
+
+#setting work directory
+workdir: HOME_DIR
+
+#setting up local rules to be run on the head node
+localrules: all
+localrules: create_list_of_contigs
+localrules: bqsr_r2_prep_gdbimport
+
+#list of all the sample IDs to be processed - eventually put in the config file
+HAE_SAMPLES = [ "Sh.NE_Dai-002.1",      "Sh.NE_Dai-010.1",      "Sh.NE_Dai-013.3",      
+            	"Sh.NE_Dai-031.1",      "Sh.NE_Dai-033.1",      "Sh.NE_Dai-044.1",
+            	"Sh.NE_Dai-045.1",      "Sh.NE_Dai-051.1",      "Sh.NE_Dai-074.1",      
+            	"Sh.NE_Dai-146.1",      "Sh.NE_DaiCP-233.1",    "Sh.NE_DaiCP-276.1", 
+           	    "Sh.NE_DaiCP-277.2",    "Sh.NE_Doki-029.1",     "Sh.NE_Kar-001.1",      
+            	"Sh.NE_Kar-002.1",      "Sh.NE_Kar-076.1",      "Sh.NE_Kar-096.2",      
+            	"Sh.NE_Kar-241.1",      "Sh.NE_Kar-241.2",      "Sh.NE_Kar-281.1",
+            	"Sh.NE_Kar-37.2",       "Sh.NE_Lata-007.3",     "Sh.NE_Lata-033.1", 
+            	"Sh.NE_Lata-078.1",     "Sh.NE_Lata-253.1",     "Sh.NE_Lata-275.2",
+            	"Sh.NE_Lata-293.1",     "Sh.NE_Lata-294.1",     "Sh.NE_LibTB-009.2",
+            	"Sh.NE_LibTB-010.1",    "Sh.NE_LibTB-022.1",    "Sh.NE_LibTB-028.1",    
+            	"Sh.NE_LibTB-031.1",    "Sh.NE_NG-011.1",       "Sh.NE_NG-06.2", 
+            	"Sh.NE_NG-089.1",       "Sh.NE_NG-236.1",       "Sh.NE_Seb-076.1",
+            	"Sh.NE_Seb-078.2",      "Sh.NE_Seb-081.2",      "Sh.NE_Tiag-272.1",
+            	"Sh.NE_YK-029.2",       "Sh.NE_YK-069.1",       "Sh.NE_YK-099.2",
+            	"Sh.NE_YK-248.2",       "Sh.NE_Youri-069.2",    "Sh.NE_Youri-091.3", 
+            	"Sh.TZ_PEM0063.1",      "Sh.TZ_PEM0075.1",      "Sh.TZ_PEM0076.1",
+            	"Sh.TZ_PEM0079.1",      "Sh.TZ_PEM0089.2",      "Sh.TZ_PEM0094.2",      
+            	"Sh.TZ_PEM0099.2",      "Sh.TZ_PEM0103.1",      "Sh.TZ_PEM0104.1",
+            	"Sh.TZ_PEM0106.2",      "Sh.TZ_PEM0108.1",      "Sh.TZ_PEM0110.1", 
+            	"Sh.TZ_PEM0114.3",      "Sh.TZ_PEM0115.4",      "Sh.TZ_PEM0120.1",
+            	"Sh.TZ_PEM0125.1",      "Sh.TZ_PEM0126.1",      "Sh.TZ_PEM0127.1",
+            	"Sh.TZ_PEM0128.1",      "Sh.TZ_PEM0130.1",      "Sh.TZ_PEM0133.1",
+            	"Sh.TZ_PEM0139.2",      "Sh.TZ_PEM0145.3",      "Sh.TZ_PEM0154.1", 
+            	"Sh.TZ_PEM0157.3",      "Sh.TZ_PEM0166.1",      "Sh.TZ_PEM0171.1",
+            	"Sh.TZ_UNG0006.1",      "Sh.TZ_UNG0038.1",      "Sh.TZ_UNG0076.1",
+            	"Sh.TZ_UNG0077.1",      "Sh.TZ_UNG0078.1",      "Sh.TZ_UNG0087.2",
+           	    "Sh.TZ_UNG0089.3",      "Sh.TZ_UNG0092.3",      "Sh.TZ_UNG0099.1", 
+            	"Sh.TZ_UNG0102.1",      "Sh.TZ_UNG0111.1",      "Sh.TZ_UNG0117.1",
+            	"Sh.TZ_UNG0121.1",      "Sh.TZ_UNG0125.3",      "Sh.TZ_UNG0127.1",
+            	"Sh.TZ_UNG0129.2",      "Sh.TZ_UNG0134.1",      "Sh.TZ_UNG0137.3",
+            	"Sh.TZ_UNG0139.1",      "Sh.TZ_UNG0142.2",      "Sh.TZ_UNG0146.1"]
+
+HAE_SRA_SAMPLES = ["ERR084970", "ERR037800", "SRR433865"]
+MAN_SAMPLES     = ["Sm.BR_1278.1", "Sm.BR_0447.1", "Sm.BR_2039.1"]
+BOV_SAMPLES     = ["ERR119622"]
+CUR_SAMPLES     = ["ERR119623"]
+#Curassoni samples ERR310937 download constantly fails
+#removed the following bovis sample just to much data "ERR103048"
+
+SAMPLES = HAE_SAMPLES + HAE_SRA_SAMPLES + MAN_SAMPLES + CUR_SAMPLES + BOV_SAMPLES
+
+#prep array to split genome
+NUMBERS=list(range(1, CONTIG_CHUNKS))
+NUMS_2D=[]
+for NUM in NUMBERS:
+    NUMS_2D.append("%02d" % NUM)
+
+FIRST_MERGE=list(range(1, 1000))
+FIRST_MERGE_3D=[]
+for NUM in FIRST_MERGE:
+    FIRST_MERGE_3D.append("%03d" % NUM)
+
+SECOND_MERGE=list(range(1, 100))
+SECOND_MERGE_2D=[]
+for NUM in SECOND_MERGE:
+    SECOND_MERGE_2D.append("%02d" % NUM)
+
+#get genomes - sman_v7 ftp://ftp.sanger.ac.uk/pub/project/pathogens/Schistosoma/mansoni/v7/sequence/Smansoni_v7.fa.gz
+shell.prefix("source ~/.bash_profile; ")
+
+#onerror:
+#    shell("echo "snakemake failed" | mail -s "an error occurred" neal.platt@gmail.com")
+
+#onsuccess:
+#    shell("rm -r " + R2_HC)
+#    shell("rm -r " + R2_DB)
+#    shell("rm -r " + R2_GENO)
+#    shell("rm -r " + R2_MERGE)
+#    shell("rm -r " + R2_FILTER)
+#    shell("#something to compress log files")
+
+#-------------------------------------------------------------------------------
+# initializing rule - these files need to be generated...initiates the pipeline
+rule all:
+    input:
+        #expand(R2_GENO + "{contig}.vcf", contig=config['contigs']),
+        expand(R2_TABLE + "{sample}_recalibration_plot_r2.pdf", sample=SAMPLES),  
+        BQSR_R2_DIR + "all_recalibration_plot_r2.pdf"
+
+
+
+#-------------------------------------------------------------------------------
+# initial SNPs with haplotype caller
+rule bqsr_r2_haplotype_caller:
+    input: 
+        MAP_DIR + "{sample}_processed.bam.bai",
+        BAM = MAP_DIR + "{sample}_processed.bam",
+        REFERENCE = GENOME,
+        LIST = BQSR_DIR + "contigs.{chunk}.list"
+    output:
+        R2_HC + "{sample}_n{chunk}.g.vcf"
+    threads:
+        1
+    log:
+        LOG_DIR + "{sample}_{chunk}.bqsr_r2_haplotype_caller"
+    shell:
+        """
+        singularity exec snpCalling_v0.0.8.img \
+            gatk HaplotypeCaller \
+               -I {input.BAM} \
+                -O {output} \
+                -R {input.REFERENCE} \
+                -L {input.LIST} \
+                -ERC GVCF
+        """
+
+#combine the snp calls into single vcfs per individuals
+rule bqsr_r2_build_indiv_vcfs:
+    input: 
+        expand(R2_HC + "{{sample}}_n{number}.g.vcf", number=NUMS_2D) 
+    output:
+        SORTED_VCF = R2_HC + "{sample}.sorted.g.vcf",
+        LIST = R2_HC + "{sample}.list",
+        TMP_VCF = R2_HC + "tmp_{sample}.merged.g.vcf"
+    threads:
+       1
+    log:
+        LOG_DIR + "{sample}.bqsr_r2_build_indiv_vcfs"
+    shell:
+        """
+        ls {input} >{output.LIST}
+    
+        singularity exec snpCalling_v0.0.8.img \
+           gatk MergeVcfs \
+                -I {output.LIST} \
+                -O {output.TMP_VCF}
+        
+        singularity exec snpCalling_v0.0.8.img \
+            gatk SortVcf \
+                -I {output.TMP_VCF} \
+                -O {output.SORTED_VCF}
+        """
+
+#make a list and db for gatk gdbimport
+rule bqsr_r2_prep_gdbimport:
+    input:
+        expand(R2_HC + "{sample}.sorted.g.vcf", sample=SAMPLES)
+    output:
+        LIST = R2_HC + "bqsr_r2_hc_samples.list",
+        DB = R2_DB
+    threads:
+        1
+    log:
+       LOG_DIR + "bqsr_r2_prep_gdbimport"
+    shell:
+        """
+        ls {input} >{output.LIST}
+	    #mkdir {output.DB}
+	    """
+
+#run gdbimport (per contig)
+rule bqsr_r2_gdbimport:
+    input:
+        R2_HC + "bqsr_r2_hc_samples.list",
+    output:
+        R2_DB + "{contig}"
+    threads:
+        12
+    log:
+        LOG_DIR + "{contig}.bqsr_r2_gdbimport"
+    #params:
+    #    CONTIG=config["contigs"]
+    shell:
+        """
+        singularity exec snpCalling_v0.0.8.img \
+            gatk --java-options \"-Xmx4g -Xms4g\" GenomicsDBImport \
+                -V {input} \
+                --genomicsdb-workspace-path {output} \
+                -L {wildcards.contig} \
+                --reader-threads {threads} \
+                --batch-size 24
+        """
+  
+#genotype each contg
+rule bqsr_r2_genotype:
+    input:
+        REFERENCE = GENOME_DIR + "schHae_v1.fa",
+        DB = R2_DB + "{contig}"     
+    output:
+        R2_GENO + "{contig}.vcf"
+    threads:
+        1
+    log:
+        LOG_DIR + "{contig}.bqsr_r2_genotype"
+    shell:
+        """
+        singularity exec snpCalling_v0.0.8.img \
+            gatk GenotypeGVCFs \
+                -R {input.REFERENCE} \
+                -V gendb://{input.DB} \
+                -new-qual \
+                -O {output}
+        """
+
+#create a cohort.vcf of raw genotypes through heirarchical merging.
+# first merge vcfs into a single file per thousand contigs
+#   create a lists to merge
+rule bqsr_r2_create_merge_lists:
+    input:
+        expand(R2_GENO + "{contig}.vcf", contig=config['contigs'])
+    output:
+        expand(R2_MERGE + "merge-1_{number}.list", number=FIRST_MERGE_3D)
+    threads:
+        1
+    log:
+        LOG_DIR + "bqsr_r2_create_merge_lists"
+    params:
+        GENO_DIR = R2_GENO,
+        PREFIX = R2_MERGE + "merge-1_",
+        VCF_LIST = R2_MERGE + "vcf.list"
+    shell:
+        """     
+        for VCF in $(ls {params.GENO_DIR}*.vcf); do
+            echo $VCF
+        done >{params.VCF_LIST}
+        
+        singularity exec snpCalling_v0.0.8.img \
+            split -n l/999 \
+                --numeric-suffixes=1 \
+                --additional-suffix .list \
+                {params.VCF_LIST} \
+                {params.PREFIX}
+        """
+
+# merge to 1k vcfs
+rule bqsr_r2_merge1000_gvcf:
+    input:
+        LIST = R2_MERGE + "merge-1_{number}.list"
+    output:
+        R2_MERGE + "merge-1_{number}.vcf"
+    threads:
+        12
+    log:
+        LOG_DIR + "n{number}_bqsr_r2_merge1000_gvcf"
+    shell:
+        """        
+        singularity exec snpCalling_v0.0.8.img \
+           gatk MergeVcfs \
+                -I {input.LIST} \
+                -O {output}
+        """
+
+rule bqsr_r2_create_merge_lists_100:
+    input:
+        expand(R2_MERGE+ "merge-1_{number}.vcf", number=FIRST_MERGE_3D)
+    output:
+        expand(R2_MERGE + "merge-2_{number}.list", number=SECOND_MERGE_2D)
+    threads:
+        1
+    log:
+        LOG_DIR + "bqsr_r2_create_merge_lists_100"
+    params:
+        GENO_DIR = R2_GENO,
+        PREFIX = R2_MERGE + "merge-2_",
+        VCF_LIST = R2_MERGE + "vcf.list"
+    shell:
+        """     
+        for VCF in $(ls {params.GENO_DIR}*.vcf); do
+            echo $VCF
+        done >{params.VCF_LIST}
+        
+        singularity exec snpCalling_v0.0.8.img \
+            split -n l/99 \
+                --numeric-suffixes=1 \
+                --additional-suffix .list \
+                {params.VCF_LIST} \
+                {params.PREFIX}
+        """
+
+# merge to 100 vcfs
+rule bqsr_r2_merge100_gvcf:
+    input:
+        LIST = R2_MERGE + "merge-2_{number}.list"
+    output:
+        R2_MERGE + "merge-2_{number}.vcf"
+    threads:
+        12
+    log:
+        LOG_DIR + "n{number}_bqsr_r2_merge100_gvcf"
+    shell:
+        """        
+        singularity exec snpCalling_v0.0.8.img \
+           gatk --java-options "-Xmx8g" MergeVcfs \
+                --MAX_RECORDS_IN_RAM 500000 \
+                -I {input.LIST} \
+                -O {output}
+        """
+
+
+# combine 1k vcfs into a single cohort vcf
+rule bqsr_r2_build_cohort_vcf:
+    input:
+        VCF = expand(R2_MERGE + "merge-2_{number}.vcf", number=SECOND_MERGE_2D)
+    output:
+        R2_FILTER + "cohort_raw.vcf"
+    threads:
+        12
+    log:
+        LOG_DIR + "bqsr_r2_build_cohort_vcf_1k"
+    params: 
+        LIST = R2_FILTER + "contig.list",
+        TMP_VCF = R2_FILTER + "all.merged.g.vcf"
+    shell:
+        """        
+        ls {input} >{params.LIST}
+    
+        singularity exec snpCalling_v0.0.8.img \
+           gatk --java-options "-Xmx8g" MergeVcfs \
+                --MAX_RECORDS_IN_RAM 500000 \
+                -I {params.LIST} \
+                -O {params.TMP_VCF}
+        
+        singularity exec snpCalling_v0.0.8.img \
+            gatk --java-options "-Xmx8g" SortVcf \
+                --MAX_RECORDS_IN_RAM 500000 \
+                -I {params.TMP_VCF} \
+                -O {output}
+        """
+
+# using the cohort vcf - filter into snps and indels
+# snps
+rule bqsr_r2_filter_snps:
+    input:
+        REFERENCE = GENOME,
+        VCF = R2_FILTER + "cohort_raw.vcf"
+    output:
+        R2_FILTER + "cohort_filtered_SNPs.vcf"
+    threads:
+        1
+    log:
+        LOG_DIR + "bqsr_r2_filter_snps"
+    params:
+        TMP_VCF = R2_FILTER + "cohort_SNPs.vcf"
+    shell:
+        """
+        singularity exec snpCalling_v0.0.8.img \
+            gatk SelectVariants \
+                -V {input.VCF} \
+                -select-type SNP \
+                -O {params.TMP_VCF} \
+                -R {input.REFERENCE}
+
+        singularity exec snpCalling_v0.0.8.img \
+            gatk VariantFiltration \
+                -R {input.REFERENCE} \
+                -V {params.TMP_VCF} \
+                --filter-name "QD_lt_2,snp" \
+                --filter-expression "QD < 2.0" \
+                --filter-name "FS_gt_60,snp" \
+                --filter-expression "FS > 60.0" \
+                --filter-name "MQ_lt_40,snp" \
+                --filter-expression "MQ < 40.0" \
+                --filter-name "MQRankSum_lt_-12.5,snp" \
+                --filter-expression "MQRankSum < -12.5" \
+                --filter-name "ReadPosRankSum_lt_-8,snp" \
+                --filter-expression "ReadPosRankSum < -8.0" \
+                -O {output}
+        """
+
+# indels
+rule bqsr_r2_filter_indels:
+    input:
+        REFERENCE = GENOME,
+        VCF = R2_FILTER + "cohort_raw.vcf"
+    output:
+        R2_FILTER + "cohort_filtered_INDELs.vcf"
+    threads:
+        1
+    log:
+        LOG_DIR + "bqsr_r2_filter_indels"
+    params:
+        TMP_VCF = R2_FILTER + "cohort_INDELs.vcf"
+    shell:
+        """
+        singularity exec snpCalling_v0.0.8.img \
+            gatk SelectVariants \
+                -V {input.VCF} \
+                -select-type INDEL \
+                -O {params.TMP_VCF} \
+                -R {input.REFERENCE}
+
+        singularity exec snpCalling_v0.0.8.img \
+            gatk VariantFiltration \
+                -R {input.REFERENCE} \
+                -V {params.TMP_VCF} \
+                --filter-name "QD_lt_2,indel" \
+                --filter-expression "QD < 2.0" \
+                --filter-name "FS_gt_200,indel" \
+                --filter-expression "FS > 200.0" \
+                --filter-name "ReadPosRankSum_lt_-20,indel" \
+                --filter-expression "ReadPosRankSum < -20.0" \
+                -O {output}
+        """
+
+#and merge them back together.
+rule bqsr_r2_merge_variants:
+    input:
+        INDELS = R2_FILTER + "cohort_filtered_INDELs.vcf",
+        SNPS = R2_FILTER + "cohort_filtered_SNPs.vcf",
+        REFERENCE = GENOME
+    output:
+        BQSR_R2_DIR + "cohort_filtered_variants_r2.vcf"
+    threads:
+        12
+    log:
+        LOG_DIR + "bqsr_r2_merge_variants"
+    params:
+        LIST = R2_FILTER + "variant.list"
+    shell:
+        """
+        ls {input.SNPS} {input.INDELS} >{params.LIST}
+        
+        singularity exec snpCalling_v0.0.8.img \
+            gatk MergeVcfs \
+                -I {params.LIST} \
+                -O {output} \
+                -R {input.REFERENCE}
+        """
+
+# wtih filtered cohort vcf...calculate covariates (per sample)
+rule bqsr_r2_score_pre_recal:
+    input:
+        BAM = R1_BAM + "{sample}_recal_r1.bam",
+        VCF = BQSR_R2_DIR + "cohort_filtered_variants_r2.vcf",
+        REFERENCE = GENOME        
+    output:
+        R2_TABLE + "{sample}_PRErecal_r2.table"
+    threads:
+        1
+    log:
+        LOG_DIR + "{sample}bqsr_r2_score_pre_recal"
+    shell:
+        """
+        singularity exec snpCalling_v0.0.8.img \
+            gatk BaseRecalibrator \
+                -R {input.REFERENCE} \
+                -I {input.BAM} \
+                --known-sites {input.VCF} \
+                -O {output}
+        """
+
+# modify the quality scores in the bam files (per sample)
+rule bqsr_r2_recalibrate_bams:
+    input:
+        BAM = R1_BAM + "{sample}_recal_r1.bam",
+        REFERENCE = GENOME,
+        PRE_TABLE = R2_TABLE + "{sample}_PRErecal_r2.table"       
+    output:
+        R2_BAM + "{sample}_recal_r2.bam"
+    threads:
+        1
+    log:
+        LOG_DIR + "{sample}bqsr_r2_score_pre_recal"
+    shell:
+        """
+        singularity exec snpCalling_v0.0.8.img \
+            gatk ApplyBQSR \
+                -R {input.REFERENCE} \
+                -I {input.BAM} \
+                --bqsr-recal-file {input.PRE_TABLE} \
+                -O {output}
+        """
+
+#check for qual distribtuion after recal (per sample)
+rule bqsr_r2_score_post_recal:
+    input:
+        BAM  = R2_BAM + "{sample}_recal_r2.bam",
+        VCF = BQSR_R2_DIR + "cohort_filtered_variants_r2.vcf",
+        REFERENCE = GENOME      
+    output:
+        R2_TABLE + "{sample}_POSTrecal_r2.table"
+    threads:
+        1
+    log:
+        LOG_DIR + "{sample}.bqsr_r2_score_pre_recal"
+    shell:
+        """
+        singularity exec snpCalling_v0.0.8.img \
+            gatk BaseRecalibrator \
+                -R {input.REFERENCE} \
+                -I {input.BAM} \
+                --known-sites {input.VCF} \
+                -O {output}
+        """
+
+# build plot to compare pre and post cal distributions (per sample)
+rule bqsr_r2_analyze_covariates_by_sample:
+    input:
+        PRE_TABLE = R2_TABLE + "{sample}_PRErecal_r2.table",
+        POST_TABLE = R2_TABLE + "{sample}_POSTrecal_r2.table"
+    output:
+        R2_TABLE + "{sample}_recalibration_plot_r2.pdf"
+    threads:
+        1
+    log:
+        LOG_DIR + "bqsr_r2_build_cohort_vcf"
+    shell:
+        """
+        singularity exec snpCalling_v0.0.8.img \
+            gatk AnalyzeCovariates \
+                -before {input.PRE_TABLE} \
+                -after {input.POST_TABLE} \
+                -plots {output}
+        """
+
+# gather bqsr tables and examine for convergence across all samples
+rule bqsr_r2_analyze_covariates_all:
+    input:
+        PRE_TABLES = expand(R2_TABLE + "{sample}_PRErecal_r2.table", sample=SAMPLES),
+        POST_TABLES = expand(R2_TABLE + "{sample}_POSTrecal_r2.table", sample=SAMPLES)
+    output:
+        protected(BQSR_R2_DIR + "all_recalibration_plot_r2.pdf")
+    threads:
+        1
+    log:
+        LOG_DIR + "bqsr_r2_build_cohort_vcf"
+    params:
+        PRE_LIST = R2_TABLE + "pre.list",
+        POST_LIST = R2_TABLE + "post.list",
+        PRE_TABLE = R2_TABLE + "all_PRErecal_r2.table",
+        POST_TABLE = R2_TABLE + "all_POSTrecal_r2.table"
+    shell:
+        """
+        ls {input.PRE_TABLES} >{params.PRE_LIST}
+        ls {input.POST_TABLES} >{params.POST_LIST} 
+
+        singularity exec snpCalling_v0.0.8.img \
+            gatk GatherBQSRReports \
+                --input {params.PRE_LIST} \
+                --output {params.PRE_TABLE}
+
+        singularity exec snpCalling_v0.0.8.img \
+            gatk GatherBQSRReports \
+                --input {params.POST_LIST}  \
+                --output {params.POST_TABLE}
+        
+        singularity exec snpCalling_v0.0.8.img \
+            gatk AnalyzeCovariates \
+                -before {params.PRE_TABLE} \
+                -after {params.POST_TABLE} \
+                -plots {output}
+        """
+
+# depending on the results the modified bam files can be used in a second round
+#   of BQSR or proceed wtih analyses of genotypes (if converged).
+
+
+

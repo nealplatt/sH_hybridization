@@ -1,0 +1,492 @@
+# File:     02.2-bqsr_r2.snake
+# Name:     Neal Platt
+# Date:     04 April 2018
+# Desc:     This Snake file is used to genotype sH samples through the first
+#           round of base qualisty score recalibration in the gatk pipeline.
+#           Schistosoma Haemotobium made available through the Anderson lab at 
+#           Texas Biomedical Research Institute.  
+
+# Reccomended
+# Usage:    snakemake \
+#               --printshellcmds \
+#               --use-conda \
+#               --cluster 'qsub -V -cwd -S /bin/bash -pe mpi {threads} -o {log}.log -e {log}.stderr' \
+#               --jobs 300 \
+#               --latency-wait 200 \
+#               --snake \
+#               --keep-going
+#               --restart-times 2
+
+# Reqs:     All required software should be installed/available through the inc.
+#            singularity image or the packaged conda env.
+
+# Comments: This portion of the workflow exectures just after mapping and
+#           and filtering and just before the second round of bqsr
+#           
+# To Do:
+#   4] fix messages - seem to crash when running 
+#   5] general cleanup of remaining files
+#   6] Add samples to config file
+#   8] modularize snake files
+#   9] update rule requirements to speed up dag
+#-------------------------------------------------------------------------------
+
+#setting up snakemake 
+configfile: "config.yaml"
+HOME_DIR = "/master/nplatt/schisto_hybridization/"
+CONTIG_CHUNKS=50
+ASSEMBLY = "schHae_v1.fa"
+
+#setting work directory
+RESULTS_DIR = HOME_DIR + "results/"
+DATA_DIR = HOME_DIR + "data/"
+LOG_DIR = RESULTS_DIR + "logs/"
+GENOME_DIR = DATA_DIR + "genome/"
+GENOME = GENOME_DIR + ASSEMBLY
+SEQ_DIR = DATA_DIR + "sequence_data/"
+FILTER_READS_DIR = RESULTS_DIR + "01-filtered_reads/"
+MAP_DIR = RESULTS_DIR + "02-mapped_reads/" 
+
+GATK_DIR = RESULTS_DIR + "03-gatk/" 
+BQSR_R1_DIR = GATK_DIR + "bqsr-r1/"
+R1_HC = BQSR_R1_DIR + "hc/"
+R1_DB = BQSR_R1_DIR + "db/"
+R1_GENO = BQSR_R1_DIR + "geno/"
+R1_MERGE = BQSR_R1_DIR + "merge/"
+R1_FILTER = BQSR_R1_DIR + "filter/"
+R1_BAM = BQSR_R1_DIR + "bams/"
+R1_TABLE = BQSR_R1_DIR + "tables/"
+
+BQSR_R2_DIR = GATK_DIR + "bqsr-r2/"
+R2_HC = BQSR_R2_DIR + "hc/"
+R2_DB = BQSR_R2_DIR + "db/"
+R2_GENO = BQSR_R2_DIR + "geno/"
+R2_MERGE = BQSR_R2_DIR + "merge/"
+R2_FILTER = BQSR_R2_DIR + "filter/"
+R2_BAM = BQSR_R2_DIR + "bams/"
+R2_TABLE = BQSR_R2_DIR + "tables/"
+
+GENO_DIR = GATK_DIR + "filter_geno/"
+ 
+WGA_DIR = RESULTS_DIR + "06-wga/" 
+
+#setting work directory
+workdir: HOME_DIR
+
+#setting up local rules to be run on the head node
+localrules: all
+localrules: create_list_of_contigs
+localrules: bqsr_r2_prep_gdbimport
+
+#list of all the sample IDs to be processed - eventually put in the config file
+HAE_SAMPLES = [ "Sh.NE_Dai-002.1",      "Sh.NE_Dai-010.1",      "Sh.NE_Dai-013.3",      
+            	"Sh.NE_Dai-031.1",      "Sh.NE_Dai-033.1",      "Sh.NE_Dai-044.1",
+            	"Sh.NE_Dai-045.1",      "Sh.NE_Dai-051.1",      "Sh.NE_Dai-074.1",      
+            	"Sh.NE_Dai-146.1",      "Sh.NE_DaiCP-233.1",    "Sh.NE_DaiCP-276.1", 
+           	    "Sh.NE_DaiCP-277.2",    "Sh.NE_Doki-029.1",     "Sh.NE_Kar-001.1",      
+            	"Sh.NE_Kar-002.1",      "Sh.NE_Kar-076.1",      "Sh.NE_Kar-096.2",      
+            	"Sh.NE_Kar-241.1",      "Sh.NE_Kar-241.2",      "Sh.NE_Kar-281.1",
+            	"Sh.NE_Kar-37.2",       "Sh.NE_Lata-007.3",     "Sh.NE_Lata-033.1", 
+            	"Sh.NE_Lata-078.1",     "Sh.NE_Lata-253.1",     "Sh.NE_Lata-275.2",
+            	"Sh.NE_Lata-293.1",     "Sh.NE_Lata-294.1",     "Sh.NE_LibTB-009.2",
+            	"Sh.NE_LibTB-010.1",    "Sh.NE_LibTB-022.1",    "Sh.NE_LibTB-028.1",    
+            	"Sh.NE_LibTB-031.1",    "Sh.NE_NG-011.1",       "Sh.NE_NG-06.2", 
+            	"Sh.NE_NG-089.1",       "Sh.NE_NG-236.1",       "Sh.NE_Seb-076.1",
+            	"Sh.NE_Seb-078.2",      "Sh.NE_Seb-081.2",      "Sh.NE_Tiag-272.1",
+            	"Sh.NE_YK-029.2",       "Sh.NE_YK-069.1",       "Sh.NE_YK-099.2",
+            	"Sh.NE_YK-248.2",       "Sh.NE_Youri-069.2",    "Sh.NE_Youri-091.3", 
+            	"Sh.TZ_PEM0063.1",      "Sh.TZ_PEM0075.1",      "Sh.TZ_PEM0076.1",
+            	"Sh.TZ_PEM0079.1",      "Sh.TZ_PEM0089.2",      "Sh.TZ_PEM0094.2",      
+            	"Sh.TZ_PEM0099.2",      "Sh.TZ_PEM0103.1",      "Sh.TZ_PEM0104.1",
+            	"Sh.TZ_PEM0106.2",      "Sh.TZ_PEM0108.1",      "Sh.TZ_PEM0110.1", 
+            	"Sh.TZ_PEM0114.3",      "Sh.TZ_PEM0115.4",      "Sh.TZ_PEM0120.1",
+            	"Sh.TZ_PEM0125.1",      "Sh.TZ_PEM0126.1",      "Sh.TZ_PEM0127.1",
+            	"Sh.TZ_PEM0128.1",      "Sh.TZ_PEM0130.1",      "Sh.TZ_PEM0133.1",
+            	"Sh.TZ_PEM0139.2",      "Sh.TZ_PEM0145.3",      "Sh.TZ_PEM0154.1", 
+            	"Sh.TZ_PEM0157.3",      "Sh.TZ_PEM0166.1",      "Sh.TZ_PEM0171.1",
+            	"Sh.TZ_UNG0006.1",      "Sh.TZ_UNG0038.1",      "Sh.TZ_UNG0076.1",
+            	"Sh.TZ_UNG0077.1",      "Sh.TZ_UNG0078.1",      "Sh.TZ_UNG0087.2",
+           	    "Sh.TZ_UNG0089.3",      "Sh.TZ_UNG0092.3",      "Sh.TZ_UNG0099.1", 
+            	"Sh.TZ_UNG0102.1",      "Sh.TZ_UNG0111.1",      "Sh.TZ_UNG0117.1",
+            	"Sh.TZ_UNG0121.1",      "Sh.TZ_UNG0125.3",      "Sh.TZ_UNG0127.1",
+            	"Sh.TZ_UNG0129.2",      "Sh.TZ_UNG0134.1",      "Sh.TZ_UNG0137.3",
+            	"Sh.TZ_UNG0139.1",      "Sh.TZ_UNG0142.2",      "Sh.TZ_UNG0146.1"]
+
+HAE_SRA_SAMPLES = ["ERR084970", "ERR037800", "SRR433865"]
+MAN_SAMPLES     = ["Sm.BR_1278.1", "Sm.BR_0447.1", "Sm.BR_2039.1"]
+BOV_SAMPLES     = ["ERR119622"]
+CUR_SAMPLES     = ["ERR119623"]
+#Curassoni samples ERR310937 download constantly fails
+#removed the following bovis sample just to much data "ERR103048"
+
+SAMPLES = HAE_SAMPLES + HAE_SRA_SAMPLES + MAN_SAMPLES + CUR_SAMPLES + BOV_SAMPLES
+
+#prep array to split genome
+NUMBERS=list(range(1, CONTIG_CHUNKS))
+NUMS_2D=[]
+for NUM in NUMBERS:
+    NUMS_2D.append("%02d" % NUM)
+
+FIRST_MERGE=list(range(1, 1000))
+FIRST_MERGE_3D=[]
+for NUM in FIRST_MERGE:
+    FIRST_MERGE_3D.append("%03d" % NUM)
+
+SECOND_MERGE=list(range(1, 100))
+SECOND_MERGE_2D=[]
+for NUM in SECOND_MERGE:
+    SECOND_MERGE_2D.append("%02d" % NUM)
+
+#get genomes - sman_v7 ftp://ftp.sanger.ac.uk/pub/project/pathogens/Schistosoma/mansoni/v7/sequence/Smansoni_v7.fa.gz
+shell.prefix("source ~/.bash_profile; ")
+
+#onerror:
+#    shell("echo "snakemake failed" | mail -s "an error occurred" neal.platt@gmail.com")
+
+#onsuccess:
+#    shell("rm -r " + R2_HC)
+
+
+#-------------------------------------------------------------------------------
+# initializing rule - these files need to be generated...initiates the pipeline
+rule all:
+    input:
+        expand(GENO_DIR + "sH_filtered_{type}-variants.vcf", type=["all", "auto", "mito", "sex"]),
+        expand(GENO_DIR + "sH_filtered_{type}-variants.vcf.idx", type=["all", "auto", "mito", "sex"])
+
+#-------------------------------------------------------------------------------
+#add unique identifer to ID field (replace "."
+rule add_snp_ids:
+    input:
+        VCF = R2_FILTER + "cohort_raw.vcf"
+    output:
+        GENO_DIR + "cohort_raw_r2.vcf"
+    threads:
+        1
+    log:
+        LOG_DIR + "soft_filter_snps"
+    conda:
+        "environment.yaml"
+    shell:
+        """
+        bcftools annotate \
+            --set-id +'%CHROM\:%POS' \
+            {input} >{output}
+        """
+
+rule soft_filter_snps:
+    input:
+        REFERENCE = GENOME,
+        GENO_DIR + "cohort_raw_r2.vcf"
+    output:
+        GENO_DIR + "cohort_filtered_SNPs.vcf"
+    threads:
+        1
+    log:
+        LOG_DIR + "soft_filter_snps"
+    shell:
+        """
+        singularity exec snpCalling_v0.0.8.img \
+            gatk VariantFiltration \
+                -R {input.REFERENCE} \
+                -V {params.TMP_VCF} \
+                --filter-name "snp_QD_lt_5" \
+                --filter-expression "QD < 5.0" \
+                --filter-name "snp_FS_gt_55" \
+                --filter-expression "FS > 55.0" \
+                --filter-name "snp_MQ_lt_30" \
+                --filter-expression "MQ < 30.0" \
+                --filter-name "snp_MQRankSum_lt_-12.5" \
+                --filter-expression "MQRankSum < -12.5" \
+                --filter-name "snp_ReadPosRankSum_lt_-8" \
+                --filter-expression "ReadPosRankSum < -8.0" \
+                --filter-name "snp_SQR_gt_3" \
+                --filter-expression "SOR > 3.0"  \
+                -O {output}
+        """
+
+# indels
+rule soft_filter_indels:
+    input:
+        REFERENCE = GENOME,
+        VCF = R2_FILTER + "cohort_raw.vcf"
+    output:
+        GENO_DIR + "cohort_filtered_INDELs.vcf"
+    threads:
+        1
+    log:
+        LOG_DIR + "soft_filter_indels"
+    shell:
+        """
+        singularity exec snpCalling_v0.0.8.img \
+            gatk VariantFiltration \
+                -R {input.REFERENCE} \
+                -V {params.TMP_VCF} \
+                --filter-name "indel_QD_lt_5" \
+                --filter-expression "QD < 5.0" \
+                --filter-name "snp_FS_gt_55" \
+                --filter-expression "FS > 55.0" \
+                --filter-name "snp_ReadPosRankSum_lt_-20" \
+                --filter-expression "ReadPosRankSum < -20.0" \
+                --filter-name "snp_SQR_gt_10" \
+                --filter-expression "SOR > 10.0" \
+                -O {output}
+        """
+
+#and merge them back together.
+rule merge_soft_filtered_variants:
+    input:
+        SNPS = rules.soft_filter_snps.VCF,
+        INDELS = rules.soft_filter_indels.VCF,
+        REFERENCE = GENOME
+    output:
+        GENO_DIR + "cohort_soft-filtered_variants_r2.vcf"
+    threads:
+        1
+    log:
+        LOG_DIR + "merge_soft_filtered_variants"
+    params:
+        LIST = R2_FILTER + "variant.list"
+    shell:
+        """
+        ls {input.SNPS} {input.INDELS} >{params.LIST}
+        
+        singularity exec snpCalling_v0.0.8.img \
+            gatk MergeVcfs \
+                -I {params.LIST} \
+                -O {output} \
+                -R {input.REFERENCE}
+        """
+
+
+#1st pass filtering - biallelic sites & 51% geno
+rule first_pass_filtering:
+    input:
+        GENO_DIR + "cohort_soft-filtered_variants_r2.vcf"
+    output:
+        GENO_DIR + "cohort_filtered_biallelic-51pS_variants_r2.recode.vcf"
+    threads:
+        1
+    log:
+        LOG_DIR + "first_pass_filtering"
+    conda:
+        "environment.yaml"
+    params:
+        PREFIX = GENO_DIR + "cohort_filtered_biallelic-51pS_variants_r2"
+    shell:
+        """
+        vcftools \
+            --remove-filtered-all \
+            --min-alleles 2 \
+            --max-alleles 2 \
+            --max-missing 0.51 \
+            --mac 3 \
+            --vcf {input} \
+            --out {params.PREFIX} \
+            --recode \
+            --recode-INFO-all
+        """
+
+#2st pass filtering - remove individuals with a lot of missing data
+rule second_pass_filtering:
+    input:
+        GENO_DIR + "cohort_filtered_biallelic-51p_variants_r2.recode.vcf"
+    output:
+        VCF = GENO_DIR + "cohort_filtered_biallelic-51pS-75pI_variants_r2.recode.vcf",
+        LIST = GENO_DIR + "data_poor_indivs_all.list"
+    threads:
+        1
+    log:
+        LOG_DIR + "second_pass_filtering"
+    conda:
+        "environment.yaml"
+    params:
+        PREFIX = GENO_DIR + "cohort_filtered_biallelic-51pS-75pI_variants_r2"
+        TABLE = GENO_DIR + "cohort_filtered_biallelic-51p_variants_r2"
+    shell:
+        """
+        vcftools \
+            --vcf {input.VCF} \
+            --missing-indv \
+            --out {params.TABLE}
+
+        #remove individuals missing more than 25% of the data    
+        cat {params.TABLE}.imiss | awk '$5 >0.25 {{print $1}}' >{output.LIST}
+
+        vcftools \
+            --vcf {input.VCF} \
+            --remove {output.LIST} \
+            --recode \
+            --recode-INFO-all \
+            --out {params.PREFIX}
+        """
+
+#3rd pass filtering - remove sites where lt95% are genotyped, high proportion called variants
+#  and min DP lt 10
+rule third_pass_filtering:
+    input:
+        VCF = GENO_DIR + "cohort_filtered_biallelic-51pS-75pI_variants_r2.recode.vcf",
+    output:
+        VCF = GENO_DIR + "cohort_filtered_biallelic-95pS-75pI-maf05-dp10_variants_r2.recode.vcf"
+    threads:
+        1
+    log:
+        LOG_DIR + "third_pass_filtering"
+    conda:
+        "environment.yaml"
+    params:
+        PREFIX = GENO_DIR + "cohort_filtered_biallelic-95pS-75pI-maf05-dp10_variants_r2"
+    shell:
+        """
+        vcftools \
+            --vcf {input.VCF} \
+            --max-missing 0.95 \
+            --maf 0.05 \
+            --recode \
+            --recode-INFO-all \
+            --out {params.PREFIX} \
+            --min-meanDP 10
+        """
+
+#4th pass filtering - remove sites close to indels
+rule fourth_pass_filtering:
+    input:
+        VCF = GENO_DIR + "cohort_filtered_biallelic-95pS-75pI-maf05-dp10_variants_r2.recode.vcf"
+    output:
+        VCF = GENO_DIR + "cohort_filtered_biallelic-95pS-75pI-maf05-dp10-50sGap-100iGap_variants_r2.recode.vcf"
+    threads:
+        1
+    log:
+        LOG_DIR + "third_pass_filtering"
+    conda:
+        "environment.yaml"
+    shell:
+        """
+        bcftools filter \
+            --SnpGap 50 \
+            --IndelGap 100 \
+            --output {output.VCF} \
+            -O v \
+            {input.VCF}
+        """
+
+#index for downstream analyses
+rule index_filtered_vcf:
+    input:
+        GENO_DIR + "sH_filtered_{type}Variants.vcf"
+    output:
+        GENO_DIR + "sH_filtered_{type}Variants.vcf.idx"
+    threads:
+        1
+    log:
+        LOG_DIR + "index_filtered_vcf"
+    conda:
+        "environment.yaml"
+    shell:
+        """
+        singularity exec ../../snpCalling_v0.0.8.img \
+            gatk IndexFeatureFile \
+                -F {input}
+        """
+
+#get sH_cohort_filtered.vcf
+rule select_filter_mito_variants:
+    input:
+        GENO_DIR + "cohort_soft-filtered_variants_r2.vcf"
+    output:
+        MITO_VCF = GENO_DIR + "cohort_soft-filtered_mito_variants_r2.vcf"
+        MITO_FILTER1_VCF =  GENO_DIR + "cohort_filtered_mito-biallelic-51pS_variants_r2.recode.vcf"
+        MITO_FILTER2_VCF =  GENO_DIR + "cohort_filtered_mito-biallelic-51pS-noHets_variants_r2.recode.vcf"
+    threads:
+        1
+    log:
+        LOG_DIR + "select_filter_mito_variants"
+    conda:
+        "environment.yaml"
+    params:
+        MITO_CONTIG="AMPZ01026399.1"
+        MITO_FILTER1_PREFIX= GENO_DIR + "cohort_filtered_mito-biallelic-51pS_variants_r2"
+    shell:
+        """
+        singularity exec snpCalling_v0.0.7.img \
+            gatk SelectVariants \
+                -V {input}  \
+                -L {params.MITO_CONTIG} \
+                -O {output.MITO_VCF}
+
+        vcftools \
+            --remove-filtered-all \
+            --max-missing 0.51 \
+            --mac 2 \
+            --vcf {output.MITO_VCF} \
+            --out {params.MITO_FILTER1_PREFIX} \
+            --recode \
+            --recode-INFO-all
+
+        bcftools view \
+            --genotype ^het \
+            {output.MITO_FILTER1_VCF} \
+            >{output.MITO_FILTER2_VCF}
+        """
+
+#2st pass filtering - remove individuals with a lot of missing data
+rule second_pass_filtering_mt:
+    input:
+        GENO_DIR + "cohort_filtered_mito-biallelic-51pS-noHets_variants_r2.recode.vcf"
+    output:
+        VCF = GENO_DIR + "sH_filtered_mito-variants.vcf",
+        LIST = GENO_DIR + "data_poor_indivs_mt.list"
+    threads:
+        1
+    log:
+        LOG_DIR + "second_pass_filtering_mt"
+    conda:
+        "environment.yaml"
+    params:
+        PREFIX = GENO_DIR + "cohort_filtered_mito-biallelic-51pS-50pI_variants_r2"
+        TABLE = GENO_DIR + "cohort_filtered_mito-biallelic-51p_variants_r2"
+    shell:
+        """
+        vcftools \
+            --vcf {input.VCF} \
+            --missing-indv \
+            --out {params.TABLE}
+
+        #remove individuals missing more than 25% of the data    
+        cat {params.TABLE}.imiss | awk '$5 >0.50 {{print $1}}' >{output.LIST}
+
+        vcftools \
+            --vcf {input.VCF} \
+            --remove {output.LIST} \
+            --recode \
+            --recode-INFO-all \
+            --out {params.PREFIX}
+        """
+
+#check log names
+#check on rule names (independent)
+#check commas on lists of input,output files
+#filter autosomal
+#filter sex
+
+
+#still to do
+# take the mito data - build a tree
+#                       haplotype network
+#
+# structure wtih multiple K
+#
+# basic popstats
+#
+#
+
+
+
+
+
+
+
+
+
+
+
