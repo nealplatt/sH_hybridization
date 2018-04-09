@@ -133,13 +133,14 @@ shell.prefix("source ~/.bash_profile; ")
 #onerror:
 #    shell("echo "snakemake failed" | mail -s "an error occurred" neal.platt@gmail.com")
 
-#onsuccess:
-#    shell("rm -r " + R1_HC)
-#    shell("rm -r " + R1_DB)
-#    shell("rm -r " + R1_GENO)
-#    shell("rm -r " + R1_MERGE)
-#    shell("rm -r " + R1_FILTER)
-#    shell("#something to compress log files")
+onsuccess:
+    shell("rm -r " + R1_HC)
+    shell("rm -r " + R1_DB)
+    shell("rm -r " + R1_GENO)
+    shell("rm -r " + R1_MERGE)
+    #shell("for i in " + LOG_DIR + "/*; do tar -r -f ./logs.tar $i; done")
+    #shell("rm -r " + LOG_DIR)
+    #shell("mkdir " + LOG_DIR)
 
 #-------------------------------------------------------------------------------
 # initializing rule - these files need to be generated...initiates the pipeline
