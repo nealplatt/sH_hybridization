@@ -86,7 +86,7 @@ shell.prefix("source ~/.bash_profile; ")
 rule all:
     input:
        # expand(GENO_DIR + "sH_filtered_{type}-variants.vcf.idx", type=["all", "auto", "mito", "sex"])
-        expand(GENO_DIR + "sH_filtered_{type}-variants.vcf.idx", type=["all", "mito"])
+        expand(GENO_DIR + "sH_filtered_{type}-variants.vcf.idx", type=["all", "mito", "auto"])
 
 #-------------------------------------------------------------------------------
 rule annotate_variants:
@@ -214,13 +214,13 @@ rule all_soft_filter_indels:
 #and merge them back together.
 rule all_merge_soft_filtered_variants:
     input:
-        SNPS = rules.all_soft_filter_snps.output,
-        INDELS = rules.all_soft_filter_indels.output,
+        SNPS = GENO_DIR + "cohort_soft-filtered_SNPs.vcf",
+        INDELS = GENO_DIR + "cohort_soft-filtered_INDELs.vcf",
         REFERENCE = GENOME
     output:
         GENO_DIR + "all_soft-filtered_variants.vcf.idx",
         VCF = GENO_DIR + "all_soft-filtered_variants.vcf",
-        LIST = R2_FILTER + "variant.list"
+        LIST = GENO_DIR + "variant.list"
     threads:
         1
     log:
@@ -272,7 +272,7 @@ rule all_filtering:
             --recode-INFO-all
 
         vcftools \
-            --vcf {input.VCF} \
+            --vcf {output.FILT_1} \
             --missing-indv \
             --out {output.MISSING_TABLE}
 
@@ -450,8 +450,6 @@ rule mito_filtering:
             --recode \
             --recode-INFO-all \
             --out {params.MISS_PREFIX}
-
-        cp {output.MISSING_VCF} {output.FINAL_VCF}
         """
 ################################################################################
 rule lift_over_variants:
@@ -674,7 +672,7 @@ rule hard_filter_autosomal_variants:
             --recode-INFO-all
 
         vcftools \
-            --vcf {input.VCF} \
+            --vcf {output.FILT_1} \
             --missing-indv \
             --out {output.MISSING_TABLE}
 
@@ -895,7 +893,7 @@ rule sex_filtering:
             --recode-INFO-all
 
         vcftools \
-            --vcf {input.VCF} \
+            --vcf {output.FILT_1} \
             --missing-indv \
             --out {output.MISSING_TABLE}
 
@@ -924,6 +922,8 @@ rule sex_filtering:
             --output {output.FINAL_VCF} \
             -O v \
             {output.FILT_3}
+
+        cp {output.FILT_3} {output.FINAL_VCF}
         """
 
 ################################################################################
