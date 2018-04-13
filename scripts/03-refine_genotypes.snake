@@ -86,14 +86,16 @@ shell.prefix("source ~/.bash_profile; ")
 rule all:
     input:
        # expand(GENO_DIR + "sH_filtered_{type}-variants.vcf.idx", type=["all", "auto", "mito", "sex"])
-        expand(GENO_DIR + "sH_filtered_{type}-variants.vcf.idx", type=["all", "mito", "auto"])
+        expand(GENO_DIR + "sH_filtered_{type}-variants.vcf.idx", type=["auto", "sex", "mito", "all"])
 
 #-------------------------------------------------------------------------------
 rule annotate_variants:
     input:
         VCF = R2_FILTER + "cohort_raw.vcf",
+        MULTI_MAPPING_SNPS = GENO_DIR + "multi-mapping_sH_vs_sM_snps.list"
     output:
-        ANNOTATED_VCF = GENO_DIR + "cohort_annotated_variants.vcf"
+        ANNOTATED_VCF = GENO_DIR + "cohort_annotated_variants.vcf",
+        SINGLE_SMAN_VCF = GENO_DIR + "cohort_annotated_singleSMan_variants.vcf"
     threads:
         1
     log:
@@ -102,18 +104,26 @@ rule annotate_variants:
         "environment.yaml"
     shell:
         """
-         bcftools annotate \
-            --set-id +'%CHROM\:%POS' \
-            {input.VCF} >{output.ANNOTATED_VCF}
+        bcftools annotate \
+           --set-id +'%CHROM\:%POS' \
+           {input.VCF} >{output.ANNOTATED_VCF}
+
+        vcftools \
+            --exclude {input.MULTI_MAPPING_SNPS} \
+            --vcf {output.ANNOTATED_VCF} \
+            --stdout \
+            --recode \
+            >{output.SINGLE_SMAN_VCF}
         """
 
-rule select_snps:
+################################################################################
+rule all_select_snps:
     input:
-        VCF = GENO_DIR + "cohort_annotated_variants.vcf",
+        VCF = GENO_DIR + "cohort_annotated_singleSMan_variants.vcf",
         REFERENCE = GENOME
     output:
-        GENO_DIR + "cohort_SNP.vcf.idx",
-        VCF = GENO_DIR + "cohort_SNP.vcf"
+        temp(GENO_DIR + "cohort_SNP.vcf.idx"),
+        VCF = temp(GENO_DIR + "cohort_SNP.vcf")
     threads:
         1
     log:
@@ -128,13 +138,13 @@ rule select_snps:
                 -R {input.REFERENCE}
         """
 
-rule select_indels:
+rule all_select_indels:
     input:
-        VCF = GENO_DIR + "cohort_annotated_variants.vcf",
+        VCF = GENO_DIR + "cohort_annotated_singleSMan_variants.vcf",
         REFERENCE = GENOME
     output:
-        GENO_DIR + "cohort_INDEL.vcf.idx",
-        VCF = GENO_DIR + "cohort_INDEL.vcf"
+        temp(GENO_DIR + "cohort_INDEL.vcf.idx"),
+        VCF = temp(GENO_DIR + "cohort_INDEL.vcf")
     threads:
         1
     log:
@@ -149,14 +159,13 @@ rule select_indels:
                 -R {input.REFERENCE}
         """
 
-################################################################################
 rule all_soft_filter_snps:
     input:
         VCF = GENO_DIR + "cohort_SNP.vcf",
         REFERENCE = GENOME
     output:
-        GENO_DIR + "cohort_soft-filtered_SNPs.vcf.idx",
-        VCF = GENO_DIR + "cohort_soft-filtered_SNPs.vcf"
+        temp(GENO_DIR + "cohort_soft-filtered_SNPs.vcf.idx"),
+        VCF = temp(GENO_DIR + "cohort_soft-filtered_SNPs.vcf")
     threads:
         1
     log:
@@ -188,8 +197,8 @@ rule all_soft_filter_indels:
         REFERENCE = GENOME,
         VCF = GENO_DIR + "cohort_INDEL.vcf",
     output:
-        GENO_DIR + "cohort_soft-filtered_INDELs.vcf.idx",
-        VCF = GENO_DIR + "cohort_soft-filtered_INDELs.vcf"
+        temp(GENO_DIR + "cohort_soft-filtered_INDELs.vcf.idx"),
+        VCF = temp(GENO_DIR + "cohort_soft-filtered_INDELs.vcf")
     threads:
         1
     log:
@@ -218,9 +227,9 @@ rule all_merge_soft_filtered_variants:
         INDELS = GENO_DIR + "cohort_soft-filtered_INDELs.vcf",
         REFERENCE = GENOME
     output:
-        GENO_DIR + "all_soft-filtered_variants.vcf.idx",
-        VCF = GENO_DIR + "all_soft-filtered_variants.vcf",
-        LIST = GENO_DIR + "variant.list"
+        temp(GENO_DIR + "all_soft-filtered_variants.vcf.idx"),
+        VCF = temp(GENO_DIR + "all_soft-filtered_variants.vcf"),
+        LIST = temp(GENO_DIR + "variant.list")
     threads:
         1
     log:
@@ -242,11 +251,11 @@ rule all_filtering:
     input:
         VCF = GENO_DIR + "all_soft-filtered_variants.vcf"
     output:
-        FILT_1 = GENO_DIR + "all-filt-1.recode.vcf",
+        FILT_1 = temp(GENO_DIR + "all-filt-1.recode.vcf"),
         MISSING_TABLE = GENO_DIR + "all-table.imiss",
         REMOVE_LIST = GENO_DIR + "all-data_poor_indivs.list",
-        FILT_2 = GENO_DIR + "all-filt-2.recode.vcf",
-        FILT_3 = GENO_DIR + "all-filt-3.recode.vcf",
+        FILT_2 = temp(GENO_DIR + "all-filt-2.recode.vcf"),
+        FILT_3 = temp(GENO_DIR + "all-filt-3.recode.vcf"),
         FINAL_VCF = protected(GENO_DIR + "sH_filtered_all-variants.vcf")
     threads:
         1
@@ -257,7 +266,8 @@ rule all_filtering:
     params:
         PREF_1 = GENO_DIR + "all-filt-1",
         PREF_2 = GENO_DIR + "all-filt-2",
-        PREF_3 = GENO_DIR + "all-filt-3"
+        PREF_3 = GENO_DIR + "all-filt-3",
+        MISSING_TABLE = GENO_DIR + "all-table"
     shell:
         """
         vcftools \
@@ -274,7 +284,7 @@ rule all_filtering:
         vcftools \
             --vcf {output.FILT_1} \
             --missing-indv \
-            --out {output.MISSING_TABLE}
+            --out {prefix.MISSING_TABLE}
 
         #remove individuals missing more than 25% of the data    
         cat {output.MISSING_TABLE}.imiss | awk '$5 >0.25 {{print $1}}' >{output.REMOVE_LIST}
@@ -288,12 +298,11 @@ rule all_filtering:
 
         vcftools \
             --vcf {output.FILT_2} \
-            --max-missing 0.95 \
+             --max-missing 0.75 \
             --maf 0.05 \
             --recode \
             --recode-INFO-all \
-            --out {params.PREF_3} \
-            --min-meanDP 10
+            --out {params.PREF_3}
 
         bcftools filter \
             --SnpGap 50 \
@@ -306,13 +315,13 @@ rule all_filtering:
 ################################################################################
 rule select_mito_snps:
     input:
-        VCF = GENO_DIR + "cohort_SNP.vcf",
+        VCF = GENO_DIR + "cohort_annotated_singleSMan_variants.vcf",
         REFERENCE = GENOME
     output:
-        MITO_SNPS = GENO_DIR + "mito_snp.vcf",
-        MITO_SOFT_SNPS = GENO_DIR + "mito_soft_snp.vcf",
-        MITO_SNPS_IDX = GENO_DIR + "mito_snp.vcf.idx",
-        MITO_SOFT_SNPS_IDX = GENO_DIR + "mito_soft_snp.vcf.idx"
+        MITO_SNPS = temp(GENO_DIR + "mito_snp.vcf"),
+        MITO_SOFT_SNPS = temp(GENO_DIR + "mito_soft_snp.vcf"),
+        MITO_SNPS_IDX = temp(GENO_DIR + "mito_snp.vcf.idx"),
+        MITO_SOFT_SNPS_IDX = temp(GENO_DIR + "mito_soft_snp.vcf.idx")
     threads:
         1
     log:
@@ -347,13 +356,13 @@ rule select_mito_snps:
         """
 rule select_mito_indels:
     input:
-        VCF = GENO_DIR + "cohort_INDEL.vcf",
+        VCF = GENO_DIR + "cohort_annotated_singleSMan_variants.vcf",
         REFERENCE = GENOME
     output:
-        MITO_INDELS = GENO_DIR + "mito_indel.vcf",
-        MITO_SOFT_INDELS = GENO_DIR + "mito_soft_indel.vcf",
-        MITO_INDELS_IDX = GENO_DIR + "mito_indel.vcf.idx",
-        MITO_SOFT_INDELS_IDX = GENO_DIR + "mito_soft_indel.vcf.idx",
+        MITO_INDELS = temp(GENO_DIR + "mito_indel.vcf"),
+        MITO_SOFT_INDELS = temp(GENO_DIR + "mito_soft_indel.vcf"),
+        MITO_INDELS_IDX = temp(GENO_DIR + "mito_indel.vcf.idx"),
+        MITO_SOFT_INDELS_IDX = temp(GENO_DIR + "mito_soft_indel.vcf.idx"),
     threads:
         1
     log:
@@ -389,14 +398,14 @@ rule mito_filtering:
         MITO_SOFT_INDELS = GENO_DIR + "mito_soft_indel.vcf",
         REFERENCE = GENOME
     output:
-        MITO_SOFT_VARIANTS = GENO_DIR + "mito_soft_variants.vcf",
-        MITO_SOFT_VARIANTS_IDX = GENO_DIR + "mito_soft_variants.vcf.idx",
-        VARIANT_LIST = GENO_DIR + "mito_variants.list",
-        MITO_HARD = GENO_DIR + "mito_hard_variants.recode.vcf",
-        MITO_HET = GENO_DIR + "mito_het_variants.vcf",
-        MISSING_LIST = GENO_DIR + "data_poor_indivs_mt.list",
-        TABLE = GENO_DIR + "mito_indiv_counts.imiss",
-        MISSING_VCF = GENO_DIR + "mito_missing_indiv_variants.recode.vcf",
+        MITO_SOFT_VARIANTS = temp(GENO_DIR + "mito_soft_variants.vcf"),
+        MITO_SOFT_VARIANTS_IDX = temp(GENO_DIR + "mito_soft_variants.vcf.idx"),
+        VARIANT_LIST = temp(GENO_DIR + "mito_variants.list"),
+        MITO_HARD = temp(GENO_DIR + "mito_hard_variants.recode.vcf"),
+        MITO_HET = temp(GENO_DIR + "mito_het_variants.vcf"),
+        MISSING_LIST = temp(GENO_DIR + "mito-data_poor_indivs.list"),
+        TABLE = temp(GENO_DIR + "mito-table.imiss"),
+        MISSING_VCF = temp(GENO_DIR + "mito_missing_indiv_variants.recode.vcf"),
         FINAL_VCF = protected(GENO_DIR + "sH_filtered_mito-variants.vcf")
     threads:
         1
@@ -407,7 +416,7 @@ rule mito_filtering:
     params:
         MITO_HARD_PREFIX= GENO_DIR + "mito_hard_variants",
         MISS_PREFIX = GENO_DIR + "mito_missing_indiv_variants",
-        TABLE = GENO_DIR + "mito_indiv_counts"
+        TABLE = GENO_DIR + "mito-table"
     shell:
         """
         ls {input.MITO_SOFT_SNPS} {input.MITO_SOFT_INDELS} >{output.VARIANT_LIST}
@@ -450,6 +459,8 @@ rule mito_filtering:
             --recode \
             --recode-INFO-all \
             --out {params.MISS_PREFIX}
+
+        cp  {output.MISSING_VCF} {output.FINAL_VCF}
         """
 ################################################################################
 rule lift_over_variants:
@@ -457,8 +468,9 @@ rule lift_over_variants:
         HAL = WGA_DIR + "schMan7_vs_schMan1.hal",
         VCF = GENO_DIR + "cohort_annotated_variants.vcf"
     output:
-        SHAE_BED = GENO_DIR + "sH_snps.bed",
-        SMAN_BED = GENO_DIR + "sH_vs_sM7_liftover.bed"
+        SHAE_BED = temp(GENO_DIR + "sH_snps.bed"),
+        SMAN_BED = protected(GENO_DIR + "sH_vs_sM7_liftover.bed"),
+        MULTI_MAPPING_LIST = GENO_DIR + "multi-mapping_sH_vs_sM_snps.list"
     threads:
         1
     log:
@@ -478,6 +490,8 @@ rule lift_over_variants:
                 {output.SHAE_BED} \
                 schMan_v7 \
                 {output.SMAN_BED}
+
+        awk '{{print $4}}' {output.SMAN_BED} | sort | uniq -c | awk '$1 > 1 {{print $2}}' >{output.MULTI_MAPPING_LIST}
         """
 
 
@@ -486,9 +500,9 @@ rule create_list_of_autosomal_variants:
     input:
         SMAN_BED = GENO_DIR + "sH_vs_sM7_liftover.bed",
         REFERENCE = GENOME,
-        VCF = GENO_DIR + "cohort_annotated_variants.vcf",
+        VCF = GENO_DIR + "cohort_annotated_singleSMan_variants.vcf",
     output:
-        AUTO_VARIANTS_LIST = GENO_DIR + "autosomes.list",
+        AUTO_VARIANTS_LIST = temp(GENO_DIR + "autosomes.list"),
     threads:
         1
     log:
@@ -509,9 +523,9 @@ rule select_autosome_snps:
     input:
         AUTO_VARIANTS_LIST = GENO_DIR + "autosomes.list",
         REFERENCE = GENOME,
-        VCF = GENO_DIR + "cohort_SNP.vcf",
+        VCF = GENO_DIR + "cohort_SNP.vcf"
     output:
-        VCF = GENO_DIR + "cohort_autoChr_snps.vcf"
+        VCF = temp(GENO_DIR + "cohort_autoChr_snps.vcf")
     threads:
         1
     log:
@@ -535,7 +549,7 @@ rule select_autosome_indels:
         REFERENCE = GENOME,
         VCF = GENO_DIR + "cohort_INDEL.vcf"
     output:
-        VCF = GENO_DIR + "cohort_autoChr_indels.vcf"
+        VCF = temp(GENO_DIR + "cohort_autoChr_indels.vcf")
     threads:
         1
     log:
@@ -558,7 +572,7 @@ rule soft_filter_autosomal_snps:
         AUTO_SNPS_VCF = GENO_DIR + "cohort_autoChr_snps.vcf",
         REFERENCE = GENOME
     output:
-        GENO_DIR + "cohort_soft-filtered_autoSNPs.vcf"
+        temp(GENO_DIR + "cohort_soft-filtered_autoSNPs.vcf")
     threads:
         1
     log:
@@ -590,7 +604,7 @@ rule soft_filter_autosomal_indels:
         AUTO_SNPS_VCF = GENO_DIR + "cohort_autoChr_indels.vcf",
         REFERENCE = GENOME
     output:
-        GENO_DIR + "cohort_soft-filtered_autoINDELs.vcf"
+        temp(GENO_DIR + "cohort_soft-filtered_autoINDELs.vcf")
     threads:
         1
     log:
@@ -619,8 +633,8 @@ rule merge_autosomal_variants:
         INDELS = GENO_DIR + "cohort_autoChr_indels.vcf",
         REFERENCE = GENOME
     output:
-        LIST = GENO_DIR + "autosomal_variant.list",
-        VCF = GENO_DIR + "auto_soft-filtered_variants.vcf"
+        LIST = temp(GENO_DIR + "autosomal_variant.list"),
+        VCF = temp(GENO_DIR + "auto_soft-filtered_variants.vcf")
     threads:
         1
     log:
@@ -642,11 +656,11 @@ rule hard_filter_autosomal_variants:
     input:
         VCF = GENO_DIR + "auto_soft-filtered_variants.vcf"
     output:
-        FILT_1 = GENO_DIR + "auto-filt-1.recode.vcf",
-        MISSING_TABLE = GENO_DIR + "auto-table.imiss",
-        REMOVE_LIST = GENO_DIR + "auto-data_poor_indivs.list",
-        FILT_2 = GENO_DIR + "auto-filt-2.recode.vcf",
-        FILT_3 = GENO_DIR + "auto-filt-3.recode.vcf",
+        FILT_1 = temp(GENO_DIR + "auto-filt-1.recode.vcf"),
+        MISSING_TABLE = temp(GENO_DIR + "auto-table.imiss"),
+        REMOVE_LIST = temp(GENO_DIR + "auto-data_poor_indivs.list"),
+        FILT_2 = temp(GENO_DIR + "auto-filt-2.recode.vcf"),
+        FILT_3 = temp(GENO_DIR + "auto-filt-3.recode.vcf"),
         FINAL_VCF = protected(GENO_DIR + "sH_filtered_auto-variants.vcf")
     threads:
         1
@@ -655,9 +669,9 @@ rule hard_filter_autosomal_variants:
     conda:
         "environment.yaml"
     params:
-        PREF_1 = GENO_DIR + "all-filt-1",
-        PREF_2 = GENO_DIR + "all-filt-2",
-        PREF_3 = GENO_DIR + "all-filt-3"
+        PREF_1 = GENO_DIR + "auto-filt-1",
+        PREF_2 = GENO_DIR + "auto-filt-2",
+        PREF_3 = GENO_DIR + "auto-filt-3"
     shell:
         """
         vcftools \
@@ -688,12 +702,11 @@ rule hard_filter_autosomal_variants:
 
         vcftools \
             --vcf {output.FILT_2} \
-            --max-missing 0.95 \
+             --max-missing 0.75 \
             --maf 0.05 \
             --recode \
             --recode-INFO-all \
-            --out {params.PREF_3} \
-            --min-meanDP 10
+            --out {params.PREF_3} 
 
         bcftools filter \
             --SnpGap 50 \
@@ -710,10 +723,10 @@ rule select_sex_chr_variants:
     input:
         SMAN_BED = GENO_DIR + "sH_vs_sM7_liftover.bed",
         REFERENCE = GENOME,
-        VCF = GENO_DIR + "cohort_annotated_variants.vcf"
+        VCF = GENO_DIR + "cohort_annotated_singleSMan_variants.vcf"
     output:
-        SEX_SNPS_LIST = GENO_DIR + "sex_chromosomes.list",
-        SEX_SNPS_VCF = GENO_DIR + "cohort_sexChr.vcf"
+        SEX_SNPS_LIST = temp(GENO_DIR + "sex_chromosomes.list"),
+        SEX_SNPS_VCF = temp(GENO_DIR + "cohort_sexChr.vcf")
     threads:
         1
     log:
@@ -731,7 +744,7 @@ rule select_sex_snps:
         REFERENCE = GENOME,
         VCF = GENO_DIR + "cohort_SNP.vcf",
     output:
-        VCF = GENO_DIR + "cohort_sexChr_snps.vcf"
+        VCF = temp(GENO_DIR + "cohort_sexChr_snps.vcf")
     threads:
         1
     log:
@@ -743,7 +756,7 @@ rule select_sex_snps:
         singularity exec snpCalling_v0.0.8.img \
             gatk SelectVariants \
                 -V {input.VCF} \
-                -L {output.SEX_VARIANTS_LIST} \
+                -L {input.SEX_VARIANTS_LIST} \
                 -select-type SNP \
                 -O {output.VCF} \
                 -R {input.REFERENCE}
@@ -751,11 +764,11 @@ rule select_sex_snps:
 
 rule select_sex_indels:
     input:
-        AUTO_VARIANTS_LIST = GENO_DIR + "sex_chromosomes.list",
+        SEX_VARIANTS_LIST = GENO_DIR + "sex_chromosomes.list",
         REFERENCE = GENOME,
         VCF = GENO_DIR + "cohort_INDEL.vcf",
     output:
-        VCF = GENO_DIR + "cohort_sexChr_indels.vcf"
+        VCF = temp(GENO_DIR + "cohort_sexChr_indels.vcf")
     threads:
         1
     log:
@@ -767,7 +780,7 @@ rule select_sex_indels:
         singularity exec snpCalling_v0.0.8.img \
             gatk SelectVariants \
                 -V {input.VCF} \
-                -L {output.AUTO_VARIANTS_LIST} \
+                -L {input.SEX_VARIANTS_LIST} \
                 -select-type INDEL \
                 -O {output.VCF} \
                 -R {input.REFERENCE}
@@ -779,7 +792,7 @@ rule sex_soft_filter_snps:
         VCF = GENO_DIR + "cohort_sexChr_snps.vcf",
         REFERENCE = GENOME
     output:
-        GENO_DIR + "cohort_soft-filtered_sexSNPs.vcf"
+        temp(GENO_DIR + "cohort_soft-filtered_sexSNPs.vcf")
     threads:
         1
     log:
@@ -811,7 +824,7 @@ rule sex_soft_filter_indels:
         VCF = GENO_DIR + "cohort_sexChr_indels.vcf",
         REFERENCE = GENOME
     output:
-        GENO_DIR + "cohort_soft-filtered_sexINDELs.vcf"
+        temp(GENO_DIR + "cohort_soft-filtered_sexINDELs.vcf")
     threads:
         1
     log:
@@ -840,8 +853,8 @@ rule sex_merge_soft_filtered_variants:
         INDELS = rules.sex_soft_filter_indels.output,
         REFERENCE = GENOME
     output:
-        LIST = GENO_DIR + "sex_variant.list",
-        VCF = GENO_DIR + "sex_soft-filtered_variants.vcf"
+        LIST = temp(GENO_DIR + "sex_variant.list"),
+        VCF = temp(GENO_DIR + "sex_soft-filtered_variants.vcf")
     threads:
         1
     log:
@@ -863,11 +876,11 @@ rule sex_filtering:
     input:
         VCF = GENO_DIR + "sex_soft-filtered_variants.vcf"
     output:
-        FILT_1 = GENO_DIR + "sex-filt-1.recode.vcf",
-        MISSING_TABLE = GENO_DIR + "sex-table.imiss",
-        REMOVE_LIST = GENO_DIR + "sex-data_poor_indivs.list",
-        FILT_2 = GENO_DIR + "sex-filt-2.recode.vcf",
-        FILT_3 = GENO_DIR + "sex-filt-3.recode.vcf",
+        FILT_1 = temp(GENO_DIR + "sex-filt-1.recode.vcf"),
+        MISSING_TABLE = temp(GENO_DIR + "sex-table.imiss"),
+        REMOVE_LIST = temp(GENO_DIR + "sex-data_poor_indivs.list"),
+        FILT_2 = temp(GENO_DIR + "sex-filt-2.recode.vcf"),
+        FILT_3 = temp(GENO_DIR + "sex-filt-3.recode.vcf"),
         FINAL_VCF = protected(GENO_DIR + "sH_filtered_sex-variants.vcf")
     threads:
         1
@@ -876,9 +889,9 @@ rule sex_filtering:
     conda:
         "environment.yaml"
     params:
-        PREF_1 = GENO_DIR + "all-filt-1",
-        PREF_2 = GENO_DIR + "all-filt-2",
-        PREF_3 = GENO_DIR + "all-filt-3"
+        PREF_1 = GENO_DIR + "sex-filt-1",
+        PREF_2 = GENO_DIR + "sex-filt-2",
+        PREF_3 = GENO_DIR + "sex-filt-3"
     shell:
         """
         vcftools \
@@ -909,12 +922,11 @@ rule sex_filtering:
 
         vcftools \
             --vcf {output.FILT_2} \
-            --max-missing 0.95 \
+             --max-missing 0.75 \
             --maf 0.05 \
             --recode \
             --recode-INFO-all \
-            --out {params.PREF_3} \
-            --min-meanDP 10
+            --out {params.PREF_3} 
 
         bcftools filter \
             --SnpGap 50 \
@@ -922,8 +934,6 @@ rule sex_filtering:
             --output {output.FINAL_VCF} \
             -O v \
             {output.FILT_3}
-
-        cp {output.FILT_3} {output.FINAL_VCF}
         """
 
 ################################################################################
@@ -944,3 +954,5 @@ rule index_filtered_vcf:
             gatk IndexFeatureFile \
                 -F {input}
         """
+
+#remove all snps present more than once on the sM genome
