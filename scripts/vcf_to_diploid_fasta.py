@@ -5,28 +5,24 @@ import sys
 #to do
 # check on the sequences.fromsequence keys code
 # exclude things that aren't biallelic?
-# print to fasta
 
 #have list of ambig codes
 
-homozygous_reference_genotype="0/0"
-homozygous_alternate_genotype="1/1"
-heterozygous_genotype="0/1"
-missing_genotype="./."
+homozygous_reference_genotype = "0/0"
+homozygous_alternate_genotype = "1/1"
+heterozygous_genotype= "0/1"
+missing_genotype = "./."
 
 
-iupac_code ={"AC":"M", "AG":"R", "AT":"W", "CG":"S", "CT":"Y", "GT":"K", "CA":"M", "GA":"R", "TA":"W", "GC":"S", "TC":"Y", "TG":"K"}
+iupac_code = {"AC":"M", "AG":"R", "AT":"W", "CG":"S", "CT":"Y", "GT":"K", "CA":"M", "GA":"R", "TA":"W", "GC":"S", "TC":"Y", "TG":"K"}
 
-sequences={}
+sequences = {}
 #open necessary files (read in from the cmd line)
-#vcf_file_in=open(sys.argv[1], 'r')
-#fasta_file_out=open(sys.argv[2], 'w')
-
-vcf_file_in=open("test.vcf", 'r')
+vcf_file_in=open(sys.argv[1], 'r')
 
 for vcf_entry in vcf_file_in:
     
-    vcf_entry=vcf_entry.rstrip()
+    vcf_entry = vcf_entry.rstrip()
     
     if vcf_entry.startswith("#CHROM"):
         #its the header line
@@ -35,22 +31,19 @@ for vcf_entry in vcf_file_in:
         samples = vcf_entry.split("\t")[9:]
         
         #CHECK ON THIS I DON"T UNDERSTAND IT       
-        sequences=sequences.fromkeys(samples, '')
+        sequences =sequences.fromkeys(samples, '')
         
-        #print("if")
     
     elif vcf_entry.startswith("##"):
         a=1
-        #print("elif")
+    
     else:
         ref_allele = vcf_entry.split("\t")[3]
         alt_allele = vcf_entry.split("\t")[4]
         genotypes = vcf_entry.split("\t")[9:]
               
-        print("else")
-        
-        for i in range(1, len(genotypes)+1):
-            print("for loop")
+        for i in range(0, len(genotypes)):
+            #print("for loop")
             sample = samples[i]
             genotype = genotypes[i].split(":")[0]
             
@@ -68,10 +61,12 @@ for vcf_entry in vcf_file_in:
                         
             sequences[sample] = sequences[sample]+nuc
 
+vcf_file_in.close()
 
 #now pring everything in the sequences dictionary
-                
+fasta_file_out=open(sys.argv[2], 'w')         
+for sample in sequences:
+    fasta_file_out.write(">" + sample + "\n" + sequences[sample] + "\n")
 
 
-
-print as fasta
+fasta_file_out.close()
