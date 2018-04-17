@@ -90,64 +90,6 @@ rule all:
         expand(POPSTATS_DIR + "sH_filtered_{chr_type}-variants_sManLift.vcf", chr_type=["auto", "sex", "mito", "all"])
 
 #-------------------------------------------------------------------------------
-#sequence dictionary
-rule index_sman_genome:
-    input: 
-        GENOME_DIR + "Smansoni_v7.fa"
-    output:
-        GENOME_DIR + "Smansoni_v7.dict",
-        GENOME_DIR + "Smansoni_v7.fa.fai"
-    threads:
-        1
-    log:
-        LOG_DIR + "index_sman_genome"
-    shell:
-        """
-        singularity exec snpCalling_v0.0.8.img \
-            gatk CreateSequenceDictionary -R {input}
-
-        samtools faidx {input}
-        """
-
-rule lift_over_coords:
-    input:
-        #VCF = GENO_DIR + "sH_filtered_{chr_type}-variants.vcf",
-        #LIFTOVER_BED =GENO_DIR + "sH_vs_sM7_liftover.bed"  
-        VCF = POPSTATS_DIR + "sH_filtered_{chr_type}-variants.vcf",
-        LIFTOVER_BED = POPSTATS_DIR + "sH_vs_sM7_liftover.bed"
-        SMAN_REFERENCE = sman  
-    output:
-        LIFTOVER_VCF = temp(POPSTATS_DIR + "sH_filtered_{chr_type}-variants_lift.vcf"),    
-        MINUS_HEADER_VCF = temp(POPSTATS_DIR + "sH_filtered_{chr_type}-variants_header.vcf"),
-        UNSORTED_VCF = temp(POPSTATS_DIR + "sH_filtered_{chr_type}-variants_header_unsorted.vcf"),    
-        FINAL_VCF = POPSTATS_DIR + "sH_filtered_{chr_type}-variants_sManLift.vcf"      
-    threads:
-        1
-    log:
-        LOG_DIR + "lift_over_coords"
-    conda:
-        "environment.yaml"
-    shell:
-        """
-        python {SCRIPTS_DIR}lift_over_vcf.py \
-            {input.LIFTOVER_BED} \
-            {input.VCF} \
-            {output.LIFTOVER_VCF}
-
-        grep -v "##contig" {output.LIFTOVER_VCF} >{output.MINUS_HEADER_VCF}
-
-        singularity exec snpCalling_v0.0.8.img \
-            gatk SelectVariants \
-                -V {output.MINUS_HEADER_VCF} \
-                -R {input.REFERENCE} \
-                -O {input.UNSORTED_VCF}
-
-        singularity exec snpCalling_v0.0.8.img \
-            gatk SortVcf \
-                -I {input.UNSORTED_VCF} \
-                -O {output.FINAL_VCF}
-        """
-
 rule create_sample_lists_by_locale:
     input: 
         POPSTATS_DIR + "sH_filtered_all-variants_sManLift.vcf"
@@ -240,6 +182,7 @@ rule admixture_all:
         TO_PRUNE = POPSTATS_DIR + "{params.PRUNE_PREFIX}.prune.out",
         LD_PRUNED_VCF = POPSTATS_DIR + "sH_filtered_all-variants_sManLift_LDpruned.vcf",
         PLINK_PED = POPSTATS_DIR + "sH_filtered_all-variants_sManLift_LDpruned.ped",
+        CV_TABLE = POPSTATS_DIR + "admixture_CV.table",
         expand(POPSTATS_DIR + "{params.PLINK_PREFIX}.{k}.{ext}", k=seq(1 12), ext=["Q", "P"]),
         expand(POPSTATS_DIR + "{k}.log", k=seq(1 12))
     threads:
@@ -278,7 +221,12 @@ rule admixture_all:
 
         for K in {{1..12}}; do
             {SCRIPTS_DIR}admixture_linux-1.3.0/admixture --cv={params.ADMIXTURE_CV} {output.PLINK_PED} $K >$K.log &
-        done                                        
+        done
+
+        wait
+
+        grep CV *.log | sort -n | awk '{print $3"\t"$4}' | sed 's/(//' | sed 's/)//' | sed 's/://' >{output.CV_TABLE}
+                                        
         """
 
 rule mds_autosomes:
