@@ -43,6 +43,8 @@ LOG_DIR = RESULTS_DIR + "logs/"
 GENOME_DIR = DATA_DIR + "genome/"
 GENOME = GENOME_DIR + ASSEMBLY
 SEQ_DIR = DATA_DIR + "sequence_data/"
+SCRIPTS_DIR = HOME_DIR + "scripts/"
+
 FILTER_READS_DIR = RESULTS_DIR + "01-filtered_reads/"
 MAP_DIR = RESULTS_DIR + "02-mapped_reads/" 
 
@@ -69,6 +71,8 @@ GENO_DIR = GATK_DIR + "filter_geno/"
  
 WGA_DIR = RESULTS_DIR + "06-wga/" 
 
+SMAN_GENOME = GENOME_DIR + "Smansoni_v7.fa"
+
 #setting work directory
 workdir: HOME_DIR
 
@@ -85,8 +89,9 @@ shell.prefix("source ~/.bash_profile; ")
 # initializing rule - these files need to be generated...initiates the pipeline
 rule all:
     input:
-       # expand(GENO_DIR + "sH_filtered_{type}-variants.vcf.idx", type=["all", "auto", "mito", "sex"])
-        expand(GENO_DIR + "sH_filtered_{type}-variants.vcf.idx", type=["auto", "sex", "mito", "all"])
+        #expand(GENO_DIR + "sH_filtered_{type}-variants.vcf.idx", type=["all", "auto", "mito", "sex"])
+        #expand(GENO_DIR + "sH_filtered_{type}-variants.vcf.idx", type=["auto", "sex", "mito", "all"]),
+        expand(GENO_DIR + "sH_filtered_{type}-variants_sManLift.vcf", type=["auto", "sex", "mito", "all"])
 
 #-------------------------------------------------------------------------------
 rule annotate_variants:
@@ -418,7 +423,7 @@ rule mito_filtering:
         MITO_HARD = temp(GENO_DIR + "mito_hard_variants.vcf"),
         MITO_HET = temp(GENO_DIR + "mito_het_variants.vcf"),
         MISSING_LIST = temp(GENO_DIR + "mito-data_poor_indivs.list"),
-        TABLE = temp(GENO_DIR + "mito-table.imiss"),
+        TABLE = GENO_DIR + "mito-table.imiss",
         FINAL_VCF = protected(GENO_DIR + "sH_filtered_mito-variants.vcf")
     threads:
         1
@@ -443,7 +448,7 @@ rule mito_filtering:
             --mac 2 \
             --vcf {output.MITO_SOFT_VARIANTS} \
             --recode \
-            --recode-INFO-all
+            --recode-INFO-all \
             --stdout >{output.MITO_HARD}
         
         #het_filt
@@ -459,7 +464,7 @@ rule mito_filtering:
             --stdout >{output.TABLE}
 
         #remove individuals missing more than 25% of the data    
-        cat {output.TABLE}.imiss | awk '$5 >0.50 {{print $1}}' >{output.MISSING_LIST}
+        cat {output.TABLE} | awk '$5 >0.50 {{print $1}}' >{output.MISSING_LIST}
 
         #remove low perc indivs
         vcftools \
@@ -467,7 +472,7 @@ rule mito_filtering:
             --remove {output.MISSING_LIST} \
             --recode \
             --recode-INFO-all \
-            --stdout {output.FINAL_VCF}
+            --stdout >{output.FINAL_VCF}
         """
 ################################################################################
 rule lift_over_variants:
@@ -659,12 +664,12 @@ rule merge_autosomal_variants:
                 -R {input.REFERENCE}
         """
 
-rule hard_filter_autosomal_variants:
+rule autosome_filtering:
     input:
         VCF = GENO_DIR + "auto_soft-filtered_variants.vcf"
     output:
         FILT_1 = temp(GENO_DIR + "auto-filt-1.recode.vcf"),
-        MISSING_TABLE = temp(GENO_DIR + "auto-table.imiss"),
+        MISSING_TABLE = GENO_DIR + "auto-table.imiss",
         REMOVE_LIST = temp(GENO_DIR + "auto-data_poor_indivs.list"),
         FILT_2 = temp(GENO_DIR + "auto-filt-2.recode.vcf"),
         FILT_3 = temp(GENO_DIR + "auto-filt-3.recode.vcf"),
@@ -672,7 +677,7 @@ rule hard_filter_autosomal_variants:
     threads:
         1
     log:
-        LOG_DIR + "autosomal_filtering"
+        LOG_DIR + "autosome_filtering"
     conda:
         "environment.yaml"
     shell:
@@ -685,7 +690,7 @@ rule hard_filter_autosomal_variants:
             --mac 3 \
             --vcf {input.VCF} \
             --recode \
-            --recode-INFO-all
+            --recode-INFO-all \
             --stdout >{output.FILT_1} \
 
         vcftools \
@@ -694,7 +699,7 @@ rule hard_filter_autosomal_variants:
             --stdout >{output.MISSING_TABLE}
 
         #remove individuals missing more than 25% of the data    
-        cat {output.MISSING_TABLE}.imiss | awk '$5 >0.25 {{print $1}}' >{output.REMOVE_LIST}
+        cat {output.MISSING_TABLE} | awk '$5 >0.25 {{print $1}}' >{output.REMOVE_LIST}
 
         vcftools \
             --vcf {output.FILT_1} \
@@ -875,14 +880,14 @@ rule sex_merge_soft_filtered_variants:
 
 rule sex_filtering:
     input:
-        VCF = GENO_DIR + "sex_soft-filtered_variants.vcf"
+        SEX_VCF = GENO_DIR + "sex_soft-filtered_variants.vcf"
     output:
-        FILT_1 = temp(GENO_DIR + "sex-filt-1.recode.vcf"),
-        MISSING_TABLE = temp(GENO_DIR + "sex-table.imiss"),
-        REMOVE_LIST = temp(GENO_DIR + "sex-data_poor_indivs.list"),
-        FILT_2 = temp(GENO_DIR + "sex-filt-2.recode.vcf"),
-        FILT_3 = temp(GENO_DIR + "sex-filt-3.recode.vcf"),
-        FINAL_VCF = protected(GENO_DIR + "sH_filtered_sex-variants.vcf")
+        SEX_FILT_1 = temp(GENO_DIR + "sex-filt-1.recode.vcf"),
+        SEX_MISSING_TABLE = GENO_DIR + "sex-table.imiss",
+        SEX_REMOVE_LIST = temp(GENO_DIR + "sex-data_poor_indivs.list"),
+        SEX_FILT_2 = temp(GENO_DIR + "sex-filt-2.recode.vcf"),
+        SEX_FILT_3 = temp(GENO_DIR + "sex-filt-3.recode.vcf"),
+        SEX_FINAL_VCF = protected(GENO_DIR + "sH_filtered_sex-variants.vcf")
     threads:
         1
     log:
@@ -901,40 +906,40 @@ rule sex_filtering:
             --max-alleles 2 \
             --max-missing 0.51 \
             --mac 3 \
-            --vcf {input.VCF} \
+            --vcf {input.SEX_VCF} \
             --recode \
             --recode-INFO-all \
-            --stdout >{output.FILT_3}
+            --stdout >{output.SEX_FILT_1}
 
         vcftools \
-            --vcf {v} \
+            --vcf {output.SEX_FILT_1} \
             --missing-indv \
-            --stdout >{output.MISSING_TABLE}
+            --stdout >{output.SEX_MISSING_TABLE}
 
         #remove individuals missing more than 25% of the data    
-        cat {output.MISSING_TABLE}.imiss | awk '$5 >0.25 {{print $1}}' >{output.REMOVE_LIST}
+        cat {output.SEX_MISSING_TABLE} | awk '$5 >0.25 {{print $1}}' >{output.SEX_REMOVE_LIST}
 
         vcftools \
-            --vcf {output.FILT_1} \
-            --remove {output.REMOVE_LIST} \
+            --vcf {output.SEX_FILT_1} \
+            --remove {output.SEX_REMOVE_LIST} \
             --recode \
             --recode-INFO-all \
-            --stdout >{output.FILT_2}
+            --stdout >{output.SEX_FILT_2}
 
         vcftools \
-            --vcf {output.FILT_2} \
+            --vcf {output.SEX_FILT_2} \
              --max-missing 0.75 \
             --maf 0.05 \
             --recode \
             --recode-INFO-all \
-            --stdout {output.FILT_3} 
+            --stdout >{output.SEX_FILT_3} 
 
         bcftools filter \
             --SnpGap 50 \
             --IndelGap 100 \
-            --output {output.FINAL_VCF} \
+            --output {output.SEX_FINAL_VCF} \
             -O v \
-            {output.FILT_3}
+            {output.SEX_FILT_3}
         """
 
 ################################################################################
@@ -956,4 +961,65 @@ rule index_filtered_vcf:
                 -F {input}
         """
 
-#remove all snps present more than once on the sM genome
+#sequence dictionary
+rule index_sman_genome:
+    input: 
+        SMAN_GENOME
+    output:
+        GENOME_DIR + "Smansoni_v7.dict",
+        GENOME_DIR + "Smansoni_v7.fa.fai"
+    threads:
+        1
+    log:
+        LOG_DIR + "index_sman_genome"
+    shell:
+        """
+        singularity exec snpCalling_v0.0.8.img \
+            gatk CreateSequenceDictionary -R {input}
+
+        samtools faidx {input}
+        """
+
+rule lift_to_sman:
+    input:
+        VCF = GENO_DIR + "sH_filtered_{chr_type}-variants.vcf",
+        LIFTOVER_BED = GENO_DIR + "sH_vs_sM7_liftover.bed",  
+        SMAN_REFERENCE = SMAN_GENOME  
+    output:
+        LIFTOVER_VCF = temp(GENO_DIR + "sH_filtered_{chr_type}-variants_lift.vcf"),    
+        MINUS_HEADER_VCF = temp(GENO_DIR + "sH_filtered_{chr_type}-variants_header.vcf"),
+        UNSORTED_VCF = temp(GENO_DIR + "sH_filtered_{chr_type}-variants_header_unsorted.vcf"),    
+        FINAL_VCF = GENO_DIR + "sH_filtered_{chr_type}-variants_sManLift.vcf",
+        FINAL_IDX = GENO_DIR + "sH_filtered_{chr_type}-variants_sManLift.vcf.idx"            
+    threads:
+        4
+    log:
+        LOG_DIR + "lift_to_sman"
+    params:
+        SCRIPT = SCRIPTS_DIR + "lift_over_vcf.py"
+    conda:
+        "environment.yaml"
+    shell:
+        """
+        python scripts/lift_over_vcf.py \
+            {input.LIFTOVER_BED} \
+            {input.VCF} \
+            {output.LIFTOVER_VCF}
+
+        grep -v "##contig" {output.LIFTOVER_VCF} >{output.MINUS_HEADER_VCF}
+
+        singularity exec snpCalling_v0.0.8.img \
+            gatk SelectVariants \
+                -V {output.MINUS_HEADER_VCF} \
+                -R {input.SMAN_REFERENCE} \
+                -O {output.UNSORTED_VCF}
+
+        singularity exec snpCalling_v0.0.8.img \
+            gatk SortVcf \
+                -I {output.UNSORTED_VCF} \
+                -O {output.FINAL_VCF}
+
+        singularity exec snpCalling_v0.0.8.img \
+            gatk IndexFeatureFile \
+                -F {output.FINAL_VCF}
+        """
