@@ -89,8 +89,7 @@ shell.prefix("source ~/.bash_profile; ")
 # initializing rule - these files need to be generated...initiates the pipeline
 rule all:
     input:
-        #expand(GENO_DIR + "sH_filtered_{type}-variants.vcf.idx", type=["all", "auto", "mito", "sex"])
-        #expand(GENO_DIR + "sH_filtered_{type}-variants.vcf.idx", type=["auto", "sex", "mito", "all"]),
+        expand(GENO_DIR + "sH_filtered_{type}-variants.vcf.idx", type=["auto", "sex", "mito", "all"]),
         expand(GENO_DIR + "sH_filtered_{type}-variants_sManLift.vcf", type=["auto", "sex", "mito", "all"])
 
 #-------------------------------------------------------------------------------
@@ -115,9 +114,11 @@ rule annotate_variants:
 rule exclude_multi_locus_snps:
     input:
         VCF = GENO_DIR + "cohort_annotated_variants.vcf",
-        MULTI_MAPPING_SNPS = GENO_DIR + "multi-mapping_sH_vs_sM_snps.list"
+        MULTI_MAPPING_SNPS_LIST = GENO_DIR + "multi-mapping_sH_vs_sM_snps.list",
+        MULTI_MAPPING_SNPS_INT = GENO_DIR + "multi-mapping_sH_vs_sM_snps.intervals"
     output:
-        SINGLE_SMAN_VCF = GENO_DIR + "cohort_annotated_singleSMan_variants.vcf",
+        SINGLE_SMAN_SNP_VCF = temp(GENO_DIR + "cohort_annotated_singleSMan_SNPonly_variants.vcf"),
+        SINGLE_SMAN_INT_VCF = GENO_DIR + "cohort_annotated_singleSMan_variants.vcf",
         VCF_IDX = GENO_DIR + "cohort_annotated_singleSMan_variants.vcf.idx"
     threads:
         1
@@ -128,15 +129,22 @@ rule exclude_multi_locus_snps:
     shell:
         """
         vcftools \
-            --exclude {input.MULTI_MAPPING_SNPS} \
+            --exclude {input.MULTI_MAPPING_SNPS_LIST} \
             --vcf {input.VCF} \
             --stdout \
             --recode \
-            >{output.SINGLE_SMAN_VCF}
+            >{output.SINGLE_SMAN_SNP_VCF}
+
+        vcftools \
+            --exclude-positions {input.MULTI_MAPPING_SNPS_INT} \
+            --vcf {output.SINGLE_SMAN_SNP_VCF} \
+            --stdout \
+            --recode \
+            >{output.SINGLE_SMAN_INT_VCF}
 
         singularity exec snpCalling_v0.0.8.img \
             gatk IndexFeatureFile \
-                -F {output.SINGLE_SMAN_VCF}
+                -F {output.SINGLE_SMAN_INT_VCF}
         """
 
 ################################################################################
@@ -482,7 +490,8 @@ rule lift_over_variants:
     output:
         SHAE_BED = temp(GENO_DIR + "sH_snps.bed"),
         SMAN_BED = protected(GENO_DIR + "sH_vs_sM7_liftover.bed"),
-        MULTI_MAPPING_LIST = GENO_DIR + "multi-mapping_sH_vs_sM_snps.list"
+        MULTI_MAPPING_LIST = GENO_DIR + "multi-mapping_sH_vs_sM_snps.list",
+        MULTI_MAPPING_BED = GENO_DIR + "multi-mapping_sH_vs_sM_snps.intervals",
     threads:
         1
     log:
@@ -503,7 +512,8 @@ rule lift_over_variants:
                 schMan_v7 \
                 {output.SMAN_BED}
 
-        awk '{{print $4}}' {output.SMAN_BED} | sort | uniq -c | awk '$1 > 1 {{print $2}}' >{output.MULTI_MAPPING_LIST}
+        awk '{{print $4}}' {output.SMAN_BED} | sort | uniq -c | awk '$1>1 {{print $2}}' >{output.MULTI_MAPPING_LIST}
+        grep -v "#" tmp.vcf | awk '{{print $1"\t"$2}}' | sort | uniq -c | awk '$1>1 {{print $2"\t"$3}}' >{output.MULTI_MAPPING_BED}
         """
 
 
@@ -533,6 +543,7 @@ rule create_list_of_autosomal_variants:
 
 rule select_autosome_snps:
     input:
+        GENO_DIR + "cohort_SNP.vcf.idx",
         AUTO_VARIANTS_LIST = GENO_DIR + "autosomes.list",
         REFERENCE = GENOME,
         VCF = GENO_DIR + "cohort_SNP.vcf"
@@ -557,10 +568,12 @@ rule select_autosome_snps:
 
 rule select_autosome_indels:
     input:
+        GENO_DIR + "cohort_INDEL.vcf.idx",
         AUTO_VARIANTS_LIST = GENO_DIR + "autosomes.list",
         REFERENCE = GENOME,
         VCF = GENO_DIR + "cohort_INDEL.vcf"
     output:
+        temp(GENO_DIR + "cohort_autoChr_indels.vcf.idx")
         VCF = temp(GENO_DIR + "cohort_autoChr_indels.vcf")
     threads:
         1
@@ -613,6 +626,7 @@ rule soft_filter_autosomal_snps:
 # indels
 rule soft_filter_autosomal_indels:
     input:
+        GENO_DIR + "cohort_autoChr_indels.vcf.idx",
         AUTO_SNPS_VCF = GENO_DIR + "cohort_autoChr_indels.vcf",
         REFERENCE = GENOME
     output:
@@ -746,6 +760,7 @@ rule select_sex_chr_variants:
 
 rule select_sex_snps:
     input:
+        GENO_DIR + "cohort_SNP.vcf.idx",
         SEX_VARIANTS_LIST = GENO_DIR + "sex_chromosomes.list",
         REFERENCE = GENOME,
         VCF = GENO_DIR + "cohort_SNP.vcf",
@@ -770,10 +785,12 @@ rule select_sex_snps:
 
 rule select_sex_indels:
     input:
+        GENO_DIR + "cohort_INDEL.vcf.idx",
         SEX_VARIANTS_LIST = GENO_DIR + "sex_chromosomes.list",
         REFERENCE = GENOME,
         VCF = GENO_DIR + "cohort_INDEL.vcf",
     output:
+        temp(GENO_DIR + "cohort_sexChr_indels.vcf.idx"),
         VCF = temp(GENO_DIR + "cohort_sexChr_indels.vcf")
     threads:
         1
@@ -827,6 +844,7 @@ rule sex_soft_filter_snps:
 # indels
 rule sex_soft_filter_indels:
     input:
+        GENO_DIR + "cohort_sexChr_indels.vcf.idx,
         VCF = GENO_DIR + "cohort_sexChr_indels.vcf",
         REFERENCE = GENOME
     output:
