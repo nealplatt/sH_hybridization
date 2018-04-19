@@ -274,6 +274,7 @@ rule soft_filter_nuclear_snps:
             --vcf {input.VCF} \
             --not-chr {params.MITO_CONTIG} \
             --recode-INFO-all \
+            --recode \
             --stdout >{output.NUC_SNPS}
 
         singularity exec snpCalling_v0.0.8.img \
@@ -322,6 +323,7 @@ rule soft_filter_nuclear_indels:
             --vcf {input.VCF} \
             --not-chr {params.MITO_CONTIG} \
             --recode-INFO-all \
+            --recode \
             --stdout >{output.NUC_INDELS}
 
         singularity exec snpCalling_v0.0.8.img \
