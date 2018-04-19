@@ -96,7 +96,7 @@ rule annotate_variants:
     input:
         VCF = R2_FILTER + "cohort_raw.vcf",
     output:
-        ANNOTATED_VCF = GENO_DIR + "cohort_annotated_variants.vcf",
+        ANNOTATED_VCF = GENO_DIR + "cohort_raw_variants.vcf",
     threads:
         1
     log:
@@ -113,9 +113,9 @@ rule annotate_variants:
 ################################################################################
 rule select_snps:
     input:
-        VCF = GENO_DIR + "cohort_annotated_variants.vcf",
+        VCF = GENO_DIR + "cohort_raw_variants.vcf",
     output:
-        VCF = temp(GENO_DIR + "cohort_SNP.vcf")
+        VCF = temp(GENO_DIR + "cohort_raw_snps.vcf")
     threads:
         1
     log:
@@ -134,9 +134,9 @@ rule select_snps:
 
 rule select_indels:
     input:
-        VCF = GENO_DIR + "cohort_annotated_variants.vcf",
+        VCF = GENO_DIR + "cohort_raw_variants.vcf",
     output:
-        VCF = temp(GENO_DIR + "cohort_INDEL.vcf")
+        VCF = temp(GENO_DIR + "cohort_raw_indels.vcf")
     threads:
         1
     log:
@@ -157,7 +157,7 @@ rule select_indels:
 ################################################################################
 rule soft_filter_mito_snps:
     input:
-        VCF = GENO_DIR + "cohort_SNP.vcf",
+        VCF = GENO_DIR + "cohort_raw_snps.vcf",
         REFERENCE = GENOME
     output:
         temp(GENO_DIR + "mito_snp.vcf.idx"),
@@ -206,7 +206,7 @@ rule soft_filter_mito_snps:
 
 rule soft_filter_mito_indels:
     input:
-        VCF = GENO_DIR + "cohort_INDEL.vcf",
+        VCF = GENO_DIR + "cohort_raw_indels.vcf",
         REFERENCE = GENOME
     output:
         temp(GENO_DIR + "mito_indel.vcf.idx"),
@@ -254,7 +254,7 @@ rule soft_filter_mito_indels:
 rule soft_filter_nuclear_snps:
     input:
         REFERENCE = GENOME,
-        VCF = GENO_DIR + "cohort_SNP.vcf"
+        VCF = GENO_DIR + "cohort_raw_snps.vcf"
     output:
         temp(GENO_DIR + "nuc_snp.vcf.idx"),
         NUC_SNPS = temp(GENO_DIR + "nuc_snp.vcf"),
@@ -303,7 +303,7 @@ rule soft_filter_nuclear_snps:
 rule soft_filter_nuclear_indels:
     input:
         REFERENCE = GENOME,
-        VCF = GENO_DIR + "cohort_INDEL.vcf"
+        VCF = GENO_DIR + "cohort_raw_indels.vcf"
     output:
         temp(GENO_DIR + "nuc_indel.vcf.idx"),
         NUC_INDELS = temp(GENO_DIR + "nuc_indel.vcf"),
