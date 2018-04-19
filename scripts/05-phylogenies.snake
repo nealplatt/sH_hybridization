@@ -96,65 +96,65 @@ rule convert_vcf_to_fasta_w_ambig:
     input: 
         GENOME_DIR + "Smansoni_v7.fa"
     output:
-        GENOME_DIR + "Smansoni_v7.dict",
-        GENOME_DIR + "Smansoni_v7.fa.fai"
+        PHYLO_DIR + "sH_filtered_{chr_type}-SNPs_sManLift.fast"
     threads:
         1
     log:
         LOG_DIR + "index_sman_genome"
     shell:
         """
-        singularity exec snpCalling_v0.0.8.img \
-            gatk CreateSequenceDictionary -R {input}
-
-        samtools faidx {input}
+        #select SNPS
+        python {SCRIPTS_DIR}vcf_to_diploid_fasta.py test_snps.vcf test_snps.fas
         """
-#impute with beagle
-beagle \
-    gt=sHaem_mito_filtered.vcf \
-    impute=false \
-    out=sH_imputed_phased
-#still imputes data
+##impute with beagle
+#beagle \
+#    gt=sHaem_mito_filtered.vcf \
+#    impute=false \
+#    out=sH_imputed_phased
+##still imputes data
 
-#vcf2fasta
-samtools faidx \
-    ../../data/genome/schHae_v1.fa AMPZ01026399.1 \
-    >schHae_v1_mt.fa 
+##vcf2fasta
+#samtools faidx \
+#    ../../data/genome/schHae_v1.fa AMPZ01026399.1 \
+#    >schHae_v1_mt.fa 
 
-#make haploid
-zcat sH_imputed_phased.vcf.gz | sed 's/|[0|1]//g' >sH_haplotypes.vcf
+##make haploid
+#zcat sH_imputed_phased.vcf.gz | sed 's/|[0|1]//g' >sH_haplotypes.vcf
 
-vcf2fasta \
-    --reference schHae_v1_mt.fa  \
-    --prefix mito_ \
-    --default-ploidy 1 \
-    sH_haplotypes.vcf 
+#vcf2fasta \
+#    --reference schHae_v1_mt.fa  \
+#    --prefix mito_ \
+#    --default-ploidy 1 \
+#    sH_haplotypes.vcf 
 
-#change fasta headers
-for i in $(ls mito_Sh.*.fasta); do
-    HEADER=">"$(echo $i | cut -f2,3 -d"_")"#AMPZ01026399.1"
-    
-    sed -i "1 s/>.*/$HEADER/" $i
+##change fasta headers
+#for i in $(ls mito_Sh.*.fasta); do
+#    HEADER=">"$(echo $i | cut -f2,3 -d"_")"#AMPZ01026399.1"
+#    
+#    sed -i "1 s/>.*/$HEADER/" $i
+#
+#done
 
-done
+#cat mito_Sh*.fasta >sH_mitochondria.fasta
+#cat schHae_v1_mt.fa >>sH_mitochondria.fasta
 
-cat mito_Sh*.fasta >sH_mitochondria.fasta
-cat schHae_v1_mt.fa >>sH_mitochondria.fasta
-
-rm rm mito_Sh.*.fasta
+#rm mito_Sh.*.fasta
 
 #exclude uninformative in paup
 #use seqmagick to convert to nexus
-seqmagick convert sH_mitochondria.fasta sH_mitochondria.nex --alphabet dna
+seqmagick convert test_snps.fasta test_snps.nex --alphabet dna
 
 #in bin wget http://phylosolutions.com/paup-test/paup4a161_centos64.gz
-export file=inf.nex format=nexus linebreaks=unix charsperline=all replace=yes
+begin paup;
+export file=inf.nex format=nexus linebreaks=unix charsperline=all replace=yes;
+end;
 
 seqmagick convert inf.nex inf.fasta
 #raxml
-raxmlHPC -m GTRCAT -V -p 12345 -s inf.fasta -n infer_ML -# 1000
-raxmlHPC -m GTRCAT -V -p 12345 -b 98765 -s inf.fasta -n boot -# 10000
-raxmlHPC -m GTRCAT -V -f b -t RAxML_bestTree.infer_ML -z RAxML_bootstrap.boot -n bootFinal
+
+raxmlHPC -m GTRCAT -V -p 12345 -s test_snps.fas -n test_snps_infer_ML -# 100
+raxmlHPC -m GTRCAT -V -p 12345 -b 98765 -s test_snps.fas -n test_snps_boot -# 1000
+raxmlHPC -m GTRCAT -V -f b -t RAxML_bestTree.test_snps_infer_ML -z RAxML_bootstrap.test_snps_boot -n test_snps_bootFinal
 
 #concurently LOCALLY in popart
 seqmagick convert inf.nex inf.fasta

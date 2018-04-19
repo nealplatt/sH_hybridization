@@ -67,8 +67,8 @@ R2_TABLE = BQSR_R2_DIR + "tables/"
 
 GENO_DIR = GATK_DIR + "filter_geno/"
  
-POPSTATS_DIR = GATK_DIR + "04-popstats/"
-
+IMPUTE_DIR = RESULTS_DIR + "04-impute/"
+IMPUTE_DIR = RESULTS_DIR + "05-popstats/"
 WGA_DIR = RESULTS_DIR + "06-wga/" 
 
 #setting work directory
@@ -165,7 +165,6 @@ rule Fst_all:
 
 
 #Rcode:
-#input         VCF = POPSTATS_DIR + "NE_vs_TZ_all_1-7_W.weir.fst"
 #fst<-read.table(file="NE_vs_TZ_mainChr.weir.fst", header=FALSE)
 #names(fst)<-c("CHROM", "POS", "FST")
 #fstsubset<-fst[complete.cases(fst),]
@@ -294,7 +293,94 @@ rule mds_autosomes:
 #       lwd = 1, lty = 1)
 
 
+# B E A G L E
+#should not impute on the sex chromosomes           
+grep -v -e H -e U -e W clean_auto.map >clean_fullauto.map
 
 
+for i in $(seq 1 7); do
+    CHR=SM_V7_"$i"
+
+    vcftools \
+        --vcf clean_auto.vcf \
+        --chr $CHR \
+        --recode \
+        --stdout >$CHR.vcf
+
+    grep $CHR clean_fullauto.map >$CHR.map
+
+    beagle \
+        gt=$CHR.vcf \
+        out=$CHR"_beagle" \
+        map=$CHR.map \
+        nthreads=12 \
+        lowmem=true \
+        window=302 \
+        overlap=30 \
+        niterations=25
+
+done
+
+gunzip *.gz
+
+vcfcombine \
+    SM_V7_1_beagle.vcf \
+    SM_V7_2_beagle.vcf \
+    SM_V7_3_beagle.vcf \
+    SM_V7_4_beagle.vcf \
+    SM_V7_5_beagle.vcf \
+    SM_V7_6_beagle.vcf \
+    SM_V7_7_beagle.vcf \
+    >SM_V7_auto_beagle.vcf
+
+
+java -jar ../../scripts/sprime.11Apr18.bad.jar \
+    gt=SM_V7_auto_beagle.vcf \
+    outgroup=TZ.list \
+    map=clean_fullauto.map \
+    out=SM_V7_auto_sprime
+
+awk '{print $1"\t"$2-1"\t"$2}' SM_V7_auto_sprime.score | sed 1d >segments.bed
+
+vcf2bed <clean_auto.vcf >clean_auto.bed
+
+ bedtools intersect -wa -a clean_auto.bed -b introgresed_segments.bed | awk '{print $4}' >introgressed_snps.list
+
+
+#Rcode:
+fst<-read.table(file="NE_vs_TZ_mainChr.weir.fst", header=FALSE)
+
+names(fst)<-c("CHROM", "POS", "FST")
+fstsubset<-fst[complete.cases(fst),]
+SNP<-c(1:(nrow(fstsubset)))
+mydf<-data.frame(SNP,fstsubset)
+manhattan(mydf, chr="CHROM", bp="POS", p="FST", snp="SNP", logp=FALSE, ylab="WC Fst", chrlabs =c(1, 2, 3, 4, 5, 6, 7, "ZW"))
+
+
+vcftools \
+    --chr SM_V7_1 \
+    --chr SM_V7_2 \
+    --chr SM_V7_3 \
+    --chr SM_V7_4 \
+    --chr SM_V7_5 \
+    --chr SM_V7_6 \
+    --chr SM_V7_7 \
+    --chr SM_V7_ZW \
+    --vcf sH_filtered_all-variants_sManLift.vcf \
+    --recode \
+    --stdout >sH_filtered_all-variants_sManLift_mainChr.vcf
+
+
+vcftools \
+    --vcf sH_filtered_all-variants_sManLift_mainChr.vcf \
+    --weir-fst-pop NE.list \
+    --weir-fst-pop TZ.list \
+    --out mainChr
+
+python update_snp_names_fst.py mainChr.weir.fst sH_filtered_all-variants_sManLift_mainChr.vcf | sed 's/SM_V7_//' | sed 's/ZW/8/' >mainChr_namedSNPS.weir.fst
+
+vcf2bed <sH_filtered_all-variants_sManLift_mainChr.vcf >sH_filtered_all-variants_sManLift_mainChr.bed
+
+bedtools intersect -wa -a sH_filtered_all-variants_sManLift_mainChr.bed -b introgresed_segments.bed | awk '{print $4}' >introgressed_snps.list
 
 
