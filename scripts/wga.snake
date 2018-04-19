@@ -1,0 +1,155 @@
+# snakemake -p --use-conda --cluster 'qsub -V -cwd -j y -S /bin/bash -pe mpi {threads} -o {log}' --jobs 120 --latency-wait 200
+# File:     Snakefile
+# Name:     Neal Platt
+# Date:     26 March 2018
+# Desc:     This Snake file is used to filter, map, and call SNPs on exome data from
+#           Schistosoma Haemotobium made available through the Anderson lab at Texas
+#           Biomedical Research Institute.  
+# Usage:    snakemake -p --use-conda --cluster 'qsub -V -cwd -j y -S /bin/bash -pe mpi {threads} -o {log}' --jobs 10 --latency-wait 200
+# Reqs:     BWA
+#           Trimmomatic
+#           SAMtools
+#           GATK
+# Comments: 
+#
+#       VERY IMPORTANT NOTE:
+#       Sometimes the cluster has a difficult time with latency issues
+#       make sure that snakemake is run with the following option:
+#
+#                     --latency-wait 120
+#       
+#       a latency time greater than 120 is OK when in doubt
+#
+#-------------------------------------------------------------------------------
+# To Do:
+#   4] fix messages - seem to crash when running 
+#   6] whatup with all the snakejob* files
+#   7] download genome and raw data from ncbi
+#   8] sub-workflows for major stages
+#  10] Param errors on samse/pe_sort
+#-------------------------------------------------------------------------------
+
+#setting up snakemake 
+configfile: "config.yaml"
+HOME_DIR = "/master/nplatt/schisto_hybridization/"
+CONTIG_CHUNKS=50
+ASSEMBLY = "schHae_v1.fa"
+
+#setting work directory
+RESULTS_DIR = HOME_DIR + "results/"
+DATA_DIR = HOME_DIR + "data/"
+LOG_DIR = RESULTS_DIR + "logs/"
+GENOME_DIR = DATA_DIR + "genome/"
+GENOME = GENOME_DIR + ASSEMBLY
+SEQ_DIR = DATA_DIR + "sequence_data/"
+FILTER_READS_DIR = RESULTS_DIR + "01-filtered_reads/"
+MAP_DIR = RESULTS_DIR + "02-mapped_reads/" 
+BQSR_DIR = RESULTS_DIR + "03-gatk_bqsr/" 
+BQSR_R1_DIR = BQSR_DIR + "r1/"
+BQSR_R2_DIR = BQSR_DIR + "r2/"
+GENO_DIR = RESULTS_DIR + "04-genotype/" 
+WGA_DIR = RESULTS_DIR + "06-wga/" 
+
+#setting work directory
+workdir: HOME_DIR
+
+#setting up local rules to be run on the head node
+localrules: all
+localrules: create_list_of_contigs
+localrules: bqsr_r1_prep_gdbimport
+localrules: bqsr_r2_prep_gdbimport
+
+#list of all the sample IDs to be processed - eventually put in the config file
+HAE_SAMPLES = [ "Sh.NE_Dai-002.1",      "Sh.NE_Dai-010.1",      "Sh.NE_Dai-013.3",      
+            	"Sh.NE_Dai-031.1",      "Sh.NE_Dai-033.1",      "Sh.NE_Dai-044.1",
+            	"Sh.NE_Dai-045.1",      "Sh.NE_Dai-051.1",      "Sh.NE_Dai-074.1",      
+            	"Sh.NE_Dai-146.1",      "Sh.NE_DaiCP-233.1",    "Sh.NE_DaiCP-276.1", 
+           	    "Sh.NE_DaiCP-277.2",    "Sh.NE_Doki-029.1",     "Sh.NE_Kar-001.1",      
+            	"Sh.NE_Kar-002.1",      "Sh.NE_Kar-076.1",      "Sh.NE_Kar-096.2",      
+            	"Sh.NE_Kar-241.1",      "Sh.NE_Kar-241.2",      "Sh.NE_Kar-281.1",
+            	"Sh.NE_Kar-37.2",       "Sh.NE_Lata-007.3",     "Sh.NE_Lata-033.1", 
+            	"Sh.NE_Lata-078.1",     "Sh.NE_Lata-253.1",     "Sh.NE_Lata-275.2",
+            	"Sh.NE_Lata-293.1",     "Sh.NE_Lata-294.1",     "Sh.NE_LibTB-009.2",
+            	"Sh.NE_LibTB-010.1",    "Sh.NE_LibTB-022.1",    "Sh.NE_LibTB-028.1",    
+            	"Sh.NE_LibTB-031.1",    "Sh.NE_NG-011.1",       "Sh.NE_NG-06.2", 
+            	"Sh.NE_NG-089.1",       "Sh.NE_NG-236.1",       "Sh.NE_Seb-076.1",
+            	"Sh.NE_Seb-078.2",      "Sh.NE_Seb-081.2",      "Sh.NE_Tiag-272.1",
+            	"Sh.NE_YK-029.2",       "Sh.NE_YK-069.1",       "Sh.NE_YK-099.2",
+            	"Sh.NE_YK-248.2",       "Sh.NE_Youri-069.2",    "Sh.NE_Youri-091.3", 
+            	"Sh.TZ_PEM0063.1",      "Sh.TZ_PEM0075.1",      "Sh.TZ_PEM0076.1",
+            	"Sh.TZ_PEM0079.1",      "Sh.TZ_PEM0089.2",      "Sh.TZ_PEM0094.2",      
+            	"Sh.TZ_PEM0099.2",      "Sh.TZ_PEM0103.1",      "Sh.TZ_PEM0104.1",
+            	"Sh.TZ_PEM0106.2",      "Sh.TZ_PEM0108.1",      "Sh.TZ_PEM0110.1", 
+            	"Sh.TZ_PEM0114.3",      "Sh.TZ_PEM0115.4",      "Sh.TZ_PEM0120.1",
+            	"Sh.TZ_PEM0125.1",      "Sh.TZ_PEM0126.1",      "Sh.TZ_PEM0127.1",
+            	"Sh.TZ_PEM0128.1",      "Sh.TZ_PEM0130.1",      "Sh.TZ_PEM0133.1",
+            	"Sh.TZ_PEM0139.2",      "Sh.TZ_PEM0145.3",      "Sh.TZ_PEM0154.1", 
+            	"Sh.TZ_PEM0157.3",      "Sh.TZ_PEM0166.1",      "Sh.TZ_PEM0171.1",
+            	"Sh.TZ_UNG0006.1",      "Sh.TZ_UNG0038.1",      "Sh.TZ_UNG0076.1",
+            	"Sh.TZ_UNG0077.1",      "Sh.TZ_UNG0078.1",      "Sh.TZ_UNG0087.2",
+           	    "Sh.TZ_UNG0089.3",      "Sh.TZ_UNG0092.3",      "Sh.TZ_UNG0099.1", 
+            	"Sh.TZ_UNG0102.1",      "Sh.TZ_UNG0111.1",      "Sh.TZ_UNG0117.1",
+            	"Sh.TZ_UNG0121.1",      "Sh.TZ_UNG0125.3",      "Sh.TZ_UNG0127.1",
+            	"Sh.TZ_UNG0129.2",      "Sh.TZ_UNG0134.1",      "Sh.TZ_UNG0137.3",
+            	"Sh.TZ_UNG0139.1",      "Sh.TZ_UNG0142.2",      "Sh.TZ_UNG0146.1"]
+
+HAE_SRA_SAMPLES = ["ERR084970", "ERR037800", "SRR433865"]
+MAN_SAMPLES     = ["Sm.BR_1278.1", "Sm.BR_0447.1", "Sm.BR_2039.1"]
+BOV_SAMPLES     = ["ERR119622", "ERR103048"]
+CUR_SAMPLES     = ["ERR119623"]
+#Curassoni samples ERR310937 download constantly fails
+EXOME_SAMPLES = HAE_SAMPLES + MAN_SAMPLES
+SRA_SAMPLES = HAE_SRA_SAMPLES + CUR_SAMPLES + BOV_SAMPLES
+SAMPLES = HAE_SAMPLES + HAE_SRA_SAMPLES + MAN_SAMPLES + CUR_SAMPLES + BOV_SAMPLES
+
+#prep array to split genome
+NUMBERS=list(range(1, CONTIG_CHUNKS))
+NUMS_2D=[]
+for NUM in NUMBERS:
+    NUMS_2D.append("%02d" % NUM)
+
+#get genomes - sman_v7 ftp://ftp.sanger.ac.uk/pub/project/pathogens/Schistosoma/mansoni/v7/sequence/Smansoni_v7.fa.gz
+shell.prefix("source ~/.bash_profile; ")
+
+#-------------------------------------------------------------------------------
+# clean all of the snake files created from previous run
+onstart:
+    shell("rm snakejob.*")
+
+#-------------------------------------------------------------------------------
+# initializing rule - these files need to be generated...initiates the pipeline
+rule all:
+    input:  
+        WGA_DIR + "schMan7_vs_schMan1.hal"
+
+
+#-------------------------------------------------------------------------------
+rule whole_genome_alignment:
+    input: 
+        HAE_GENOME = GENOME_DIR + "schHae_v1.fa",
+        MAN_GENOME = GENOME_DIR + "schMan_v7.fa"
+    output:
+        HAL = WGA_DIR + "schMan7_vs_schMan1.hal"
+    threads:
+        12
+    log:
+        LOG_DIR + "whole_genome_alignment.log"
+    params:
+        OUT_DIR = WGA_DIR + "cactus",
+        SEQ_FILE = WGA_DIR + "seqFile"
+    shell:
+        """
+        echo -e "*schMan_v7 {input.MAN_GENOME}" >{params.SEQ_FILE}
+        echo -e "schHae_v1 {input.HAE_GENOME}" >>{params.SEQ_FILE}
+
+        singularity exec snpCalling_v0.0.8.img \       
+            /usr/software/progressiveCactus/bin/runProgressiveCactus.sh \
+                --maxThreads {threads} \
+                results/05-wga/seqFile \
+                {params.OUT_DIR} \
+                {output.HAL}
+        """
+
+
+
+
