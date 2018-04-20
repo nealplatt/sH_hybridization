@@ -67,7 +67,7 @@ R2_FILTER = BQSR_R2_DIR + "filter/"
 R2_BAM = BQSR_R2_DIR + "bams/"
 R2_TABLE = BQSR_R2_DIR + "tables/"
 
-GENO_DIR = GATK_DIR + "filter_geno/"
+REFPAN_DIR = RESULTS_DIR + "04-build_refpanel/"
  
 WGA_DIR = RESULTS_DIR + "06-wga/" 
 
@@ -96,7 +96,7 @@ rule annotate_variants:
     input:
         VCF = R2_FILTER + "cohort_raw.vcf",
     output:
-        ANNOTATED_VCF = GENO_DIR + "cohort_raw_variants.vcf",
+        ANNOTATED_VCF = REFPAN_DIR + "cohort_raw_variants.vcf",
     threads:
         1
     log:
@@ -113,9 +113,9 @@ rule annotate_variants:
 ################################################################################
 rule select_snps:
     input:
-        VCF = GENO_DIR + "cohort_raw_variants.vcf",
+        VCF = REFPAN_DIR + "cohort_raw_variants.vcf",
     output:
-        VCF = temp(GENO_DIR + "cohort_raw_snps.vcf")
+        VCF = temp(REFPAN_DIR + "cohort_raw_snps.vcf")
     threads:
         1
     log:
@@ -134,9 +134,9 @@ rule select_snps:
 
 rule select_indels:
     input:
-        VCF = GENO_DIR + "cohort_raw_variants.vcf",
+        VCF = REFPAN_DIR + "cohort_raw_variants.vcf",
     output:
-        VCF = temp(GENO_DIR + "cohort_raw_indels.vcf")
+        VCF = temp(REFPAN_DIR + "cohort_raw_indels.vcf")
     threads:
         1
     log:
@@ -157,13 +157,13 @@ rule select_indels:
 ################################################################################
 rule soft_filter_mito_snps:
     input:
-        VCF = GENO_DIR + "cohort_raw_snps.vcf",
+        VCF = REFPAN_DIR + "cohort_raw_snps.vcf",
         REFERENCE = GENOME
     output:
-        temp(GENO_DIR + "mito_snp.vcf.idx"),
-        MITO_SNPS = temp(GENO_DIR + "mito_snp.vcf"),
-        MITO_SOFT_SNPS = temp(GENO_DIR + "mito_soft_snp.vcf"),
-        MITO_SOFT_SNPS_IDX = temp(GENO_DIR + "mito_soft_snp.vcf.idx")
+        temp(REFPAN_DIR + "mito_snp.vcf.idx"),
+        MITO_SNPS = temp(REFPAN_DIR + "mito_snp.vcf"),
+        MITO_SOFT_SNPS = temp(REFPAN_DIR + "mito_soft_snp.vcf"),
+        MITO_SOFT_SNPS_IDX = temp(REFPAN_DIR + "mito_soft_snp.vcf.idx")
     threads:
         1
     log:
@@ -206,13 +206,13 @@ rule soft_filter_mito_snps:
 
 rule soft_filter_mito_indels:
     input:
-        VCF = GENO_DIR + "cohort_raw_indels.vcf",
+        VCF = REFPAN_DIR + "cohort_raw_indels.vcf",
         REFERENCE = GENOME
     output:
-        temp(GENO_DIR + "mito_indel.vcf.idx"),
-        MITO_INDELS = temp(GENO_DIR + "mito_indel.vcf"),
-        MITO_SOFT_INDELS = temp(GENO_DIR + "mito_soft_indel.vcf"),
-        MITO_SOFT_INDELS_IDX = temp(GENO_DIR + "mito_soft_indel.vcf.idx"),
+        temp(REFPAN_DIR + "mito_indel.vcf.idx"),
+        MITO_INDELS = temp(REFPAN_DIR + "mito_indel.vcf"),
+        MITO_SOFT_INDELS = temp(REFPAN_DIR + "mito_soft_indel.vcf"),
+        MITO_SOFT_INDELS_IDX = temp(GREFPAN_DIRENO_DIR + "mito_soft_indel.vcf.idx"),
     threads:
         1
     log:
@@ -249,17 +249,15 @@ rule soft_filter_mito_indels:
                 -O {output.MITO_SOFT_INDELS}
         """
 
-
-
 rule soft_filter_nuclear_snps:
     input:
         REFERENCE = GENOME,
-        VCF = GENO_DIR + "cohort_raw_snps.vcf"
+        VCF = REFPAN_DIR + "cohort_raw_snps.vcf"
     output:
-        temp(GENO_DIR + "nuc_snp.vcf.idx"),
-        NUC_SNPS = temp(GENO_DIR + "nuc_snp.vcf"),
-        NUC_SOFT_SNPS = temp(GENO_DIR + "nuc_soft_snp.vcf"),
-        NUC_SOFT_SNPS_IDX = temp(GENO_DIR + "nuc_soft_snp.vcf.idx")
+        temp(REFPAN_DIR + "nuc_snp.vcf.idx"),
+        NUC_SNPS = temp(REFPAN_DIR + "nuc_snp.vcf"),
+        NUC_SOFT_SNPS = temp(REFPAN_DIR + "nuc_soft_snp.vcf"),
+        NUC_SOFT_SNPS_IDX = temp(REFPAN_DIR + "nuc_soft_snp.vcf.idx")
     threads:
         1
     log:
@@ -303,12 +301,12 @@ rule soft_filter_nuclear_snps:
 rule soft_filter_nuclear_indels:
     input:
         REFERENCE = GENOME,
-        VCF = GENO_DIR + "cohort_raw_indels.vcf"
+        VCF = REFPAN_DIR + "cohort_raw_indels.vcf"
     output:
-        temp(GENO_DIR + "nuc_indel.vcf.idx"),
-        NUC_INDELS = temp(GENO_DIR + "nuc_indel.vcf"),
-        NUC_SOFT_INDELS = temp(GENO_DIR + "nuc_soft_indel.vcf"),
-        NUC_SOFT_INDELS_IDX = temp(GENO_DIR + "nuc_soft_indel.vcf.idx")
+        temp(REFPAN_DIR + "nuc_indel.vcf.idx"),
+        NUC_INDELS = temp(REFPAN_DIR + "nuc_indel.vcf"),
+        NUC_SOFT_INDELS = temp(REFPAN_DIR + "nuc_soft_indel.vcf"),
+        NUC_SOFT_INDELS_IDX = temp(REFPAN_DIR + "nuc_soft_indel.vcf.idx")
     threads:
         1
     log:
@@ -347,18 +345,18 @@ rule soft_filter_nuclear_indels:
 
 rule filter_variants:
     input:
-        SOFT_SNPS = GENO_DIR + "{type}_soft_snp.vcf",
-        SOFT_INDELS = GENO_DIR + "{type}_soft_indel.vcf",
+        SOFT_SNPS = REFPAN_DIR + "{type}_soft_snp.vcf",
+        SOFT_INDELS = REFPAN_DIR + "{type}_soft_indel.vcf",
         REFERENCE = GENOME
     output:
-        SOFT_VCF = temp(GENO_DIR + "{type}_soft_variants.vcf"),
-        SOFT_VCF_IDX = temp(GENO_DIR + "{type}_soft_variants.vcf.idx"),
-        VARIANT_LIST = temp(GENO_DIR + "{type}_variants.list"),
-        HARD_VCF = temp(GENO_DIR + "{type}_hard_variants.vcf"),
-        MISSING_LIST = temp(GENO_DIR + "{type}-data_poor_indivs.list"),
-        TABLE = GENO_DIR + "{type}-table.imiss",
-        INDIV_VCF = temp(GENO_DIR + "{type}-hq_indivs.vcf"),
-        FINAL_VCF = protected(GENO_DIR + "sH_filtered_{type}-variants.vcf")
+        SOFT_VCF = temp(REFPAN_DIR + "{type}_soft_variants.vcf"),
+        SOFT_VCF_IDX = temp(REFPAN_DIR + "{type}_soft_variants.vcf.idx"),
+        VARIANT_LIST = temp(GEREFPAN_DIRNO_DIR + "{type}_variants.list"),
+        HARD_VCF = temp(REFPAN_DIR + "{type}_hard_variants.vcf"),
+        MISSING_LIST = temp(REFPAN_DIR + "{type}-data_poor_indivs.list"),
+        TABLE = REFPAN_DIR + "{type}-table.imiss",
+        INDIV_VCF = temp(REFPAN_DIR + "{type}-hq_indivs.vcf"),
+        FINAL_VCF = protected(REFPAN_DIR + "sH_filtered_{type}-variants.vcf")
     threads:
         1
     log:
@@ -414,10 +412,10 @@ rule filter_variants:
 #build snp panel (chr:locus) for outgroup snp calling
 rule build_snp_panel:
     input:
-        MITO_VCF  = GENO_DIR + "sH_filtered_mito-variants.vcf",
-        NUC_VCF = GENO_DIR + "sH_filtered_nuc-variants.vcf"
+        MITO_VCF  = REFPAN_DIR + "sH_filtered_mito-variants.vcf",
+        NUC_VCF = REFPAN_DIR + "sH_filtered_nuc-variants.vcf"
     output:
-        GENO_DIR + "sH_ref_panel_snps.list"
+        REFPAN_DIR + "sH_ref_panel_snps.list"
     threads:
         1
     log:
