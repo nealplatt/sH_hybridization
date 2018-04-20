@@ -357,6 +357,7 @@ rule filter_variants:
         HARD_VCF = temp(GENO_DIR + "{type}_hard_variants.vcf"),
         MISSING_LIST = temp(GENO_DIR + "{type}-data_poor_indivs.list"),
         TABLE = GENO_DIR + "{type}-table.imiss",
+        INDIV_VCF = temp(GENO_DIR + "{type}-hq_indivs.vcf"),
         FINAL_VCF = protected(GENO_DIR + "sH_filtered_{type}-variants.vcf")
     threads:
         1
@@ -398,38 +399,33 @@ rule filter_variants:
             --remove {output.MISSING_LIST} \
             --recode \
             --recode-INFO-all \
+            --stdout >{output.INDIV_VCF}
+
+        #inital_hard_filt
+        vcftools \
+            --remove-filtered-all \
+            --max-missing 0.75 \
+            --maf 0.05 \
+            --vcf {output.INDIV_VCF} \
+            --recode \
             --stdout >{output.FINAL_VCF}
         """
 
-#index for downstream analyses
-rule merge_mito_and_nuclear_variants:
+#build snp panel (chr:locus) for outgroup snp calling
+rule build_snp_panel:
     input:
-        REFERENCE = GENOME,
         MITO_VCF  = GENO_DIR + "sH_filtered_mito-variants.vcf",
         NUC_VCF = GENO_DIR + "sH_filtered_nuc-variants.vcf"
     output:
-        GENO_DIR + "sH_filtered_variants.vcf.idx",
-        VCF = GENO_DIR + "sH_filtered_variants.vcf",
-        LIST = temp(GENO_DIR + "merge.list")
+        GENO_DIR + "sH_ref_panel_snps.list"
     threads:
         1
     log:
-        LOG_DIR + "merge_mito_and_nuclear_variants"
+        LOG_DIR + "build_snp_panel"
     conda:
         "environment.yaml"
     shell:
         """
-        ls {input.MITO_VCF} {input.NUC_VCF} >{output.LIST}
-        
-        singularity exec snpCalling_v0.0.8.img \
-            gatk MergeVcfs \
-                -I {output.LIST} \
-                -O {output.VCF} \
-                -R {input.REFERENCE}
-
-        singularity exec snpCalling_v0.0.8.img \
-            gatk IndexFeatureFile \
-                -F {output.VCF}
+        grep -v "#" {input.MITO_VCF} {input.NUC_VCF} | awk '{{print $3}}' >{output}  
         """
 
-#create a SNP panel
