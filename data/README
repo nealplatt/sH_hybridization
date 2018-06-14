@@ -1,0 +1,4 @@
+Locations_Shaem.csv - collecting localities for Shaematobium exome samples (W Le'Clech)
+S0742423_Probes_w_mito.bed - coordinates for probes to Shaem from Shaem v1 genome (FCheval)
+Sm_v7.1.gff - gene annotations for the Smansoni v7 genome (from Matt Berriman)
+Sm_v7.1_transcript_table_gff-hhpred.tsv - gene annotations with predictions (F Cheval)
