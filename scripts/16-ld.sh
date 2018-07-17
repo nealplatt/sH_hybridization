@@ -143,23 +143,14 @@ for CHR in $(cat schHae_contigs.list); do
 
 done
 
-rm *temp*
+rm KL* AMP*
 
-#when finished
+#when finished, create csv files with r2 and physical distance
 cat schHae_ld/*.ld | awk '{print $7","$8}' | grep -v "R2" >schHae_ld.csv
+grep -v R2 schMan_ld/SM_V7_?.ld | awk '{print $7","$8 }' >schMan_ld.csv
+
 tar -czf schHae_ld.tgz schHae_ld/
-rm -r schHae_ld/
-#produces a rather small ~75MB file
+tar -czf schMan_ld.tgz schMan_ld/
 
-for i in $(seq 1 7); do
-
-    CHR=SM_V7_"$i"
-
-    awk '{print $7","$8 }' $CHR"_haem.ld" | grep -v R2 >$CHR"_haem.ld.csv" &
-
-done
-wait
-
-
-
+rm -r schHae_ld/ schMan_ld
 
