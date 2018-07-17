@@ -84,11 +84,12 @@ ls hc/*.vcf >samples.list
 
 #run GDIMPORT for each contig
 for INTERVAL in $(cat $DATA_DIR/schHae_v1_probes.intervals); do
+#for INTERVAL in $(cat failed_1.intervals); do
 
     INTERVAL_DIR=$(echo $INTERVAL | sed 's/:/_/')
 
     ############ GDBIMPORT
-    JID=$INTERVAL_DIR"_import_bsqr-1"
+    JID=$INTERVAL_DIR"_import_bsqr-1_fail-1"
     LOG=$LOGS_DIR/$JID".log"
     SCRIPT=$SCRIPTS_DIR/$JID".sh"
     THREADS=12
@@ -98,6 +99,8 @@ for INTERVAL in $(cat $DATA_DIR/schHae_v1_probes.intervals); do
     SAMPLES_LIST=$SNP_DIR/samples.list
     OUT_DB=$SNP_DIR/db/$INTERVAL_DIR
     
+    rm -r $OUT_DB
+
     CMD="${ENVIRONMENTS[$ENV]} \
             gatk --java-options \"-Xmx4g -Xms4g\" GenomicsDBImport \
                 -V $SAMPLES_LIST \
@@ -122,8 +125,12 @@ for INTERVAL in $(cat $DATA_DIR/schHae_v1_probes.intervals); do
 done
 
 #check for completion
-grep -L "Traversal complete" ../../logs/*_import_bsqr-1.log >inc
+grep -L "Traversal complete" ../logs/*_import_bsqr-1.log >inc
 #no failed jobs
+
+#if failed
+cat inc | cut -f3 -d/ | sed 's/_import_bsqr-1.log//' | sed 's/_/:/' >failed_1.intervals
+#then re-run
 
 #then genotype each sample
 for INTERVAL in $(cat $DATA_DIR/schHae_v1_probes.intervals); do
@@ -185,7 +192,7 @@ for CHUNK in $(seq -w 1 600); do
     echo $CMD | $QSUB -N merge-1_$CHUNK -o merge-1_$CHUNK.log -pe mpi 12
 done
 
-ls $SNP_DIR/merge-1_*.vcf >ls $SNP_DIR/vcf.list
+ls $SNP_DIR/merge-1_*.vcf >$SNP_DIR/vcf.list
 
 ${ENVIRONMENTS['SINGULARITY']} \
     split -n l/10 \
@@ -204,23 +211,24 @@ for CHUNK in $(seq -w 1 10); do
     echo $CMD | $QSUB -N merge-2_$CHUNK -o merge-2_$CHUNK.log -pe mpi 12
 done
 
-ls $SNP_DIR/merge-1_*.vcf >ls $SNP_DIR/vcf.list
+#final merge (on titan)
+ls $SNP_DIR/merge-2_*.vcf >$SNP_DIR/vcf.list
 
-${ENVIRONMENTS["SINGULARITY"]} \
-    gatk --java-options "-Xmx4g" MergeVcfs \
+${ENVIRONMENTS["TITAN SINGULARITY"]} \
+    gatk --java-options "-Xmx24g" MergeVcfs \
         --MAX_RECORDS_IN_RAM 500000 \
         -I $SNP_DIR/vcf.list \
         -O $SNP_DIR/tmp.vcf
 
 ${ENVIRONMENTS["TITAN SINGULARITY"]} \
     gatk --java-options "-Xmx24g" SortVcf \
-        --MAX_RECORDS_IN_RAM 500000 \
+        --MAX_RECORDS_IN_RAM 2000000 \
         -I $SNP_DIR/tmp.vcf \
         -O $SNP_DIR/cohort_raw_bqsr-1.vcf
 
 
 #clean dir
-rm merge-*
+rm merge-* tmp*
 
 ################################################################################
 
