@@ -5,7 +5,7 @@
 #this program takes in a vcf file and converts it into X csv files for
 # import into the R introgress package.  
 
-#IT IS VERY IMPORTANT TO NOTE THAT BOVIS IN THIS CASE IS THE THIRD SAMPLE
+#IT IS VERY IMPORTANT TO NOTE THAT BOVIS IN THIS CASE IS THE SECOND SAMPLE
 # IN THE VCF
 
 # also the matrix will have a B for the bovis allele and an H for the haem
@@ -16,7 +16,7 @@ import sys
 #matrix_file_out=open("sys.argv[2]", 'w')
 #loci_file_out=open("sys.argv[3]", 'w')
 
-vcf_file_in=open("bovis_zanzibar_fixed_snps_autosomal_LD_SUBSAMPLE.vcf", 'r')
+vcf_file_in=open("bovis_zanzibar_fixed_snps_autosomal_LD.vcf", 'r')
 matrix_file_out=open("matrix", 'w')
 loci_file_out=open("loci", 'w')
 
@@ -46,7 +46,7 @@ for vcf_entry in vcf_file_in:
             
         cleaned_gt=",".join(gt)
         
-        bovis_gt=cleaned_gt.split(",")[2]
+        bovis_gt=cleaned_gt.split(",")[1]
         if bovis_gt == '0/0':
             
             trantab=cleaned_gt.maketrans(bov_00_intab, bov_00_outtab)
