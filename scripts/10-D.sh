@@ -17,7 +17,7 @@ import sys
 import itertools
 
 #read in the vcf data
-callset=allel.read_vcf('../build_snp_panel/cohort_snps_schMan_autosomal_panel.vcf', log=sys.stdout)
+callset=allel.read_vcf('../build_snp_panel/auto_maf.vcf', log=sys.stdout)
 gt=allel.GenotypeArray(callset['calldata/GT'])
 
 #get allele counts for each locus
@@ -25,22 +25,24 @@ ac=gt.count_alleles()
 
 
 #designate the population (index) in the allele count array
-egypt_pop=[0,1,9] 
-bov_pop=2
-mat_pop=[3,7,8]
+egypt_pop=0 
+bov_pop=1
+mat_pop=[2,7,8]
+guin_pop=3
 inter_pop=4
 curs_pop=5
 marg_pop=6      
-niger_pop=list(range(10,58))                                                            
-tz_pop=list(range(58,104))
+niger_pop=list(range(9,57))                                                            
+tz_pop=list(range(58,103))
 
 bov_group_pop=[bov_pop, curs_pop, marg_pop]
-haem_group_pop=egypt_pop + niger_pop + tz_pop
+haem_group_pop=[egypt_pop + niger_pop + tz_pop]
 
 #now count the alleles in the array for each pop
-egypt_ac=gt.count_alleles(subpop=egypt_pop)
+egypt_ac=gt.count_alleles(subpop=[egypt_pop])
 bov_ac=gt.count_alleles(subpop=[bov_pop])
 mat_ac=gt.count_alleles(subpop=mat_pop)
+guin_ac=gt.count_alleles(subpop=[guin_pop])
 inter_ac=gt.count_alleles(subpop=[inter_pop])
 curs_ac=gt.count_alleles(subpop=[curs_pop])
 marg_ac=gt.count_alleles(subpop=[marg_pop])
@@ -53,14 +55,14 @@ haem_group_ac=gt.count_alleles(subpop=haem_group_pop)
 #calculate D (genome wide)
 
 allel.average_patterson_d(niger_ac, tz_ac, bov_ac, marg_ac, blen=100)
-#D=0.5446731600901533
-#SE=0.020470047021376385
-#Z=26.60830038745705
+#D=0.5286103796332378
+#SE=0.028903900509447026
+#Z=18.288548269132928
 
 allel.average_patterson_d(niger_ac, tz_ac, curs_ac, marg_ac, blen=100)
-#D=0.39719782215941596
-#SE=0.02204818857784749
-#Z=18.014986617018195
+#D=0.3711153222658304
+#SE=0.028993585006014663
+#Z=12.799911504177329
 
 #D sliding window (niger vs. tz)----------------------------------------------
 #identify where in the array each chr starts and begins
@@ -81,8 +83,8 @@ chr5_start_idx=np.amin(np.where(callset['variants/CHROM']=="SM_V7_5"))
 chr6_start_idx=np.amin(np.where(callset['variants/CHROM']=="SM_V7_6"))
 chr7_start_idx=np.amin(np.where(callset['variants/CHROM']=="SM_V7_7"))
 
-window_len=500
-step=500
+window_len=50
+step=25
 
 chr1_d=allel.moving_patterson_d(niger_ac, tz_ac, bov_ac, marg_ac, size=window_len, step=step, start=chr1_start_idx, stop=chr1_end_idx) 
 chr2_d=allel.moving_patterson_d(niger_ac, tz_ac, bov_ac, marg_ac, size=window_len, step=step, start=chr2_start_idx, stop=chr2_end_idx) 
@@ -101,22 +103,22 @@ np.average(chr5_d[~np.isnan(chr5_d)])
 np.average(chr6_d[~np.isnan(chr6_d)]) 
 np.average(chr7_d[~np.isnan(chr7_d)]) 
 
-#chr1 0.396
-#chr2 0.404
-#chr3 0.385
-#chr4 0.559
-#chr5 0.667
-#chr6 0.598
-#chr7 0.312
+#chr1 0.2380922836246541
+#chr2 0.3234009169727691
+#chr3 0.17499223569086322
+#chr4 0.5171380361979426
+#chr5 0.6340332479067423
+#chr6 0.5835939510256485
+#chr7 0.28596967474351065
 
-len(chr1_d) #714
-len(chr2_d) #371
-len(chr3_d) #374
-len(chr4_d) #364
-len(chr5_d) #147
-len(chr6_d) #168
-len(chr7_d) #112
-#2250
+len(chr1_d) #780
+len(chr2_d) #437
+len(chr3_d) #392
+len(chr4_d) #466
+len(chr5_d) #283
+len(chr6_d) #279
+len(chr7_d) #132
+#2769
 
 pos=list(callset['variants/POS'])
 
@@ -178,23 +180,22 @@ cul_pos+=chr6_cul_pos
 cul_pos+=chr7_cul_pos
 
 chr=""
-chr=list(itertools.repeat("SM_V7_1", len(chr1_cul_pos)))
-chr+=list(itertools.repeat("SM_V7_2", len(chr2_cul_pos)))
-chr+=list(itertools.repeat("SM_V7_3", len(chr3_cul_pos)))
-chr+=list(itertools.repeat("SM_V7_4", len(chr4_cul_pos)))
-chr+=list(itertools.repeat("SM_V7_5", len(chr5_cul_pos)))
-chr+=list(itertools.repeat("SM_V7_6", len(chr6_cul_pos)))
-chr+=list(itertools.repeat("SM_V7_7", len(chr7_cul_pos)))
+chr=list(itertools.repeat("SM_V7_1", len(chr1_d)))
+chr+=list(itertools.repeat("SM_V7_2", len(chr2_d)))
+chr+=list(itertools.repeat("SM_V7_3", len(chr3_d)))
+chr+=list(itertools.repeat("SM_V7_4", len(chr4_d)))
+chr+=list(itertools.repeat("SM_V7_5", len(chr5_d)))
+chr+=list(itertools.repeat("SM_V7_6", len(chr6_d)))
+chr+=list(itertools.repeat("SM_V7_7", len(chr7_d)))
 
-chr=""
-chr=list(itertools.repeat("SM_V7_1", 214))
-chr+=list(itertools.repeat("SM_V7_2", 111))
-chr+=list(itertools.repeat("SM_V7_3", 112))
-chr+=list(itertools.repeat("SM_V7_4", 109))
-chr+=list(itertools.repeat("SM_V7_5", 44))
-chr+=list(itertools.repeat("SM_V7_6", 50))
-chr+=list(itertools.repeat("SM_V7_7", 34))
 
+len(chr1_d) #780
+len(chr2_d) #437
+len(chr3_d) #392
+len(chr4_d) #466
+len(chr5_d) #283
+len(chr6_d) #279
+len(chr7_d) #132
 
 D_per_window=list(chr1_d) + list(chr2_d) + list(chr3_d) + list(chr4_d) + list(chr5_d) + list(chr6_d) + list(chr7_d) 
 window_pos=chr1_window_pos + chr2_window_pos + chr3_window_pos + chr4_window_pos + chr5_window_pos + chr6_window_pos + chr7_window_pos
@@ -205,7 +206,7 @@ window_d=np.column_stack((chr, cul_pos, window_pos, D_per_window))
 # remove if count is lt 10 #######
 
 #save to file
-np.savetxt("window_D_500snp-500snp_autosomal.csv", window_d, fmt='%s', delimiter=",")
+np.savetxt("window_D_50snp-25snp_autosomal.csv", window_d, fmt='%s', delimiter=",")
 
 #now plot this in R so that each chromosome has a different color
 
@@ -250,40 +251,38 @@ chr+=list(itertools.repeat("SM_V7_7", len(chr7_cul_pos)))
 #ERR310940	marg
 
 vcftools \
-    --vcf ../build_snp_panel/cohort_snps_schMan_autosomal_panel.vcf \
+    --vcf ../build_snp_panel/auto_maf.vcf \
     --indv ERR103048 \
     --indv ERR310940 \
-    --recode \
+    --extract-FORMAT-info GT \
     --stdout \
     >bov_marg.vcf
 
- grep -v "#" bov_marg.vcf | cut -f3,10,11 | awk '{print $1"\t"substr($2,1,3)"\t"substr($3,1,3)}' | 
->bov_marg.gt
 
-grep -P "1/1\t0/0" bov_marg.gt | cut -f1 >bov_marg.abba                                           
-grep -P "0/0\t1/1" bov_marg.gt | cut -f1  >>bov_marg.abba  
+grep -P "1/1\t0/0" bov_marg.vcf | cut -f1,2 >bov_marg_abba.pos                                           
+grep -P "0/0\t1/1" bov_marg.vcf | cut -f1,2  >>bov_marg_abba.pos  
 
 
 
 vcftools \
-    --vcf ../build_snp_panel/cohort_snps_schMan_autosomal_panel.vcf \
-    --snps bov_marg.abba \
-    --keep niger.samples \
+    --vcf ../build_snp_panel/auto_maf.vcf \
+    --positions bov_marg_abba.pos \
+    --keep niger.list \
     --stdout \
     --freq \
     >niger.freq
 
 vcftools \
-    --vcf ../build_snp_panel/cohort_snps_schMan_autosomal_panel.vcf \
-    --snps bov_marg.abba \
-    --keep tz.samples \
+    --vcf ../build_snp_panel/auto_maf.vcf \
+    --positions bov_marg_abba.pos \
+    --keep tz.list \
     --stdout \
     --freq \
     >tz.freq
 
 vcftools \
-    --vcf ../build_snp_panel/cohort_snps_schMan_autosomal_panel.vcf \
-    --snps bov_marg.abba \
+    --vcf ../build_snp_panel/auto_maf.vcf \
+    --positions bov_marg_abba.pos \
     --indv ERR103048 \
     --stdout \
     --freq \
@@ -291,8 +290,8 @@ vcftools \
 
 
 vcftools \
-    --vcf ../build_snp_panel/cohort_snps_schMan_autosomal_panel.vcf \
-    --snps bov_marg.abba \
+    --vcf ../build_snp_panel/auto_maf.vcf \
+    --positions bov_marg_abba.pos \
     --indv ERR310940 \
     --stdout \
     --freq \
@@ -302,6 +301,108 @@ vcftools \
 paste niger.freq tz.freq bov.freq marg.freq | cut -f1,2,5,11,17,23 >freqs.out
 
 #used excel to get a good table of abba baba sites: use them to extract from VCF
+
+
+#find sites that I KNOW are BABA sites from the vcf file using Fst.  then test allel
+
+#get fst
+vcftools \
+    --vcf ../build_snp_panel/cohort_snps_schMan_autosomal_panel.vcf \
+    --weir-fst-pop  niger.samples \
+    --weir-fst-pop  tz.samples \
+    --stdout \
+    >niger_vs_tz.fst
+
+#get fixed sites
+cat niger_vs_tz.fst | sed '1d' | grep -v "nan" | awk '$3==1' | cut -f1,2 >fixed.pos
+
+#extract fixed sites from the vcf
+vcftools \
+    --vcf ../build_snp_panel/cohort_snps_schMan_autosomal_panel.vcf \
+    --positions fixed.pos \
+    --stdout \
+    --recode \
+    >fixed.vcf
+
+#get allele counts per population
+#
+vcftools \
+    --vcf fixed.vcf \
+    --keep niger.samples \
+    --stdout \
+    --freq \
+    >niger_fixed.freq
+
+vcftools \
+    --vcf fixed.vcf \
+    --keep tz.samples \
+    --stdout \
+    --freq \
+    >tz_fixed.freq
+
+vcftools \
+    --vcf fixed.vcf \
+    --indv ERR103048 \
+    --stdout \
+    --freq \
+    >bov_fixed.freq
+
+vcftools \
+    --vcf fixed.vcf \
+    --indv ERR310940 \
+    --stdout \
+    --freq \
+    >marg_fixed.freq
+
+paste niger_fixed.freq tz_fixed.freq bov_fixed.freq marg_fixed.freq | cut -f1,2,5,11,17,23 >fixed_freqs.out
+
+
+import allel
+import numpy as np  
+import sys
+import itertools
+
+#read in the vcf data
+callset=allel.read_vcf('header.vcf', log=sys.stdout)
+gt=allel.GenotypeArray(callset['calldata/GT'])
+
+#get allele counts for each locus
+ac=gt.count_alleles()
+
+niger_pop=[0,1,2,3]
+tz_pop=[4,5,6,7]
+bov_pop=8
+marg_pop=9
+
+#designate the population (index) in the allele count array
+egypt_pop=[0,1,9] 
+bov_pop=2
+mat_pop=[3,7,8]
+inter_pop=4
+curs_pop=5
+marg_pop=6      
+niger_pop=list(range(10,58))                                                            
+tz_pop=list(range(58,104))
+
+bov_group_pop=[bov_pop, curs_pop, marg_pop]
+haem_group_pop=egypt_pop + niger_pop + tz_pop
+
+#now count the alleles in the array for each pop
+egypt_ac=gt.count_alleles(subpop=egypt_pop)
+bov_ac=gt.count_alleles(subpop=[bov_pop])
+mat_ac=gt.count_alleles(subpop=mat_pop)
+inter_ac=gt.count_alleles(subpop=[inter_pop])
+curs_ac=gt.count_alleles(subpop=[curs_pop])
+marg_ac=gt.count_alleles(subpop=[marg_pop])
+niger_ac=gt.count_alleles(subpop=niger_pop)
+tz_ac=gt.count_alleles(subpop=tz_pop)
+
+bov_group_ac=gt.count_alleles(subpop=bov_group_pop)
+haem_group_ac=gt.count_alleles(subpop=haem_group_pop)
+
+#calculate D (genome wide)
+
+allel.average_patterson_d(niger_ac, tz_ac, bov_ac, marg_ac, blen=10)
 
 
 

@@ -13,112 +13,111 @@ cd pcadmix
 
 #create files in beagle format
 #exctract bovis
+cp ../tz.list .
+cp ../niger.list .
+
+
 vcftools \
-    --vcf ../beagle_impute/cohort_snps_schMan_autosomal_beagle.vcf \
+    --vcf ../beagle/auto_beagle.vcf \
     --indv ERR103048 \
     --recode \
     --stdout \
-    | java -jar ../../scripts/vcf2beagle.jar NA bovis_autosomal
+    | java -jar ../../scripts/vcf2beagle.jar NA BOV
 
 #extract TZ
-cat ../beagle_impute/cohort_snps_schMan_autosomal_beagle.vcf \
-    | grep "#" \
-    | tail -n1 \
-    | cut -f10- \
-    | sed 's/\t/\n/g' \
-    | grep Sh.TZ \
-    >tz.samples
-
-#extract NE
 vcftools \
-    --vcf ../beagle_impute/cohort_snps_schMan_autosomal_beagle.vcf \
-    --keep tz.samples \
+    --vcf ../beagle/auto_beagle.vcf \
+    --keep tz.list \
     --recode \
     --stdout \
-    | java -jar ../../scripts/vcf2beagle.jar NA TZ_autosomal
+    | java -jar ../../scripts/vcf2beagle.jar NA TZ
 
-#create a file of ONLY admixed individualsadmixed set
-cat ../beagle_impute/cohort_snps_schMan_autosomal_beagle.vcf \
-    | grep "#" \
-    | tail -n1 \
-    | cut -f10- \
-    | sed 's/\t/\n/g' \
-    | grep Sh.NE \
-    >ne.samples
-
+    #extract NE
 vcftools \
-    --vcf ../beagle_impute/cohort_snps_schMan_autosomal_beagle.vcf \
-    --keep ne.samples \
+    --vcf ../beagle/auto_beagle.vcf \
+    --keep niger.list \
     --recode \
     --stdout \
-    | java -jar ../../scripts/vcf2beagle.jar NA NE_autosomal
+    | java -jar ../../scripts/vcf2beagle.jar NA NE
 
-gunzip *.gz
+gunzip BOV.bgl.gz TZ.bgl.gz NE.bgl.gz
+
+$WORK_DIR/scripts/PCAdmix/PCAdmix3_linux \
+    -anc TZ.bgl BOV.bgl \
+    -adm NE.bgl \
+    -o tz-bov-ne_maf00 \
+    -lab TZ BOV NE \
+    -w 30 \
+    -thr 0.99 \
+    -ld 0
+
+sed 's/ /,/gi' tz-bov-ne_maf00.fbk.txt >tz-bov-ne_maf00.fbk.csv
+sed 's/ /,/gi' tz-bov-ne_maf00.pca.txt >tz-bov-ne_maf00.pca.csv
+sed 's/ /,/gi' tz-bov-ne_maf00.vit.txt >tz-bov-ne_maf00.vit.csv
+sed 's/ /,/gi' tz-bov-ne_maf00.markers.txt >tz-bov-ne_maf00.markers.csv
+sed 's/ /,/gi' tz-bov-ne_maf00.ia.txt >tz-bov-ne_maf00.ia.csv
+
+
+############## with a few samples as a TZ control
+
+shuf -n 5 tz.list
+#Sh.TZ_PEM0125.1
+#Sh.TZ_PEM0171.1
+#Sh.TZ_PEM0103.1
+#Sh.TZ_UNG0087.2
+#Sh.TZ_UNG0076.1
+
+#remove random samples
+nano tz.list >control.list
+
+#add random samples
+nano niger.list >admixed.list
+
+#extract CONTROL
+vcftools \
+    --vcf ../beagle/auto_beagle.vcf \
+    --keep control.list \
+    --recode \
+    --stdout \
+    | java -jar ../../scripts/vcf2beagle.jar NA control
+
+    #extract NE
+vcftools \
+    --vcf ../beagle/auto_beagle.vcf \
+    --keep admixed.list \
+    --recode \
+    --stdout \
+    | java -jar ../../scripts/vcf2beagle.jar NA admixed
+
+gunzip control.bgl.gz admixed.bgl.gz
+
+$WORK_DIR/scripts/PCAdmix/PCAdmix3_linux \
+    -anc control.bgl BOV.bgl \
+    -adm admixed.bgl \
+    -o control-bov-admixed_maf00 \
+    -lab TZ BOV ADM \
+    -w 30 \
+    -thr 0.99 \
+    -ld 0
+
+sed 's/ /,/gi' control-bov-admixed_maf00.fbk.txt >control-bov-admixed_maf00.fbk.csv
+sed 's/ /,/gi' control-bov-admixed_maf00.pca.txt >control-bov-admixed_maf00.pca.csv
+sed 's/ /,/gi' control-bov-admixed_maf00.vit.txt >control-bov-admixed_maf00.vit.csv
+sed 's/ /,/gi' control-bov-admixed_maf00.markers.txt >control-bov-admixed_maf00.markers.csv
+sed 's/ /,/gi' control-bov-admixed_maf00.ia.txt >control-bov-admixed_maf00.ia.csv
 
 # NEED TO FIGURE OUT MAPS
 ##get the genetic map and physical map
-plink \
-    --vcf ../beagle_impute/cohort_snps_schMan_autosomal_beagle.vcf \
-    --out cohort_snps_schMan_autosomal_beagle \
-    --recode12 \
-    --allow-extra-chr
+#plink \
+#    --vcf ../beagle/auto_beagle.vcf \
+#    --out auto_beagle \
+#    --recode12 \
+#    --allow-extra-chr
 
-cut -f4 cohort_snps_schMan_autosomal_beagle.map \
-    | awk '{printf "%s\t-\t%.10f\n", $1, 287000/1000000}' \
-    | head  \
-    >cohort_snps_schMan_autosomal_beagle.geneticmap
+#cut -f4 auto_beagle.map \
+#    | awk '{printf "%s\t-\t%.10f\n", $1, 287000/1000000}' \
+#    | head  \
+#    >auto_beagle.geneticmap
 
-$WORK_DIR/scripts/PCAdmix/PCAdmix3_linux \
-    -anc TZ_autosomal.bgl bovis_autosomal.bgl \
-    -adm NE_autosomal.bgl \
-    -o num_2 \
-    -bed num_2.bed \
-    -lab TZ BOV NE_ADMIXED
-
-$WORK_DIR/scripts/PCAdmix/PCAdmix3_linux \
-    -anc TZ_autosomal.bgl bovis_autosomal.bgl \
-    -adm NE_autosomal.bgl \
-    -o num_2 \
-    -bed num_2.bed \
-    -lab TZ BOV NE_ADMIXED \
-    -wSNP
-
-
-
-shuf tz.samples | shuf | shuf | shuf | shuf | shuf | shuf | shuf  >tz_test.sampl 
-head -n 20 tz_shuffled.samples >tz_test.samples
-tail -n 27 tz_shuffled.samples >tz_control.samples
-cat tz_test.samples ne.samples >adm.samples
-
-
-vcftools \
-    --vcf ../beagle_impute/cohort_snps_schMan_autosomal_beagle.vcf \
-    --keep adm.samples \
-    --chr SM_V7_4 \
-    --recode \
-    --stdout \
-    | java -jar ../../scripts/vcf2beagle.jar NA ADM_autosomal
-
-vcftools \
-    --vcf ../beagle_impute/cohort_snps_schMan_autosomal_beagle.vcf \
-    --keep tz_control.samples \
-    --chr SM_V7_4 \
-    --recode \
-    --stdout \
-    | java -jar ../../scripts/vcf2beagle.jar NA TZ_CONTROL_autosomal
-
-gunzip *.gz
-
-$WORK_DIR/scripts/PCAdmix/PCAdmix3_linux \
-    -anc bovis_autosomal.bgl TZ_CONTROL_autosomal.bgl \
-    -adm ADM_autosomal.bgl \
-    -o test_adm \
-    -map cohort_snps_schMan_autosomal_beagle.map \
-    -bed \
-    -lab BOVIS TZ NE \
-    -wMB 0.25
-
-
-$WORK_DIR/scripts/PCAdmix/PCAdmix3_linux
 
 

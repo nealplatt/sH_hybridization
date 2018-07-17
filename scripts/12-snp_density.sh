@@ -5,35 +5,31 @@ mkdir $RESULTS_DIR/admixture
 cd $RESULTS_DIR/admixture
 
 #make windows
-bedtools makewindows -g ../../data/genome/Smansoni_v7.fa.fai -w 10000 -s 10000 | grep '\<SM_V7_.\>' >sman_10k-10k.windows
+bedtools makewindows -g ../../data/genome/Smansoni_v7.fa.fai -w 100000 -s 100000 | grep '\<SM_V7_.\>' >sman_10k-10k.windows
 
-#get vcf files
-cp ../11-pop-assign/samples.list .
-grep Sh.NE samples.list >niger.samples
-grep Sh.TZ samples.list >tz.samples
-
-#all
-cp ../build_snp_panel/cohort_snps_schMan_autosomal_panel.vcf all.vcf
+#get sample files
+cp ../niger.list .
+cp ../tz.list .
 
 #group
 vcftools \
-    --vcf ../build_snp_panel/cohort_snps_schMan_autosomal_panel.vcf \
+    --vcf ../build_snp_panel/auto_maf.vcf \
     --keep samples.list \
     --recode \
     --stdout \
-    >haem_group.vcf
+    >all.vcf
 
 #niger
 vcftools \
-    --vcf ../build_snp_panel/cohort_snps_schMan_autosomal_panel.vcf \
-    --keep samples.list \
+    --vcf ../build_snp_panel/auto_maf.vcf \
+    --keep niger.list \
     --recode \
     --stdout \
     >niger.vcf
 
 #bovis
 vcftools \
-    --vcf ../build_snp_panel/cohort_snps_schMan_autosomal_panel.vcf \
+    --vcf ../build_snp_panel/auto_maf.vcf \
     --indv ERR103048 \
     --recode \
     --stdout \
@@ -41,13 +37,13 @@ vcftools \
 
 #tz
 vcftools \
-    --vcf ../build_snp_panel/cohort_snps_schMan_autosomal_panel.vcf \
-    --keep samples.list \
+    --vcf ../build_snp_panel/auto_maf.vcf \
+    --keep tz.list \
     --recode \
     --stdout \
     >tz.vcf
 
-for TYPE in tz bovis niger haem_group all; do
+for TYPE in tz bovis niger all; do
     bcftools view \
         -m2 \
         -M2 \
@@ -64,7 +60,7 @@ for TYPE in tz bovis niger haem_group all; do
 done
 
 #intersect with windows (to get snp/kb counts)
-bedtools intersect -c -a sman_10k-10k.windows -b all_biallelic.bed  >sman_10k-10k.counts
+bedtools intersect -c -a sman_100k-100k.windows -b all_biallelic.bed  >sman_100k-100k.counts
 
 
 #combine into a single file (with a header)
