@@ -11,10 +11,10 @@ cd $RESULTS_DIR/phylogeny
 
 #convert vcf to fasta
 python $WORK_DIR/scripts/vcf_to_diploid_fasta.py \
-    ../build_snp_panel/cohort_snps_schMan_autosomal_panel_LD-25-5-2.vcf \
-    cohort_snps_schMan_autosomal_panel_LD-25-5-2.fas
+    ../build_snp_panel/auto_maf_ld.vcf \
+    auto_maf_ld.fas
 
-JOB_QSUB=$QSUB" -N raxml_100 -o raxml_100.stdout -pe mpi 12"
+JOB_QSUB=$QSUB" -N raxml_1k -o raxml_1k.stdout -pe mpi 12"
 
 echo "raxmlHPC \
     -f a \
@@ -22,9 +22,13 @@ echo "raxmlHPC \
     -m GTRCAT \
     -p 12345 \
     -x 54321 \
-    -# 100 \
-    -s cohort_snps_schMan_autosomal_panel_LD-25-5-2.fas \
-    -n cohort_snps_schMan_autosomal_panel_LD-25-5-2_100" | $JOB_QSUB
+    -# 1000 \
+    -s auto_maf_ld.fas \
+    -n auto_maf_ld" | $JOB_QSUB
+
+
+#-------------------------------------------------------------------------------
+
 
 JOB_QSUB=$QSUB" -N raxml_1k -o raxml_1k.stdout -pe mpi 12"
 
