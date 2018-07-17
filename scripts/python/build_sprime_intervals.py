@@ -7,6 +7,7 @@ segment_start = {}
 segment_end = {}
 segment_chr = {}
 snp_ids = {}
+score = {}
 
 for introgressed_snp in sprime_score_table_in:
     
@@ -17,12 +18,14 @@ for introgressed_snp in sprime_score_table_in:
         sman_bp = introgressed_snp.split("\t")[1]
         shae_snp_id = introgressed_snp.split("\t")[2]
         segment = introgressed_snp.split("\t")[5]
+        segment_score = introgressed_snp.split("\t")[7]
         
         if segment not in segment_start:
             segment_start[segment] = sman_bp
             segment_end[segment] = sman_bp
             snp_ids[segment] = [shae_snp_id]
             segment_chr[segment] = sman_chr
+            score[segment] = segment_score
         else:        
             if segment_start[segment] > sman_bp:
                 segment_start[segment] = sman_bp
@@ -40,9 +43,10 @@ for segment in segment_start:
     stop=segment_end[segment]
     segment_id=segment
     snps=snp_ids[segment]
+    segment_score=score[segment]
     snp_list=",".join(snps)
     
     #print chrom, "\t", start, "\t", stop, "\t", score, "\t", containing_snps
-    print(chrom, "\t", start, "\t", stop, "\t", segment_id, "\t", snp_list )
+    print(chrom, "\t", start, "\t", stop, "\t", segment_id, "\t", segment_score, "\t", snp_list )
 
 
