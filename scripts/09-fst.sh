@@ -35,9 +35,6 @@ marg_pop=6
 niger_pop=list(range(9,57))                                                            
 tz_pop=list(range(58,103))
 
-bov_group_pop=[bov_pop, curs_pop, marg_pop]
-haem_group_pop=[egypt_pop + niger_pop + tz_pop]
-
 #now count the alleles in the array for each pop
 egypt_ac=gt.count_alleles(subpop=[egypt_pop])
 bov_ac=gt.count_alleles(subpop=[bov_pop])
@@ -48,9 +45,6 @@ curs_ac=gt.count_alleles(subpop=[curs_pop])
 marg_ac=gt.count_alleles(subpop=[marg_pop])
 niger_ac=gt.count_alleles(subpop=niger_pop)
 tz_ac=gt.count_alleles(subpop=tz_pop)
-
-bov_group_ac=gt.count_alleles(subpop=bov_group_pop)
-haem_group_ac=gt.count_alleles(subpop=haem_group_pop)
 
 #calculate fst between populations
 # via Willing et al. (2012) can't do FST with lt 4-6 samples

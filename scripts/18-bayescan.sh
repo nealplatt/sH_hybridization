@@ -35,3 +35,7 @@ vcftools \
 
 #converted to bayescan format wtih pgd spider on local computer
 #vcf ->pgd ->bayescan  (tz-ne_maf05_bi.bayescan)
+
+
+#initial bayescan testrun
+bayescan2 tz-ne_maf05_bi.bayescan -threads 6 
