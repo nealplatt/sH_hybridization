@@ -1,5 +1,3 @@
-# lift_over_vcf.py <in_bed> <in_vcf> <out_vcf>
-
 import sys
 
 #open necessary files (read in from the cmd line)
@@ -9,8 +7,8 @@ windows_coords_out=open(sys.argv[2], 'r')
 
 pos={}
 chr={}
-markers_in=open("bovis_vs_tz.markers.start_end", 'r')
-vcf_file_in=open("../beagle_impute/cohort_snps_schMan_autosomal_beagle.vcf", 'r')
+markers_in=open("control-bov-admixed_maf00.markers.txt", 'r')
+vcf_file_in=open("../beagle/auto_beagle.vcf", 'r')
 windows_coords_out=open("test", 'w')
 for vcf_entry in vcf_file_in:
     
@@ -28,7 +26,7 @@ for window_entry in markers_in:
     marker_info = window_entry.split()
     window_name = marker_info[0]
     start_snp = marker_info[1]
-    stop_snp = marker_info[2]
+    stop_snp = marker_info[-1]
     
     entry='\t'.join([window_name, chr[start_snp], pos[start_snp], chr[stop_snp], pos[stop_snp]])
     
