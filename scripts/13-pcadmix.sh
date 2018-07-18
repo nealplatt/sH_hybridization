@@ -121,3 +121,38 @@ sed 's/ /,/gi' control-bov-admixed_maf00.ia.txt >control-bov-admixed_maf00.ia.cs
 
 
 
+#get snps scored (bialleleic in TZ and bovis)
+cat tz-bov-ne_maf00.markers.txt | cut -f2 | sed 's/ /\n/g' | sort >tz-bov-ne_maf00.snps
+
+#remove white lines
+sed -i '/^\s*$/d' tz-bov-ne_maf00.snps
+
+#extract these snps from vcf
+vcftools \
+    --vcf ../beagle/auto_beagle.vcf \
+    --keep niger.list \
+    --snps tz-bov-ne_maf00.snps \
+    --recode \
+    --stdout \
+    >tz-bov-ne_maf00_scores_snps.vcf
+#After filtering, kept 48 out of 97 Individuals
+#After filtering, kept 168982 out of a possible 370770 Sites
+
+#just do average in excel for now
+
+#combine 
+while read SNP_ID;do
+    MAN_POS=$(grep $SNP_ID tz-bov-ne_maf00_scores_snps.vcf | awk '{print $1":"$2}')
+    WINDOW=$(grep $SNP_ID tz-bov-ne_maf00.markers.txt | awk '{print $1}')
+    SCORE=$(grep $WINDOW window.avg | awk '{print $2}')
+    echo -e "$SNP_ID\t$MAN_POS\t$WINDOW\t$SCORE"
+
+done <tz-bov-ne_maf00.snps >tz-bov-ne_maf00_scores_snps.table
+
+
+#now plot each snp in R
+#x=chr and pos
+#y=window_avg (avg freq in ne pop)
+#color is based on window average
+#id     chr     pos     window      window_score
+
