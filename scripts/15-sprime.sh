@@ -48,4 +48,21 @@ sed 1d tz-niger_auto_sprime_2018-07-16.score \
     | awk '{print $3}' \
     >tz-niger_auto_sprime_2018-07-16.list
 
-#for speed - did this in excel
+#create list of SNPs id'd by sprime
+cat tz-niger_auto_sprime_2018-07-16.score \
+    | cut -f3 \
+    | sed 1d \
+    | sort \
+    | uniq \
+    >tz-niger_auto_sprime_2018-07-16.snps
+
+#now do the reverse (how many novel segments in tanzanian samples)
+java -jar $WORK_DIR/scripts/sprime.11Apr18.bad.jar \
+    gt=tz-niger_auto_beagle.vcf  \
+    outgroup=niger.list \
+    map=tz-niger_auto_beagle.map \
+    out=niger-tz_auto_sprime_2018-07-16 \
+    mu=8.1E-9 \
+    minscore=1e5
+
+
