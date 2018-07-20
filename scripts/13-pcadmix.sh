@@ -141,6 +141,8 @@ vcftools \
 #just do average in excel for now
 
 #combine 
+#create window.avg file (percent of NE with bovis ancestry)
+
 while read SNP_ID;do
     MAN_POS=$(grep $SNP_ID tz-bov-ne_maf00_scores_snps.vcf | awk '{print $1":"$2}')
     WINDOW=$(grep $SNP_ID tz-bov-ne_maf00.markers.txt | awk '{print $1}')
@@ -149,6 +151,7 @@ while read SNP_ID;do
 
 done <tz-bov-ne_maf00.snps >tz-bov-ne_maf00_scores_snps.table
 
+########### THERE ARE SOME WINDOWS MISSING>>>>> FIND THEM
 
 #now plot each snp in R
 #x=chr and pos
