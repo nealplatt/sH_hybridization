@@ -39,3 +39,80 @@ vcftools \
 
 #initial bayescan testrun
 bayescan2 tz-ne_maf05_bi.bayescan -threads 6 
+
+#no qvalues...updating to bayescan 2.1
+wget http://cmpg.unibe.ch/software/BayeScan/files/BayeScan2.1.zip
+unzip BayeScan2.1.zip
+
+chmod u+x BayeScan2.1/binaries/BayeScan2.1_linux64bits 
+
+
+for CHAIN in $(seq -w 1 100); do
+
+    mkdir chain$CHAIN
+    cd chain$CHAIN
+    
+    JID=chain$CHAIN
+    LOG=$JID.log
+    
+    CMD="../BayeScan2.1/binaries/BayeScan2.1_linux64bits \
+        ../tz-ne_maf05_bi.bayescan \
+        -threads 12 \
+        -o tz-ne_maf05_bi_bayescan_pr10_pi10k_bin50K_ngen50_npb50_thin20_chain$CHAIN \
+        -pr_odds 10 \
+        -pilot 10000 \
+        -burn 50000 \
+        -nbp 50 \
+        -n 50000 \
+        -thin 20"
+
+
+    JOB_QSUB=$QSUB" -N $JID -o $LOG -pe mpi 12"
+
+    echo $CMD | $JOB_QSUB 
+
+    cd ..
+done
+ 
+
+BayeScan2.1/binaries/BayeScan2.1_linux64bits \
+    tz-ne_maf05_bi.bayescan \
+    -threads 12 \
+    -o tz-ne_maf05_bi_bayescan_pr10_pi10k_bin50K_ngen50_npb50_thin20_chain2 \
+    -pr_odds 10 \
+    -pilot 10000 \
+    -burn 50000 \
+    -nbp 50 \
+    -n 50000 \
+    -thin 20 
+
+BayeScan2.1/binaries/BayeScan2.1_linux64bits \
+    tz-ne_maf05_bi.bayescan \
+    -threads 12 \
+    -o tz-ne_maf05_bi_bayescan_pr10_pi10k_bin50K_ngen50_npb50_thin20_chain2 \
+    -pr_odds 10 \
+    -pilot 10000 \
+    -burn 50000 \
+    -nbp 50 \
+    -n 50000 \
+    -thin 20 
+
+BayeScan2.1/binaries/BayeScan2.1_linux64bits \
+    tz-ne_maf05_bi.bayescan \
+    -threads 12 \
+    -o tz-ne_maf05_bi_bayescan_pr10_pi10k_bin50K_ngen50_npb50_thin20_chain4 \
+    -pr_odds 10 \
+    -pilot 10000 \
+    -burn 50000 \
+    -nbp 50 \
+    -n 50000 \
+    -thin 20 
+    
+
+BayeScan2.1/binaries/BayeScan2.1_linux64bits \
+    tz-ne_maf05_bi.bayescan \
+    -threads 10 \
+    -o test_pr50 \
+    -pr_odds 50 \
+    -pilot 5 \
+    -burn 50
