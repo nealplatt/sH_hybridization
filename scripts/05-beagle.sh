@@ -45,7 +45,7 @@ for i in $(seq 1 7); do
         out=$CHR"_beagle" \
         map=$CHR".map" \
         nthreads=10 \
-        window=302 \
+        window=300 \
         overlap=30 \
         niterations=250
 
