@@ -54,25 +54,31 @@ echo "source activate snp_calling;
         -# 1000 \
         -s auto_maf_ld_var.fas \
         -n auto_maf_ld_var" | $JOB_QSUB
+#-------------------------------------------------------------------------------
 
+#phylogeny of haplotypes
+python $WORK_DIR/scripts/vcf_to_haploid_fasta.py \
+    ../beagle/auto_beagle_maf05_LD.vcf \
+    auto_beagle_maf05_LD.fas
+
+JOB_QSUB=$QSUB" -N auto_beagle_maf05_LD_raxml.log -o auto_beagle_maf05_LD_raxml.stdout -pe mpi 12"
+
+echo "source activate snp_calling; 
+    raxmlHPC-PTHREADS \
+        -f a \
+        -T 12 \
+        -m ASC_GTRCAT \
+        --asc-corr=lewis \
+        -p 12345 \
+        -x 54321 \
+        -# 1000 \
+        -s auto_beagle_maf05_LD.fas \
+        -n auto_beagle_maf05_LD" | $JOB_QSUB
 
 #-------------------------------------------------------------------------------
 
 
-JOB_QSUB=$QSUB" -N raxml_1k -o raxml_1k.stdout -pe mpi 12"
-
-echo "raxmlHPC \
-    -f a \
-    -T 12 \
-    -m GTRCAT \
-    -p 12345 \
-    -x 54321 \
-    -# 1000 \
-    -s cohort_snps_schMan_autosomal_panel_LD-25-5-2.fas \
-    -n cohort_snps_schMan_autosomal_panel_LD-25-5-2_1k" | $JOB_QSUB
-
-
-
+#sliding window phylogeny
 #bedtools make windows
 bedtools makewindows -g ../../data/genome/Smansoni_v7.fa.fai -w 150000 -s 75000 | grep '\<SM_V7_.\>' >sman.windows
 
