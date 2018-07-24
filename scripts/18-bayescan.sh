@@ -58,8 +58,8 @@ for CHAIN in $(seq -w 1 100); do
     CMD="../BayeScan2.1/binaries/BayeScan2.1_linux64bits \
         ../tz-ne_maf05_bi.bayescan \
         -threads 12 \
-        -o tz-ne_maf05_bi_bayescan_pr10_pi10k_bin50K_ngen50_npb50_thin20_chain$CHAIN \
-        -pr_odds 10 \
+        -o tz-ne_maf05_bi_bayescan_pr50_pi10k_bin50K_ngen50_npb50_thin20_chain$CHAIN \
+        -pr_odds 50 \
         -pilot 10000 \
         -burn 50000 \
         -nbp 50 \
@@ -73,46 +73,3 @@ for CHAIN in $(seq -w 1 100); do
 
     cd ..
 done
- 
-
-BayeScan2.1/binaries/BayeScan2.1_linux64bits \
-    tz-ne_maf05_bi.bayescan \
-    -threads 12 \
-    -o tz-ne_maf05_bi_bayescan_pr10_pi10k_bin50K_ngen50_npb50_thin20_chain2 \
-    -pr_odds 10 \
-    -pilot 10000 \
-    -burn 50000 \
-    -nbp 50 \
-    -n 50000 \
-    -thin 20 
-
-BayeScan2.1/binaries/BayeScan2.1_linux64bits \
-    tz-ne_maf05_bi.bayescan \
-    -threads 12 \
-    -o tz-ne_maf05_bi_bayescan_pr10_pi10k_bin50K_ngen50_npb50_thin20_chain2 \
-    -pr_odds 10 \
-    -pilot 10000 \
-    -burn 50000 \
-    -nbp 50 \
-    -n 50000 \
-    -thin 20 
-
-BayeScan2.1/binaries/BayeScan2.1_linux64bits \
-    tz-ne_maf05_bi.bayescan \
-    -threads 12 \
-    -o tz-ne_maf05_bi_bayescan_pr10_pi10k_bin50K_ngen50_npb50_thin20_chain4 \
-    -pr_odds 10 \
-    -pilot 10000 \
-    -burn 50000 \
-    -nbp 50 \
-    -n 50000 \
-    -thin 20 
-    
-
-BayeScan2.1/binaries/BayeScan2.1_linux64bits \
-    tz-ne_maf05_bi.bayescan \
-    -threads 10 \
-    -o test_pr50 \
-    -pr_odds 50 \
-    -pilot 5 \
-    -burn 50
