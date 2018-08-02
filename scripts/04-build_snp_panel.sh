@@ -38,7 +38,6 @@ bcftools annotate \
     cohort_snps.vcf \
     >cohort_snps_annotated.vcf
 
-    
 #filter loci with 85% of samples genotyped
 vcftools \
     --vcf cohort_snps_annotated.vcf \
@@ -51,7 +50,7 @@ vcftools \
 
 vcftools \
     --vcf cohort_snps_annotated.vcf \
-    --exclude-positions keep_site.list \
+    --exclude-positions remove_site.list \
     --recode \
     --recode-INFO-all \
     --stdout \
@@ -85,7 +84,8 @@ cat indiv_missing_table.tsv \
     #Sm.BR_0447.1
     #Sm.BR_1278.1
     #Sm.BR_2039.1
-
+    #Sh.NE_Doki_029.1
+    #Sh.NE_Kar_241.2
 
 vcftools \
     --vcf cohort_snps_85perSite.vcf \
@@ -98,15 +98,18 @@ vcftools \
     #After filtering, kept 584,413 out of a possible 584,413 Sites
 
 #-------------------------
-
 #only keep bi-allelic sites
-bcftools view \
-    -m2 \
-    -M2 \
-    -v snps \
-    cohort_snps_80perIndiv.vcf \
+vcftools \
+    --vcf cohort_snps_80perIndiv.vcf \
+    --min-alleles 2 \
+    --max-alleles 2 \
+    --recode \
+    --recode-INFO-all \
+    --stdout \
     >cohort_snps_biallelic.vcf
     #After filtering, kept 579,316 sites
+
+--min-alleles 2 --max-alleles 2
 
 #now get snps that are single locus in mansoni genome.
 #lift over to smansoni coordinates
