@@ -41,11 +41,9 @@ vcftools \
     --remove-indv ERR103051 \
     --remove-indv ERR119612 \
     --remove-indv ERR119613 \
-    --remove-indv ERR310937 \
     --remove-indv ERR310940 \
     --remove-indv ERR539855 \
     --remove-indv ERR539857 \
-    --remove-indv SRR433865 \
     --recode \
     --recode-INFO-all \
     --stdout \
@@ -71,13 +69,13 @@ grep "#" haem_auto_maf_ld.vcf \
 vcftools \
     --vcf haem_auto_maf_ld.vcf \
     --remove-indv ERR103048 \
+    --remove-indv ERR310937 \
     --recode \
     --recode-INFO-all \
     --stdout \
     >haemOnly_auto_maf_ld.vcf
-    #After filtering, kept 95 out of 96 Individuals
-    #After filtering, kept 5905 out of a possible 5905 Sites
-
+    #After filtering, kept 94 out of 96 Individuals
+    #After filtering, kept 5882 out of a possible 5882 Sites
 
 plink \
     --vcf haemOnly_auto_maf_ld.vcf \
