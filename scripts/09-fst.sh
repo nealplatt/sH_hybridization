@@ -8,7 +8,6 @@ mkdir fst
 
 cd fst
 
-
 #in python
 
 import allel
@@ -32,8 +31,8 @@ guin_pop=3
 inter_pop=4
 curs_pop=5
 marg_pop=6      
-niger_pop=list(range(9,57))                                                            
-tz_pop=list(range(58,103))
+niger_pop=list(range(9,55))                                                            
+tz_pop=list(range(56,101))
 
 #now count the alleles in the array for each pop
 egypt_ac=gt.count_alleles(subpop=[egypt_pop])
@@ -52,11 +51,11 @@ tz_ac=gt.count_alleles(subpop=tz_pop)
 
 subpops=[niger_pop, tz_pop]
 allel.average_weir_cockerham_fst(gt, subpops, blen=100)
-#fst 0.2820221632974806
-#se 0.010486528819494833
+#fst 0.2847818029924119
+#se 0.01077928218864319
 allel.average_patterson_fst(niger_ac, tz_ac, blen=100)
-#fst 0.2857281133918937
-#se 0.010557928500715526
+#fst 0.2861097085173953
+#se 0.010796452519675303
 
 
 #fst sliding window (niger vs. tz)----------------------------------------------
