@@ -64,11 +64,9 @@ vcftools \
     --remove-indv ERR103051 \
     --remove-indv ERR119612 \
     --remove-indv ERR119613 \
-    --remove-indv ERR310937 \
     --remove-indv ERR310940 \
     --remove-indv ERR539855 \
     --remove-indv ERR539857 \
-    --remove-indv SRR433865 \
     --recode \
     --recode-INFO-all \
     --stdout \
@@ -117,7 +115,5 @@ $WORK_DIR/scripts/admixture_linux-1.3.0/admixture \
     haem_auto_maf_ld.ped \
     2 \
     >supervised.log
-
-   
 
 #plot in R on local computer using the script <R SCRIPT>
