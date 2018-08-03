@@ -44,12 +44,14 @@ for i in $(seq 1 7); do
         gt=$CHR".vcf" \
         out=$CHR"_beagle" \
         map=$CHR".map" \
-        nthreads=10 \
+        nthreads=4 \
         window=300 \
         overlap=30 \
-        niterations=250
+        niterations=250 >>$CHR.beaglelog 2>&1 &
 
 done
+
+wait 
 
 gunzip SM*vcf.gz
 
