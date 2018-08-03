@@ -94,8 +94,9 @@ vcftools \
     --recode-INFO-all \
     --stdout \
     >cohort_snps_80perIndiv.vcf
-    #After filtering, kept 104 out of 118 Individuals
-    #After filtering, kept 584,413 out of a possible 584,413 Sites
+    #After filtering, kept 102 out of 118 Individuals
+    #After filtering, kept 58,4413 out of a possible 58,4413 Sites
+
 
 #-------------------------
 #only keep bi-allelic sites
@@ -107,7 +108,7 @@ vcftools \
     --recode-INFO-all \
     --stdout \
     >cohort_snps_biallelic.vcf
-    #After filtering, kept 104 out of 104 Individuals
+    #After filtering, kept 102 out of 102 Individuals
     #After filtering, kept 549,249 out of a possible 584,413 Sites
 
 
@@ -166,7 +167,7 @@ vcftools \
     --recode-INFO-all \
     --stdout \
     >cohort_snps_schMan_singleLocus.vcf
-    #After filtering, kept 104 out of 104 Individuals
+    #After filtering, kept 102 out of 102 Individuals
     #After filtering, kept 482,406 out of a possible 531,201 Sites
 
 
@@ -198,23 +199,23 @@ vcftools \
     >tmp.vcf
 
 mv tmp.vcf cohort_snps_schMan_singleLocus.vcf
-#After filtering, kept 104 out of 104 Individuals
-#After filtering, kept 482204 out of a possible 482406 Sites
+#After filtering, kept 102 out of 102 Individuals
+#After filtering, kept 482,204 out of a possible 482,406 Sites
 
-
+#**********************************************************************************
 #fix header and sort
 grep -v "contig=<ID=" cohort_snps_schMan_singleLocus.vcf \
     >headerless.vcf
 
 #add contigs for sman to header
-${ENVIRONMENTS["SINGULARITY"]} \
+${ENVIRONMENTS["TITAN SINGULARITY"]} \
     gatk SelectVariants \
         -R $MAN_GENOME \
         -V headerless.vcf \
         -O header.vcf
         #482,204 loci remaining
 
-#may need to be run on titan
+#may need to be run on high mem nodes
 ${ENVIRONMENTS["TITAN SINGULARITY"]} \
     gatk SortVcf \
         -R $MAN_GENOME \
@@ -236,7 +237,7 @@ vcftools \
     --recode-INFO-all \
     --stdout \
     >cohort_snps_schMan_autosomal_panel.vcf
-#After filtering, kept 104 out of 104 Individuals
+#After filtering, kept 102 out of 102 Individuals
 #After filtering, kept 370770 out of a possible 482204 Sites
 
 #filter all snps for maf
@@ -247,8 +248,8 @@ vcftools \
     --recode-INFO-all \
     --stdout \
     >cohort_snps_schMan_autosomal_maf05_panel.vcf
-#After filtering, kept 104 out of 104 Individuals
-#After filtering, kept 69482 out of a possible 370770 Sites
+#After filtering, kept 102 out of 102 Individuals
+#After filtering, kept 69,957 out of a possible 370770 Sites
 
 
 #filter autosomal snps in LD
@@ -257,7 +258,8 @@ plink \
     --allow-extra-chr \
     --indep-pairwise 25 5 0.20 \
     --out cohort_snps_schMan_autosomal_maf0_panel_LD
-#63577 of 69482 variants removed
+#Pruning complete.  64075 of 69957 variants removed.
+
 
 
 vcftools \
@@ -267,8 +269,8 @@ vcftools \
     --recode-INFO-all \
     --stdout \
     >cohort_snps_schMan_autosomal_maf05_LD.vcf
-    #After filtering, kept 104 out of 104 Individuals
-    #After filtering, kept 5,905 out of a possible 69,482 Sites
+    #After filtering, kept 102 out of 102 Individuals
+    #After filtering, kept 5,882 out of a possible 64,075 Sites
 
 
 #once all filtering is complete there are three major autosomal files
@@ -299,7 +301,7 @@ vcftools \
     --recode-INFO-all \
     --stdout \
     >cohort_snps_schMan_ZW_maf05_panel.vcf
-    #After filtering, kept 16,790 out of a possible 111,343 Sites
+    #After filtering, kept 16940 out of a possible 111,343 Sites
 
 #cohort_snps_schMan_ZW_panel.vcf                all ZW snps
 #cohort_snps_schMan_ZW_maf05_panel.vcf          all ZW snps, maf filtered
@@ -317,8 +319,8 @@ vcftools \
     --recode-INFO-all \
     --stdout \
     >cohort_snps_schHae_maf05_panel.vcf
-#After filtering, kept 104 out of 104 Individuals
-#After filtering, kept 101327 out of a possible 549249 Sites
+#After filtering, kept 102 out of 102 Individuals
+#After filtering, kept 102020 out of a possible 549249 Sites
 
 
 #filter autosomal snps in LD
@@ -327,7 +329,7 @@ plink \
     --allow-extra-chr \
     --indep-pairwise 25 5 0.20 \
     --out cohort_snps_schHae_maf05_panel_LD
-    #Pruning complete.  89609 of 101327 variants removed.
+    #Pruning complete.  90302 of 102020 variants removed.
 
 vcftools \
     --vcf cohort_snps_schHae_maf05_panel.vcf \
@@ -336,8 +338,8 @@ vcftools \
     --recode-INFO-all \
     --stdout \
     >cohort_snps_schHae_maf05_LD.vcf
-    #After filtering, kept 104 out of 104 Individuals
-    #After filtering, kept 11,718 out of a possible 101,327 Sites
+    #After filtering, kept 102 out of 102 Individuals
+    #After filtering, kept 11,718 out of a possible 102,020 Sites
 
 #cohort_snps_biallelic.vcf                  all biallelic alleles, haem coords
 #cohort_snps_schHae_maf05_panel.vcf         bi-alleles, maf filtered, haem coords
@@ -346,3 +348,5 @@ vcftools \
 ln -s cohort_snps_biallelic.vcf haem.vcf
 ln -s cohort_snps_schHae_maf05_panel.vcf haem_maf.vcf
 ln -s cohort_snps_schHae_maf05_LD.vcf haem_maf_ld.vcf
+
+
