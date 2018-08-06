@@ -45,14 +45,14 @@ DATE=$(date +"%Y-%m-%d")
 
 for CHAIN in $(seq -w 1 100); do
 
-    mkdir $DATE"_"chain$CHAIN
-    cd $DATE"_"chain$CHAIN
+    mkdir -p $DATE/chain$CHAIN
+    cd $DATE/chain$CHAIN
     
     JID=chain$CHAIN
     LOG=$JID.log
     
-    CMD="../BayeScan2.1/binaries/BayeScan2.1_linux64bits \
-        ../tz-ne_maf05_bi.bayescan \
+    CMD="../../BayeScan2.1/binaries/BayeScan2.1_linux64bits \
+        ../../tz-ne_maf05_bi.bayescan \
         -threads 12 \
         -o tz-ne_maf05_bi_bayescan_pr10_pi10k_bin50K_ngen50_npb50_thin20_chain$CHAIN \
         -pr_odds 10 \
@@ -66,5 +66,5 @@ for CHAIN in $(seq -w 1 100); do
 
     echo $CMD | $JOB_QSUB 
 
-    cd ..
+    cd ../..
 done
