@@ -284,6 +284,26 @@ ln -s cohort_snps_schMan_autosomal_panel.vcf auto.vcf
 ln -s cohort_snps_schMan_autosomal_maf05_panel.vcf auto_maf.vcf
 ln -s cohort_snps_schMan_autosomal_maf05_LD.vcf auto_maf_ld.vcf
 
+#and sample lists for downstream
+cat build_snp_panel/auto_maf.vcf \
+    | grep "#" \
+    | tail -n 1 \
+    | cut -f10- \
+    | sed 's/\t/\n/gi' \
+    | grep Sh.NE \
+    >niger.list 
+
+
+cat build_snp_panel/auto_maf.vcf \
+    | grep "#" \
+    | tail -n 1 \
+    | cut -f10- \
+    | sed 's/\t/\n/gi' \
+    | grep Sh.TZ \
+    >tz.list 
+
+
+
 #presumed sex chromosome snps
 vcftools \
     --vcf cohort_snps_schMan_panel.vcf \
