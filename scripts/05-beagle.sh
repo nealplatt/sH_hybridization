@@ -65,6 +65,13 @@ vcfcombine \
     SM_V7_6_beagle.vcf \
     SM_V7_7_beagle.vcf \
     >auto_beagle.vcf
+    #370,770
 
-#75,704 snps
-
+vcftools \
+    --vcf auto_beagle.vcf \
+    --maf 0.05 \
+    --recode \
+    --recode-INFO-all \
+    --stdout \
+    >auto_beagle_maf05.vcf
+    #41,680
