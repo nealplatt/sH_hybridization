@@ -16,7 +16,7 @@ import itertools
 
 #read in the vcf data
 
-callset=allel.read_vcf('../build_snp_panel/auto_maf.vcf', log=sys.stdout)
+callset=allel.read_vcf('auto_beagle_maf05_LD.vcf', log=sys.stdout)
 gt=allel.GenotypeArray(callset['calldata/GT'])
 
 
@@ -29,36 +29,63 @@ ac=gt.count_alleles()
 #designate the population (index) in the allele count array
 egypt_pop=0 
 bov_pop=1
-mat_pop=[2,7,8]
-guin_pop=3
-inter_pop=4
-curs_pop=5
-marg_pop=6      
-niger_pop=list(range(9,57))                                                            
-tz_pop=list(range(58,103))
+curs_pop=2
+niger_pop=list(range(3,48))                                                            
+tz_pop=list(range(49,95))
 
 
 #now count the alleles in the array for each pop
 egypt_ac=gt.count_alleles(subpop=[egypt_pop])
 bov_ac=gt.count_alleles(subpop=[bov_pop])
-mat_ac=gt.count_alleles(subpop=mat_pop)
-guin_ac=gt.count_alleles(subpop=[guin_pop])
-inter_ac=gt.count_alleles(subpop=[inter_pop])
 curs_ac=gt.count_alleles(subpop=[curs_pop])
-marg_ac=gt.count_alleles(subpop=[marg_pop])
 niger_ac=gt.count_alleles(subpop=niger_pop)
 tz_ac=gt.count_alleles(subpop=tz_pop)
 
-bov_group_ac=gt.count_alleles(subpop=bov_group_pop)
-haem_group_ac=gt.count_alleles(subpop=haem_group_pop)
 
 
 allel.average_patterson_f3(tz_ac, niger_ac, bov_ac, 100)
-#f3 1.3067408628912387
-#SE 0.07403752556207435
-#Z  17.6497101026917
+#f3 0.4517691002956402
+#SE 0.03543316969051088
+#Z  12.749892381674945
 
 allel.average_patterson_f3(niger_ac, tz_ac, bov_ac, 100)
-#f3 -0.1629027774840651
-#SE 0.007224948856017552
-#Z  -22.54725683606546
+#f3 -0.054453718360619706
+#SE 0.009507627944607596
+#Z  -5.72737160918292
+
+allel.average_patterson_f3(tz_ac, niger_ac, curs_ac, 100)
+#f3 0.44908378098920204
+#SE 0.03553567963537079
+#Z  12.637545858056477
+
+allel.average_patterson_f3(niger_ac, tz_ac, curs_ac, 100)
+#f3 -0.05252711049980318
+#SE 0.00995347006333908
+#Z  -5.277266135884872
+
+
+##################################
+# in bash
+plink \
+    --vcf ../beagle/auto_beagle_maf05.vcf \
+    --allow-extra-chr \
+    --indep-pairwise 25 5 0.20 \
+    --out auto_beagle_maf05
+
+vcftools \
+    --vcf ../beagle/auto_beagle_maf05.vcf \
+    --exclude auto_beagle_maf05.prune.out \
+    --recode \
+    --recode-INFO-all \
+    --stdout \
+    >auto_beagle_maf05_LD.vcf
+
+vcftools \
+    --vcf auto_beagle_maf05_LD.vcf \
+    --het \
+    --stdout >auto_beagle_maf05_f.out
+
+#F NE  = -0.001748478
+#F TZ  =  0.3607874
+#H0 NE =  0.2759724
+#HO TZ =  0.1760968
