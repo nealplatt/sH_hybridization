@@ -1,8 +1,6 @@
 source activate snp_calling
 source /master/nplatt/schisto_hybridization/scripts/set_env.sh
 
-#Smp_127030
-
 cd $RESULTS_DIR
 
 mkdir dnds
