@@ -1,24 +1,39 @@
+#!/bin/bash
+#
+# SNP calling in S. haemotobium hybridzone(s).
+# NPlatt
+# Neal.platt@gmail.com
+
+# 04-build_snp_panel.sh - after genotyping...the vcf files are filtered in a way
+#       that generates multiple output files, for example SNPs on autosomal
+#       chromosomes, vs. SNPs on autosomal chromosomes with LD fitlering
+
+# Uses a combination of conda environments and singularity
+
 cd $RESULTS_DIR/build_snp_panel
 
-#ERR119622 bovis
-#ERR103048 bovis
-#ERR310937 curassoni
-#ERR119623 curassoni
-#ERR084970 haematobium
-#ERR037800 haematobium
-#SRR433865 haematobium
-#ERR103051 bovis
-#ERR119612 guineensis
-#ERR119613 intercalatum
-#ERR310940 margrebowiei
-#ERR539850 guineensis
-#ERR539851 mattheei
-#ERR539852 guineensis
-#ERR539853 bovis
-#ERR539854 intercalatum 
-#ERR539855 mattheei
-#ERR539856 intercalatum 
-#ERR539857 mattheei
+#outgroup identification
+# ID        Species
+#--------------------
+#ERR119622  bovis
+#ERR103048  bovis
+#ERR310937  curassoni
+#ERR119623  curassoni
+#ERR084970  haematobium
+#ERR037800  haematobium
+#SRR433865  haematobium
+#ERR103051  bovis
+#ERR119612  guineensis
+#ERR119613  intercalatum
+#ERR310940  margrebowiei
+#ERR539850  guineensis
+#ERR539851  mattheei
+#ERR539852  guineensis
+#ERR539853  bovis
+#ERR539854  intercalatum 
+#ERR539855  mattheei
+#ERR539856  intercalatum 
+#ERR539857  mattheei
 
 ln -s $SNP_DIR/cohort_filtered_bqsr-1.vcf
 ln -s $SNP_DIR/cohort_filtered_bqsr-1.vcf.idx

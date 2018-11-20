@@ -1,8 +1,16 @@
-#...............................................................................
-#...............................................................................
-#PCA - needs LD pruned snps and to be in the plink ped format
+#!/bin/bash
+#
+# SNP calling in S. haemotobium hybridzone(s).
+# NPlatt
+# Neal.platt@gmail.com
 
-#clean and process reads to the haematobium genome
+# 06-pca.sh - using the LD fitlered SNPs create multiple pcas to examine
+#       genotypic space. This generates the coordinates that are then plotted
+#       with an R script
+
+# Uses a conda to manage the enviroment
+
+#Set up the environment
 source /master/nplatt/schisto_hybridization/scripts/set_env.sh
 source activate snp_calling
 
@@ -13,8 +21,6 @@ cd $RESULTS_DIR/pca
 #1) all samples
 #2) curs, bovis, haem
 #3) haem only
-
-#cohort_snps_schMan_maf-05-perc_autosomal_panel_LD-25-5-2.vcf
 
 ################################################################################
 #1) ALL SAMPLES

@@ -1,4 +1,17 @@
-#clean and process reads to the haematobium genome
+#!/bin/bash
+#
+# SNP calling in S. haemotobium hybridzone(s).
+# NPlatt
+# Neal.platt@gmail.com
+
+# 05-beagle.sh - takes the fitlered vcf files and uses beagle to impute and 
+#       phase.
+
+# Uses a combination of conda environments and singularity
+
+# done on a moderatley high memory node (150 Gb).
+
+#set the environment
 source /master/nplatt/schisto_hybridization/scripts/set_env.sh
 source activate snp_calling
 

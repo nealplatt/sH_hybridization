@@ -1,11 +1,17 @@
-#...............................................................................
-#...............................................................................
-#...............................................................................
-#ADMIXTURE - needs LD pruned snps and to be in the plink ped format
+#!/bin/bash
+#
+# SNP calling in S. haemotobium hybridzone(s).
+# NPlatt
+# Neal.platt@gmail.com
 
-#NEED TO RE-RUN AND EXCLUDE SEX SNPs
+# 07-admixture.sh - using admixture to examine structure in each sample.  Ran
+#       multiple runs, but the one of import is the one with only S.haem and
+#       bovis.  Used supervised and unsupervised (to test).  Results were
+#       plotted in R.
 
-#clean and process reads to the haematobium genome
+# Uses a conda to manage the enviroment and relies on the scheduler
+
+#Set up the environment
 source /master/nplatt/schisto_hybridization/scripts/set_env.sh
 source activate snp_calling
 
@@ -16,8 +22,6 @@ cd $RESULTS_DIR/admixture
 # analyese.
 #1) with all samples
 #2) with haematobium, bovis, and curassoni samples.
-
-#consider doing supervised an unsupervised
 
 #ALL SAMPLES
 plink \
@@ -106,8 +110,10 @@ grep CV group_cv_k*.log \
     | sed 's/://' \
     >group_cv_table.tsv
 
+#choose the best K from the group_cv_table (lowest value).
+
 #-------------------------------------------------------------------------------
-# SUPERVISED?
+# SUPERVISED? (for fun)
 $WORK_DIR/scripts/admixture_linux-1.3.0/admixture \
     -j12 \
     --cv=1000 \

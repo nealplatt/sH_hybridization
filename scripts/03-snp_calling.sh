@@ -1,4 +1,17 @@
-#clean and process reads to the haematobium genome
+#!/bin/bash
+#
+# SNP calling in S. haemotobium hybridzone(s).
+# NPlatt
+# Neal.platt@gmail.com
+
+# 03-snp_calling - uses gatk4 to genotype probed regions of schHaem genome and 
+#       preps for 1 round of base quality recalibration.  (includes entire
+#       mitochondria)
+
+# Uses a combination of conda environments and singularity and relies heavily
+#       on the scheduler....
+
+# SET ENVIRONMENT
 source /master/nplatt/schisto_hybridization/scripts/set_env.sh
 source activate snp_calling
 

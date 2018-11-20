@@ -1,4 +1,16 @@
-#clean and process reads to the haematobium genome
+#!/bin/bash
+#
+# SNP calling in S. haemotobium hybridzone(s).
+# NPlatt
+# Neal.platt@gmail.com
+
+# 02-filter_and_map_reads_to_haem - take reads and filter them wtih trimmomatic
+#       and then map to the schHae v1 assembly in anticipation of SNP calling
+
+# Uses a combination of conda environments and singularity
+
+
+# SET ENVIRONMENT
 source /master/nplatt/schisto_hybridization/scripts/set_env.sh
 
 FILTER_DIR=$RESULTS_DIR/processed_reads/exome
