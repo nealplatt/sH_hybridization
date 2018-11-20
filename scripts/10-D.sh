@@ -1,4 +1,18 @@
-#clean and process reads to the haematobium genome
+#!/bin/bash
+#
+# SNP calling in S. haemotobium hybridzone(s).
+# NPlatt
+# Neal.platt@gmail.com
+
+# 10-D.sh - calculate genome wide D in the scikit-allel package.  
+
+# *** IMPORTANT
+# So this script is not inteded to be "run" as much as it reflect steps that I
+#   took in the analysis.  Its a combination of bash and python
+
+# Uses a conda to manage the enviroment
+
+#Set up the environment
 source /master/nplatt/schisto_hybridization/scripts/set_env.sh
 source activate snp_calling
 
@@ -204,205 +218,4 @@ window_d=np.column_stack((chr, cul_pos, window_pos, D_per_window))
 np.savetxt("window_D_100snp-10snp_autosomal.csv", window_d, fmt='%s', delimiter=",")
 
 #now plot this in R so that each chromosome has a different color
-
-
-
-##13536
-#chr1_cul_pos=[x+0 for x in chr1_window_pos]
-#start=chr1_len
-#chr2_cul_pos=[x+start for x in chr2_window_pos]
-#start+=chr2_len
-#chr3_cul_pos=[x+start for x in chr3_window_pos]
-#start+=chr3_len
-#chr4_cul_pos=[x+start for x in chr4_window_pos]
-#start+=chr4_len
-#chr5_cul_pos=[x+start for x in chr5_window_pos]
-#start+=chr5_len
-#chr6_cul_pos=[x+start for x in chr6_window_pos]
-#start+=chr6_len
-#chr7_cul_pos=[x+start for x in chr7_window_pos]
-
-
-#cul_pos=chr1_cul_pos
-#cul_pos+=chr2_cul_pos
-#cul_pos+=chr3_cul_pos
-#cul_pos+=chr4_cul_pos
-#cul_pos+=chr5_cul_pos
-#cul_pos+=chr6_cul_pos
-#cul_pos+=chr7_cul_pos
-
-#chr=""
-#chr=list(itertools.repeat("SM_V7_1", len(chr1_cul_pos)))
-#chr+=list(itertools.repeat("SM_V7_2", len(chr2_cul_pos)))
-#chr+=list(itertools.repeat("SM_V7_3", len(chr3_cul_pos)))
-#chr+=list(itertools.repeat("SM_V7_4", len(chr4_cul_pos)))
-#chr+=list(itertools.repeat("SM_V7_5", len(chr5_cul_pos)))
-#chr+=list(itertools.repeat("SM_V7_6", len(chr6_cul_pos)))
-chr+=list(itertools.repeat("SM_V7_7", len(chr7_cul_pos)))
-
-########################################################################
-import allel
-import numpy as np  
-import sys
-import itertools
-
-#read in the vcf data
-callset=allel.read_vcf('../build_snp_panel/auto_maf.vcf', log=sys.stdout)
-gt=allel.GenotypeArray(callset['calldata/GT'])
-
-#get allele counts for each locus
-ac=gt.count_alleles()
-
-#designate the population (index) in the allele count array
-egypt_pop=0 
-bov_pop=1
-mat_pop=[2,7,8]
-guin_pop=3
-inter_pop=4
-curs_pop=5
-marg_pop=6      
-niger_pop=list(range(9,54))                                                            
-tz_pop=list(range(55,102))
-
-#now count the alleles in the array for each pop
-egypt_ac=gt.count_alleles(subpop=[egypt_pop])
-bov_ac=gt.count_alleles(subpop=[bov_pop])
-mat_ac=gt.count_alleles(subpop=mat_pop)
-inter_ac=gt.count_alleles(subpop=[inter_pop])
-curs_ac=gt.count_alleles(subpop=[curs_pop])
-marg_ac=gt.count_alleles(subpop=[marg_pop])
-niger_ac=gt.count_alleles(subpop=niger_pop)
-tz_ac=gt.count_alleles(subpop=tz_pop)
-
-#calculate D (genome wide)
-allel.average_patterson_d(niger_ac, tz_ac, bov_ac, marg_ac, blen=100)
-#D  = 0.5267468007511834
-#SE = 0.03071556684389132
-#Z  = 17.149180525572564
-
-allel.average_patterson_d(niger_ac, tz_ac, curs_ac, marg_ac, blen=10)
-#D  = 0.37006955593977653
-#SE = 0.031013066311292727
-#Z  = 11.932698051370169
-
-len(allel.average_patterson_d(niger_ac, tz_ac, bov_ac, marg_ac, blen=100))[4].tolist())
-#n = 699
-
-
-
-#########################
-# CAN PROBABLY TRASH SOON
-###########################
-
-
-
-#ERR103048	bov
-#ERR310937	curs
-#ERR310940	marg
-
-vcftools \
-    --vcf ../build_snp_panel/auto_maf.vcf \
-    --indv ERR103048 \
-    --indv ERR310940 \
-    --extract-FORMAT-info GT \
-    --stdout \
-    >bov_marg.vcf
-
-
-grep -P "1/1\t0/0" bov_marg.vcf | cut -f1,2 >bov_marg_abba.pos                                           
-grep -P "0/0\t1/1" bov_marg.vcf | cut -f1,2  >>bov_marg_abba.pos  
-
-
-
-vcftools \
-    --vcf ../build_snp_panel/auto_maf.vcf \
-    --positions bov_marg_abba.pos \
-    --keep niger.list \
-    --stdout \
-    --freq \
-    >niger.freq
-
-vcftools \
-    --vcf ../build_snp_panel/auto_maf.vcf \
-    --positions bov_marg_abba.pos \
-    --keep tz.list \
-    --stdout \
-    --freq \
-    >tz.freq
-
-vcftools \
-    --vcf ../build_snp_panel/auto_maf.vcf \
-    --positions bov_marg_abba.pos \
-    --indv ERR103048 \
-    --stdout \
-    --freq \
-    >bov.freq
-
-
-vcftools \
-    --vcf ../build_snp_panel/auto_maf.vcf \
-    --positions bov_marg_abba.pos \
-    --indv ERR310940 \
-    --stdout \
-    --freq \
-    >marg.freq
-
-
-paste niger.freq tz.freq bov.freq marg.freq | cut -f1,2,5,11,17,23 >freqs.out
-
-#used excel to get a good table of abba baba sites: use them to extract from VCF
-
-
-#find sites that I KNOW are BABA sites from the vcf file using Fst.  then test allel
-
-#get fst
-vcftools \
-    --vcf ../build_snp_panel/cohort_snps_schMan_autosomal_panel.vcf \
-    --weir-fst-pop  niger.samples \
-    --weir-fst-pop  tz.samples \
-    --stdout \
-    >niger_vs_tz.fst
-
-#get fixed sites
-cat niger_vs_tz.fst | sed '1d' | grep -v "nan" | awk '$3==1' | cut -f1,2 >fixed.pos
-
-#extract fixed sites from the vcf
-vcftools \
-    --vcf ../build_snp_panel/cohort_snps_schMan_autosomal_panel.vcf \
-    --positions fixed.pos \
-    --stdout \
-    --recode \
-    >fixed.vcf
-
-#get allele counts per population
-#
-vcftools \
-    --vcf fixed.vcf \
-    --keep niger.samples \
-    --stdout \
-    --freq \
-    >niger_fixed.freq
-
-vcftools \
-    --vcf fixed.vcf \
-    --keep tz.samples \
-    --stdout \
-    --freq \
-    >tz_fixed.freq
-
-vcftools \
-    --vcf fixed.vcf \
-    --indv ERR103048 \
-    --stdout \
-    --freq \
-    >bov_fixed.freq
-
-vcftools \
-    --vcf fixed.vcf \
-    --indv ERR310940 \
-    --stdout \
-    --freq \
-    >marg_fixed.freq
-
-paste niger_fixed.freq tz_fixed.freq bov_fixed.freq marg_fixed.freq | cut -f1,2,5,11,17,23 >fixed_freqs.out
 
