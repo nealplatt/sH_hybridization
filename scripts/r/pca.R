@@ -22,16 +22,16 @@ haem_samples<-read.table("haemOnly_auto_maf_ld_pca.samples", header=FALSE)
 
 haem_colors<-c(
   rep("orange", 1),
-  rep("deeppink", 48), 
+  rep("deeppink", 46), 
   rep("blue", 26),
   rep("aquamarine", 21))
 
-svg("haemOnly_auto_maf_ld_pca_2018-07-06.svg", width=7, height=7)
+svg("haemOnly_auto_maf_ld_pca.svg", width=7, height=7)
 plot(haem_evec$V3, haem_evec$V4, 
      col=alpha(haem_colors, 0.7), 
      cex=1.5, 
      pch=19, 
-     xlab="PC1 (22.1%)", 
+     xlab="PC1 (21.9%)", 
      ylab="PC2 (2%)", 
      main="PCA unlinked autosomes"
 )
@@ -59,22 +59,23 @@ group_samples<-read.table("haem_auto_maf_ld_pca.samples", header=FALSE)
 
 group_colors<-c(
   rep("orange", 1),
-  rep("green", 1), 
-  rep("deeppink", 48), 
+  rep("green", 1),
+  rep("grey", 1),
+  rep("deeppink", 46), 
   rep("blue", 26),
   rep("aquamarine", 21))
 
-svg("haem_auto_maf_ld_pca_2018-07-06.svg", width=7, height=7)
+svg("haem_auto_maf_ld_pca.svg", width=7, height=7)
 plot(group_evec$V3, group_evec$V4, 
      col=alpha(group_colors, 0.7), 
      cex=1.5, 
      pch=19, 
-     xlab="PC1 (22.5%)", 
-     ylab="PC2 (8.9%)", 
+     xlab="PC1 (23.1%)", 
+     ylab="PC2 (11.7%)", 
      main="PCA unlinked autosomes"
 )
 
-legend(-0.1, -0.6,
+legend(-0.1, -0.4,
        c("S. bovis", 
          "S. haematobium. (Niger)", 
          "S. h. (Tanzania, Pemba Island)", 
@@ -106,25 +107,24 @@ all_colors<-c(rep("orange", 1),
               rep("grey", 1),
               rep("brown", 1),
               rep("purple", 2),
-              rep("orange", 1),
-              rep("deeppink", 48), 
+              rep("deeppink", 46), 
               rep("blue", 26),
               rep("aquamarine", 21))
 
 
-svg("auto_maf_ld_pca_2018-07-06.svg", width=7, height=7)
+svg("auto_maf_ld_pca.svg", width=7, height=7)
 plot(all_evec$V3, all_evec$V4, 
      col=alpha(all_colors, 0.7), 
      cex=1.5, 
      pch=19, 
      xlab="PC1 (30.5%)", 
-     ylab="PC2 (18.7%)", 
+     ylab="PC2 (18.4%)", 
      main="PCA unlinked autosomes"
-     )
+)
 
 
 legend(0.1, 0.1,
-      c("S. bovis", 
+       c("S. bovis", 
          "S. curassoni",
          "S. guiniensis",
          "S. intercalatum", 
@@ -142,6 +142,43 @@ legend(0.1, 0.1,
 )
 dev.off()
 #------------------------------------------------------------------
+
+#------------------------------------------------------------------
+#plot all samples
+
+exome_evec<-read.table("exome_auto_maf_ld_pca.eigenvec", header=FALSE)
+exome_eval<-read.table("exome_auto_maf_ld_pca.eigenval", header=FALSE)
+exome_samples<-read.table("exome_auto_maf_ld_pca.samples", header=FALSE)
+
+exome_colors<-c(rep("deeppink", 46), 
+              rep("blue", 26),
+              rep("aquamarine", 21))
+
+
+svg("exome_auto_maf_ld_pca.svg", width=7, height=7)
+plot(exome_evec$V3, exome_evec$V4, 
+     col=exome_colors, 
+     cex=1.5, 
+     pch=19, 
+     xlab="PC1 (21.8.5%)", 
+     ylab="PC2 (1.8.4%)", 
+     main="PCA unlinked autosomes"
+)
+
+
+legend(0.05, 0.3,
+       c("S. haematobium. (Niger)", 
+         "S. h. (Tanzania, Pemba Island)", 
+         "S. h. (Tanzania, Ungua Island)"),
+       col=c("deeppink", "blue", "aquamarine"),
+       cex = 1,
+       lwd = 0, 
+       lty = 1,
+       pch=19
+)
+dev.off()
+#------------------------------------------------------------------
+
 
 svg("all_LD-150-5-02_pca_eigenval.svg", width=7, height=7)
 barplot(all_eval$V1, 
