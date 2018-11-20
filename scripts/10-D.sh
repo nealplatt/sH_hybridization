@@ -4,9 +4,9 @@ source activate snp_calling
 
 cd $RESULTS_DIR
 
-mkdir D
+mkdir d
 
-cd D
+cd d
 
 
 #in python
@@ -32,11 +32,8 @@ guin_pop=3
 inter_pop=4
 curs_pop=5
 marg_pop=6      
-niger_pop=list(range(9,57))                                                            
-tz_pop=list(range(58,103))
-
-bov_group_pop=[bov_pop, curs_pop, marg_pop]
-haem_group_pop=[egypt_pop + niger_pop + tz_pop]
+niger_pop=list(range(9,55))                                                            
+tz_pop=list(range(56,101))
 
 #now count the alleles in the array for each pop
 egypt_ac=gt.count_alleles(subpop=[egypt_pop])
@@ -49,20 +46,18 @@ marg_ac=gt.count_alleles(subpop=[marg_pop])
 niger_ac=gt.count_alleles(subpop=niger_pop)
 tz_ac=gt.count_alleles(subpop=tz_pop)
 
-bov_group_ac=gt.count_alleles(subpop=bov_group_pop)
-haem_group_ac=gt.count_alleles(subpop=haem_group_pop)
 
 #calculate D (genome wide)
 
 allel.average_patterson_d(niger_ac, tz_ac, bov_ac, marg_ac, blen=100)
-#D=0.5286103796332378
-#SE=0.028903900509447026
-#Z=18.288548269132928
+#D=0.5265479048065299
+#SE=0.030727384187397785
+#Z=17.136112257238054
 
 allel.average_patterson_d(niger_ac, tz_ac, curs_ac, marg_ac, blen=100)
-#D=0.3711153222658304
-#SE=0.028993585006014663
-#Z=12.799911504177329
+#D=0.36994720437937195
+#SE=0.03099805504835359
+#Z=11.934529563299847
 
 #D sliding window (niger vs. tz)----------------------------------------------
 #identify where in the array each chr starts and begins
@@ -83,8 +78,8 @@ chr5_start_idx=np.amin(np.where(callset['variants/CHROM']=="SM_V7_5"))
 chr6_start_idx=np.amin(np.where(callset['variants/CHROM']=="SM_V7_6"))
 chr7_start_idx=np.amin(np.where(callset['variants/CHROM']=="SM_V7_7"))
 
-window_len=50
-step=25
+window_len=100
+step=10
 
 chr1_d=allel.moving_patterson_d(niger_ac, tz_ac, bov_ac, marg_ac, size=window_len, step=step, start=chr1_start_idx, stop=chr1_end_idx) 
 chr2_d=allel.moving_patterson_d(niger_ac, tz_ac, bov_ac, marg_ac, size=window_len, step=step, start=chr2_start_idx, stop=chr2_end_idx) 
@@ -103,22 +98,22 @@ np.average(chr5_d[~np.isnan(chr5_d)])
 np.average(chr6_d[~np.isnan(chr6_d)]) 
 np.average(chr7_d[~np.isnan(chr7_d)]) 
 
-#chr1 0.2380922836246541
-#chr2 0.3234009169727691
-#chr3 0.17499223569086322
-#chr4 0.5171380361979426
-#chr5 0.6340332479067423
-#chr6 0.5835939510256485
-#chr7 0.28596967474351065
+#chr1 0.22506882777025594
+#chr2 0.30027278913165845
+#chr3 0.13917677032505857
+#chr4 0.4849967394476935
+#chr5 0.6468710188046242
+#chr6 0.5806791013859727
+#chr7 0.25208570383276535
 
-len(chr1_d) #780
-len(chr2_d) #437
-len(chr3_d) #392
-len(chr4_d) #466
-len(chr5_d) #283
-len(chr6_d) #279
-len(chr7_d) #132
-#2769
+len(chr1_d) #1926
+len(chr2_d) #1099
+len(chr3_d) #981
+len(chr4_d) #1166
+len(chr5_d) #698
+len(chr6_d) #694
+len(chr7_d) #328
+#6892
 
 pos=list(callset['variants/POS'])
 
@@ -189,13 +184,13 @@ chr+=list(itertools.repeat("SM_V7_6", len(chr6_d)))
 chr+=list(itertools.repeat("SM_V7_7", len(chr7_d)))
 
 
-len(chr1_d) #780
-len(chr2_d) #437
-len(chr3_d) #392
-len(chr4_d) #466
-len(chr5_d) #283
-len(chr6_d) #279
-len(chr7_d) #132
+len(chr1_d) #1962
+len(chr2_d) #1099
+len(chr3_d) #981
+len(chr4_d) #1166
+len(chr5_d) #698
+len(chr6_d) #694
+len(chr7_d) #328
 
 D_per_window=list(chr1_d) + list(chr2_d) + list(chr3_d) + list(chr4_d) + list(chr5_d) + list(chr6_d) + list(chr7_d) 
 window_pos=chr1_window_pos + chr2_window_pos + chr3_window_pos + chr4_window_pos + chr5_window_pos + chr6_window_pos + chr7_window_pos
@@ -206,7 +201,7 @@ window_d=np.column_stack((chr, cul_pos, window_pos, D_per_window))
 # remove if count is lt 10 #######
 
 #save to file
-np.savetxt("window_D_50snp-25snp_autosomal.csv", window_d, fmt='%s', delimiter=",")
+np.savetxt("window_D_100snp-10snp_autosomal.csv", window_d, fmt='%s', delimiter=",")
 
 #now plot this in R so that each chromosome has a different color
 
@@ -244,6 +239,61 @@ np.savetxt("window_D_50snp-25snp_autosomal.csv", window_d, fmt='%s', delimiter="
 #chr+=list(itertools.repeat("SM_V7_5", len(chr5_cul_pos)))
 #chr+=list(itertools.repeat("SM_V7_6", len(chr6_cul_pos)))
 chr+=list(itertools.repeat("SM_V7_7", len(chr7_cul_pos)))
+
+########################################################################
+import allel
+import numpy as np  
+import sys
+import itertools
+
+#read in the vcf data
+callset=allel.read_vcf('../build_snp_panel/auto_maf.vcf', log=sys.stdout)
+gt=allel.GenotypeArray(callset['calldata/GT'])
+
+#get allele counts for each locus
+ac=gt.count_alleles()
+
+#designate the population (index) in the allele count array
+egypt_pop=0 
+bov_pop=1
+mat_pop=[2,7,8]
+guin_pop=3
+inter_pop=4
+curs_pop=5
+marg_pop=6      
+niger_pop=list(range(9,54))                                                            
+tz_pop=list(range(55,102))
+
+#now count the alleles in the array for each pop
+egypt_ac=gt.count_alleles(subpop=[egypt_pop])
+bov_ac=gt.count_alleles(subpop=[bov_pop])
+mat_ac=gt.count_alleles(subpop=mat_pop)
+inter_ac=gt.count_alleles(subpop=[inter_pop])
+curs_ac=gt.count_alleles(subpop=[curs_pop])
+marg_ac=gt.count_alleles(subpop=[marg_pop])
+niger_ac=gt.count_alleles(subpop=niger_pop)
+tz_ac=gt.count_alleles(subpop=tz_pop)
+
+#calculate D (genome wide)
+allel.average_patterson_d(niger_ac, tz_ac, bov_ac, marg_ac, blen=100)
+#D  = 0.5267468007511834
+#SE = 0.03071556684389132
+#Z  = 17.149180525572564
+
+allel.average_patterson_d(niger_ac, tz_ac, curs_ac, marg_ac, blen=10)
+#D  = 0.37006955593977653
+#SE = 0.031013066311292727
+#Z  = 11.932698051370169
+
+len(allel.average_patterson_d(niger_ac, tz_ac, bov_ac, marg_ac, blen=100))[4].tolist())
+#n = 699
+
+
+
+#########################
+# CAN PROBABLY TRASH SOON
+###########################
+
 
 
 #ERR103048	bov
@@ -355,54 +405,4 @@ vcftools \
     >marg_fixed.freq
 
 paste niger_fixed.freq tz_fixed.freq bov_fixed.freq marg_fixed.freq | cut -f1,2,5,11,17,23 >fixed_freqs.out
-
-
-import allel
-import numpy as np  
-import sys
-import itertools
-
-#read in the vcf data
-callset=allel.read_vcf('header.vcf', log=sys.stdout)
-gt=allel.GenotypeArray(callset['calldata/GT'])
-
-#get allele counts for each locus
-ac=gt.count_alleles()
-
-niger_pop=[0,1,2,3]
-tz_pop=[4,5,6,7]
-bov_pop=8
-marg_pop=9
-
-#designate the population (index) in the allele count array
-egypt_pop=[0,1,9] 
-bov_pop=2
-mat_pop=[3,7,8]
-inter_pop=4
-curs_pop=5
-marg_pop=6      
-niger_pop=list(range(10,58))                                                            
-tz_pop=list(range(58,104))
-
-bov_group_pop=[bov_pop, curs_pop, marg_pop]
-haem_group_pop=egypt_pop + niger_pop + tz_pop
-
-#now count the alleles in the array for each pop
-egypt_ac=gt.count_alleles(subpop=egypt_pop)
-bov_ac=gt.count_alleles(subpop=[bov_pop])
-mat_ac=gt.count_alleles(subpop=mat_pop)
-inter_ac=gt.count_alleles(subpop=[inter_pop])
-curs_ac=gt.count_alleles(subpop=[curs_pop])
-marg_ac=gt.count_alleles(subpop=[marg_pop])
-niger_ac=gt.count_alleles(subpop=niger_pop)
-tz_ac=gt.count_alleles(subpop=tz_pop)
-
-bov_group_ac=gt.count_alleles(subpop=bov_group_pop)
-haem_group_ac=gt.count_alleles(subpop=haem_group_pop)
-
-#calculate D (genome wide)
-
-allel.average_patterson_d(niger_ac, tz_ac, bov_ac, marg_ac, blen=10)
-
-
 

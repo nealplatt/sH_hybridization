@@ -31,6 +31,11 @@ vcftools \
 #After filtering, kept 93 out of 93 Individuals
 #After filtering, kept 35241 out of a possible 370770 Sites
 
+#make pop file
+cat niger.list tz.list >pop
+
+#also get list of SNP coordinates for R figure
+grep -v "#" tz-ne_maf05_bi.vcf | cut -f1,2 >sites
 
 
 #converted to bayescan format wtih pgd spider on local computer
@@ -54,12 +59,12 @@ for CHAIN in $(seq -w 1 100); do
     CMD="../../BayeScan2.1/binaries/BayeScan2.1_linux64bits \
         ../../tz-ne_maf05_bi.bayescan \
         -threads 12 \
-        -o tz-ne_maf05_bi_bayescan_pr10_pi10k_bin50K_ngen50_npb50_thin20_chain$CHAIN \
+        -o tz-ne_maf05_bi_bayescan_pr10_pi10k_bin25k_ngen100k_npb50_thin20_chain$CHAIN \
         -pr_odds 10 \
         -pilot 10000 \
-        -burn 50000 \
+        -burn 25000 \
         -nbp 50 \
-        -n 50000 \
+        -n 100000 \
         -thin 20"
 
     JOB_QSUB=$QSUB" -N $JID -o $LOG -pe mpi 12"

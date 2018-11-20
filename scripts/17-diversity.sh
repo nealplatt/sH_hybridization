@@ -46,3 +46,36 @@ vcftools \
 
 #plot in R
 
+vcftools \
+    --vcf ../beagle/auto_beagle.vcf \
+    --maf 0.05 \
+    --keep niger.list \
+    --keep tz.list \
+    --stdout \
+    --recode \
+    >maf05.vcf
+
+grep -v "#" maf05.vcf | cut -f3 >maf05.list
+
+vcftools \
+    --vcf ../beagle/auto_beagle.vcf \
+    --snps maf05.list \
+    --keep niger.list \
+    --chr SM_V7_4 \
+    --window-pi 10000 \
+    --window-pi-step 2500 \
+    --stdout \
+    >ne_SM_V7_4_maf05.window_pi
+
+vcftools \
+    --vcf ../beagle/auto_beagle.vcf \
+    --snps maf05.list \
+    --keep tz.list \
+    --chr SM_V7_4 \
+    --window-pi 10000 \
+    --window-pi-step 2500 \
+    --stdout \
+    >tz_SM_V7_4_maf05.window_pi
+
+paste ne_SM_V7_4_maf05.window_pi tz_SM_V7_4_maf05.window_pi >window.pi
+

@@ -1,6 +1,6 @@
 #clean and process reads to the haematobium genome
 source /master/nplatt/schisto_hybridization/scripts/set_env.sh
-
+source activate snp_calling
 
 #-------------------------------------------------------------------------------
 #get a set of intervals that contain the probes:
@@ -27,26 +27,54 @@ awk '{print $1":"$2"-"$3}' schHae_v1_probes.bed >schHae_v1_probes.intervals
 # this gives us 52,237 intervals that will be analyzed
 
 #-------------------------------------------------------------------------------
-#-------------------------------------------------------------------------------
-#-------------------------------------------------------------------------------
-#-------------------------------------------------------------------------------
 
-mkdir -p $SNP_DIR/r1
 
-cd $SNP_DIR/r1
+mkdir -p $SNP_DIR
 
-mkdir hc db geno filter recal
+cd /master/nplatt/schisto_hybridization/results/call_snps
+
+mkdir hc db geno filter
 
 #CALL SNPS AT REF_PANEL LOCI IN EACH OF THE SAMPLES (SH AND OUTGROUP)
 for SAMPLE in "${SAMPLES[@]}"; do
 
-    BAM=$MAP_DIR/$SAMPLE"_processed.bam"
+for SAMPLE in ERR037800 ERR084970 ERR103048 ERR103051 ERR119612 ERR119613 \
+ERR119622 ERR119623 ERR310937 ERR310940 ERR539850 ERR539851 ERR539852 ERR539853 \
+ERR539854 ERR539855 ERR539856 ERR539857 Sm.BR_0447.1 Sm.BR_1278.1 Sm.BR_2039.1 SRR433865; do
+
+
+for SAMPLE in \
+    SRR433865 \
+    Sh.NE_Dai-051.1 \
+    Sh.NE_DaiCP-233.1 \
+    Sh.NE_DaiCP-276.1 \
+    Sh.NE_Kar-241.1 \
+    Sh.NE_Lata-294.1 \
+    Sh.NE_LibTB-010.1 \
+    Sh.NE_LibTB-028.1 \
+    Sh.NE_NG-06.2 \
+    Sh.NE_Seb-076.1 \
+    Sh.TZ_PEM0079.1 \
+    Sh.TZ_PEM0089.2 \
+    Sh.TZ_PEM0094.2 \
+    Sh.TZ_PEM0130.1 \
+    Sh.TZ_UNG0076.1 \
+    Sh.TZ_UNG0099.1 \
+    Sh.TZ_UNG0111.1 \
+    Sh.TZ_UNG0117.1 \
+    Sh.TZ_UNG0121.1 \
+    Sh.TZ_UNG0125.3 \
+    Sh.TZ_UNG0129.2 \
+    Sh.TZ_UNG0137.3 \
+    Sh.TZ_UNG0142.2; do
+
+    BAM=$MAP_DIR/exome/$SAMPLE"_processed.bam"
 
     echo"" >$SCRIPTS_DIR/$SAMPLE"_hc.sh"
 
     ############ HC
-    JID=$SAMPLE"_hc_bsqr-1"
-    LOG=$LOGS_DIR/$JID".log"
+    JID="hc_"$SAMPLE
+    LOG=$JID".log"
     SCRIPT=$SCRIPTS_DIR/$JID".sh"
     THREADS=12
     ENV="SINGULARITY"     
@@ -75,9 +103,7 @@ done
 #WAIT UNTIL ALL JOBS ARE FINISHED.
 
 #-------------------------------------------------------------------------------
-#-------------------------------------------------------------------------------
-#-------------------------------------------------------------------------------
-#-------------------------------------------------------------------------------
+
 
 #create list of samples
 ls hc/*.vcf >samples.list

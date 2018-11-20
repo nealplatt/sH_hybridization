@@ -24,8 +24,8 @@ WORK_DIR=/master/nplatt/schisto_hybridization
 RESULTS_DIR=$WORK_DIR/results
 LOGS_DIR=$RESULTS_DIR/logs
 SCRIPTS_DIR=$RESULTS_DIR/scripts
-FILTER_DIR=$RESULTS_DIR/processed_reads/filtered_reads
-MAP_DIR=$RESULTS_DIR/processed_reads/sh_mapped_reads
+FILTER_DIR=$RESULTS_DIR/processed_reads
+MAP_DIR=$RESULTS_DIR/map_reads
 SNP_DIR=$RESULTS_DIR/call_snps
 SNP_PANEL_DIR=$RESULTS_DIR/snp_panel
 
@@ -100,6 +100,42 @@ GENOME_LINKS=(
     ["MAT"]="ftp://ftp.sanger.ac.uk/pub/project/pathogens/HGI/Schistosoma_mattheei_v1.0_4.fa.gz"
     )
 
+
+EXOME_SAMPLES=(    "Sh.NE_Dai-002.1"       "Sh.NE_Dai-010.1" 
+            "Sh.NE_Dai-013.3"       "Sh.NE_Dai-031.1"       "Sh.NE_Dai-033.1"
+            "Sh.NE_Dai-044.1"       "Sh.NE_Dai-045.1"       "Sh.NE_Dai-051.1"   
+            "Sh.NE_Dai-074.1"       "Sh.NE_Dai-146.1"       "Sh.NE_DaiCP-233.1"
+            "Sh.NE_DaiCP-276.1"     "Sh.NE_DaiCP-277.2"     "Sh.NE_Doki-029.1" 
+            "Sh.NE_Kar-001.1"       "Sh.NE_Kar-002.1"       "Sh.NE_Kar-076.1" 
+            "Sh.NE_Kar-096.2"       "Sh.NE_Kar-241.1"       "Sh.NE_Kar-241.2" 
+            "Sh.NE_Kar-281.1"       "Sh.NE_Kar-37.2"        "Sh.NE_Lata-007.3" 
+            "Sh.NE_Lata-033.1"      "Sh.NE_Lata-078.1"      "Sh.NE_Lata-253.1" 
+            "Sh.NE_Lata-275.2"      "Sh.NE_Lata-293.1"      "Sh.NE_Lata-294.1" 
+            "Sh.NE_LibTB-009.2"     "Sh.NE_LibTB-010.1"     "Sh.NE_LibTB-022.1" 
+            "Sh.NE_LibTB-028.1"     "Sh.NE_LibTB-031.1"     "Sh.NE_NG-011.1" 
+            "Sh.NE_NG-06.2"         "Sh.NE_NG-089.1"        "Sh.NE_NG-236.1" 
+            "Sh.NE_Seb-076.1"       "Sh.NE_Seb-078.2"       "Sh.NE_Seb-081.2" 
+            "Sh.NE_Tiag-272.1"      "Sh.NE_YK-029.2"        "Sh.NE_YK-069.1" 
+            "Sh.NE_YK-099.2"        "Sh.NE_YK-248.2"        "Sh.NE_Youri-069.2" 
+            "Sh.NE_Youri-091.3"     "Sh.TZ_PEM0063.1"       "Sh.TZ_PEM0075.1" 
+            "Sh.TZ_PEM0076.1"       "Sh.TZ_PEM0079.1"       "Sh.TZ_PEM0089.2" 
+            "Sh.TZ_PEM0094.2"       "Sh.TZ_PEM0099.2"       "Sh.TZ_PEM0103.1" 
+            "Sh.TZ_PEM0104.1"       "Sh.TZ_PEM0106.2"       "Sh.TZ_PEM0108.1" 
+            "Sh.TZ_PEM0110.1"       "Sh.TZ_PEM0114.3"       "Sh.TZ_PEM0115.4" 
+            "Sh.TZ_PEM0120.1"       "Sh.TZ_PEM0125.1"       "Sh.TZ_PEM0126.1" 
+            "Sh.TZ_PEM0127.1"       "Sh.TZ_PEM0128.1"       "Sh.TZ_PEM0130.1" 
+            "Sh.TZ_PEM0133.1"       "Sh.TZ_PEM0139.2"       "Sh.TZ_PEM0145.3" 
+            "Sh.TZ_PEM0154.1"       "Sh.TZ_PEM0157.3"       "Sh.TZ_PEM0166.1" 
+            "Sh.TZ_PEM0171.1"       "Sh.TZ_UNG0006.1"       "Sh.TZ_UNG0038.1"  
+            "Sh.TZ_UNG0076.1"       "Sh.TZ_UNG0077.1"       "Sh.TZ_UNG0078.1" 
+            "Sh.TZ_UNG0087.2"       "Sh.TZ_UNG0089.3"       "Sh.TZ_UNG0092.3" 
+            "Sh.TZ_UNG0099.1"       "Sh.TZ_UNG0102.1"       "Sh.TZ_UNG0111.1" 
+            "Sh.TZ_UNG0117.1"       "Sh.TZ_UNG0121.1"       "Sh.TZ_UNG0125.3" 
+            "Sh.TZ_UNG0127.1"       "Sh.TZ_UNG0129.2"       "Sh.TZ_UNG0134.1" 
+            "Sh.TZ_UNG0137.3"       "Sh.TZ_UNG0139.1"       "Sh.TZ_UNG0142.2" 
+            "Sh.TZ_UNG0146.1"       
+        )
+
 SAMPLES=(   "Sm.BR_0447.1"          "Sm.BR_1278.1"          "Sm.BR_2039.1"      
             "ERR103048"             "ERR119622"             "ERR119623" 
             "ERR310937"             "SRR433865"             "ERR037800"
@@ -148,6 +184,21 @@ SRA_SAMPLES=(   "ERR119622" "ERR103048" "ERR119622" "ERR310937"
                 "ERR539850" "ERR539851" "ERR539852" "ERR539853" 
                 "ERR539854" "ERR539855" "ERR539856" "ERR539857"
             )
+
+WGRS_SAMPLES=(  "Sh_Dai_044_1"      "Sh_DaiCP_276_1"    "Sh_Kar_001_1"
+                "Sh_Kar_37_2"       "Sh_Lata_078_1"     "Sh_PEM_0103_1"
+                "Sh_PEM_0104_1"     "Sh_PEM_0130_1"     "Sh_Tiag_272_1"
+                "Sh_UNG_0038_1"     "Sh_UNG_0099_1"     "Sh_UNG_0121_1"
+            ) 
+
+WGRS_RG_INDEX=( ["Sh_Dai_044_1"]="TGACCA"           ["Sh_DaiCP_276_1"]="ACAGTG" 
+                ["Sh_Kar_001_1"]="CGATGT"           ["Sh_Kar_37_2"]="GCCAAT"
+                ["Sh_Lata_078_1"]="CAGATC"          ["Sh_PEM_0103_1"]="ATCACG"
+                ["Sh_PEM_0104_1"]="TTAGGC"          ["Sh_PEM_0130_1"]="ACTTGA"
+                ["Sh_Tiag_272_1"]="CTTGTA"          ["Sh_UNG_0038_1"]="GATCAG"
+                ["Sh_UNG_0099_1"]="TAGCTT"          ["Sh_UNG_0121_1"]="GGCTAC"
+                )
+
 
 RG_CELL=(  ["ERR119622"]="4"                   ["ERR103048"]="3" 
            ["ERR119623"]="5"                   ["Sm.BR_1278.1"]="C3E5HACXX" 

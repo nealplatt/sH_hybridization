@@ -1,22 +1,15 @@
 #clean and process reads to the haematobium genome
 source /master/nplatt/schisto_hybridization/scripts/set_env.sh
 
-##DOWNLOAD SRA DATA
-#cd $SEQ_DIR
-#for SRA_ACCESSION in ${SRA_SAMPLES[@]}; do
-#    ${ENVIRONMENTS["SINGULARITY"]} fastq-dump --split-files --gzip $SRA_ACCESSION &
-#done
-
-#wait
-
-#rename _1.fastq.gz _R1.fastq.gz *_1.fastq.gz
-#rename _2.fastq.gz _R2.fastq.gz *_2.fastq.gz
+FILTER_DIR=$RESULTS_DIR/processed_reads/exome
+MAP_DIR=$RESULTS_DIR/map_reads/exome
 
 #START FILTERING/MAPPING PROCESS
-cd $RESULTS_DIR
-for SAMPLE in "${SAMPLES[@]}"; do
+cd $FILTER_DIR
 
-    echo"" >$SAMPLE"_process.sh"
+mkdir -p $FILTER_DIR $MAP_DIR
+
+for SAMPLE in "${SAMPLES[@]}"; do
 
     ############ FILTER_READS
     JID=$SAMPLE"_filter"
@@ -26,7 +19,7 @@ for SAMPLE in "${SAMPLES[@]}"; do
     HOLD="-hold_jid "$SAMPLE"_R1_map,"$SAMPLE"_R2_map"
 
     R1=$SEQ_DIR/$SAMPLE"_R1.fastq.gz"
-    R2=$SEQ_DIR/$SAMPLE"_R1.fastq.gz"
+    R2=$SEQ_DIR/$SAMPLE"_R2.fastq.gz"
     PE_R1=$FILTER_DIR/$SAMPLE"_filtered_paired_R1.fastq.gz"
     PE_R2=$FILTER_DIR/$SAMPLE"_filtered_paired_R2.fastq.gz"
     SE_R1=$FILTER_DIR/$SAMPLE"_filtered_unpaired_R1.fastq.gz"
@@ -49,8 +42,7 @@ for SAMPLE in "${SAMPLES[@]}"; do
       
     JOB_QSUB=$QSUB" -N $JID -o $LOG -pe mpi $THREADS $HOLD"
 
-    echo $CMD | $JOB_QSUB
-    echo $CMD >>$SAMPLE"_process.sh"
+    #echo $CMD | $JOB_QSUB
       
     ############ MAP R1 and R2 READS
     for READ in R1 R2; do
@@ -68,8 +60,7 @@ for SAMPLE in "${SAMPLES[@]}"; do
 
         CMD="${ENVIRONMENTS[$ENV]} bwa aln -t 12 -f $SAI $GENOME $FQ"
             
-        echo $CMD | $JOB_QSUB
-        echo $CMD >>$SAMPLE"_process.sh"
+        #echo $CMD | $JOB_QSUB
     done
 
     ############ MAP RX READS
@@ -87,8 +78,7 @@ for SAMPLE in "${SAMPLES[@]}"; do
 
     CMD="${ENVIRONMENTS[$ENV]} bwa aln -t 12 -f $SAI $GENOME $FQ"
             
-    echo $CMD | $JOB_QSUB
-    echo $CMD >>$SAMPLE"_process.sh"
+    #echo $CMD | $JOB_QSUB
 
     ############ SAMPE
     JID=$SAMPLE"_sampe"
@@ -104,11 +94,10 @@ for SAMPLE in "${SAMPLES[@]}"; do
     PE_2=$FILTER_DIR/$SAMPLE"_filtered_paired_R2.fastq.gz"
     SAMPE_BAM=$MAP_DIR/$SAMPLE"_sampe.bam"
     
-    CMD="${ENVIRONMENTS[$ENV]} bwa sampe $GENOME $SAI_1 $SAI_2 $PE_1 $PE_2 | samtools view -Sb -F 4 - >$SAMPE_BAM"      
+    CMD="${ENVIRONMENTS[$ENV]} bwa sampe $GENOME $SAI_1 $SAI_2 $PE_1 $PE_2 | samtools view -Sb - >$SAMPE_BAM"      
     JOB_QSUB=$QSUB" -N $JID -o $LOG -pe mpi $THREADS $HOLD"
 
-    echo $CMD | $JOB_QSUB
-    echo $CMD >>$SAMPLE"_process.sh"
+    #echo $CMD | $JOB_QSUB
 
     ############ SAMSE
     JID=$SAMPLE"_samse"
@@ -122,11 +111,10 @@ for SAMPLE in "${SAMPLES[@]}"; do
     PE_X=$FILTER_DIR/$SAMPLE"_filtered_unpaired_RX.fastq.gz"
     SAMSE_BAM=$MAP_DIR/$SAMPLE"_samse.bam"
     
-    CMD="${ENVIRONMENTS[$ENV]} bwa samse $GENOME $SAI_X $PE_X | samtools view -Sb -F 4 - >$SAMSE_BAM"      
+    CMD="${ENVIRONMENTS[$ENV]} bwa samse $GENOME $SAI_X $PE_X | samtools view -Sb - >$SAMSE_BAM"      
     JOB_QSUB=$QSUB" -N $JID -o $LOG -pe mpi $THREADS $HOLD"
 
-    echo $CMD | $JOB_QSUB
-    echo $CMD >>$SAMPLE"_process.sh"
+    #echo $CMD | $JOB_QSUB
 
     ############ SORT SAMPE
     JID=$SAMPLE"_sampe_sort"
@@ -138,11 +126,10 @@ for SAMPLE in "${SAMPLES[@]}"; do
     SAMPE_BAM=$MAP_DIR/$SAMPLE"_sampe.bam"
     SORTED_SAMPE=$MAP_DIR/$SAMPLE"_sorted_sampe.bam"
     
-    CMD="${ENVIRONMENTS[$ENV]}  samtools sort --threads $THREADS -o $SORTED_SAMPE $SAMPE_BAM"      
+    CMD="${ENVIRONMENTS[$ENV]} samtools sort --threads $THREADS -o $SORTED_SAMPE $SAMPE_BAM"      
     JOB_QSUB="$QSUB -N $JID -o $LOG -pe mpi $THREADS $HOLD"
 
     echo $CMD | $JOB_QSUB
-    echo $CMD >>$SAMPLE"_process.sh"
 
     ############ SORT SAMSE
     JID=$SAMPLE"_samse_sort"
@@ -154,11 +141,10 @@ for SAMPLE in "${SAMPLES[@]}"; do
     SAMSE_BAM=$MAP_DIR/$SAMPLE"_samse.bam"
     SORTED_SAMSE=$MAP_DIR/$SAMPLE"_sorted_samse.bam"
     
-    CMD="${ENVIRONMENTS[$ENV]} samtools sort --threads $THREADS -o $SORTED_SAMSE $SAMSE_BAM "      
+    CMD="${ENVIRONMENTS[$ENV]} samtools sort --threads $THREADS -o $SORTED_SAMSE $SAMSE_BAM"      
     JOB_QSUB=$QSUB" -N $JID -o $LOG -pe mpi $THREADS $HOLD"
 
     echo $CMD | $JOB_QSUB
-    echo $CMD >>$SAMPLE"_process.sh"
 
     ############ MERGE SAMSE AND SAMSE
     JID=$SAMPLE"_merge"
@@ -176,16 +162,47 @@ for SAMPLE in "${SAMPLES[@]}"; do
     JOB_QSUB=$QSUB" -N $JID -o $LOG -pe mpi $THREADS $HOLD"
 
     echo $CMD | $JOB_QSUB
-    echo $CMD >>$SAMPLE"_process.sh"
+
+    ############ FLAGSTAT
+    JID=$SAMPLE"_flagstat"
+    LOG=$LOGS_DIR/$JID".log"
+    THREADS=12
+    ENV="CONDA_SNPS"
+    HOLD="-hold_jid "$SAMPLE"_merge"
+
+    MERGED_BAM=$MAP_DIR/$SAMPLE".bam"    
+    FLAGSTAT=$MAP_DIR/$SAMPLE".flagstat"
+
+    CMD="${ENVIRONMENTS[$ENV]} samtools flagstat $MERGED_BAM >$FLAGSTAT"      
+    
+    JOB_QSUB=$QSUB" -N $JID -o $LOG -pe mpi $THREADS $HOLD"
+
+    echo $CMD | $JOB_QSUB
+
+    ############ FILTER UNMAPPED
+    JID=$SAMPLE"_FILTER"
+    LOG=$LOGS_DIR/$JID".log"
+    THREADS=12
+    ENV="CONDA_SNPS"
+    HOLD="-hold_jid $SAMPLE"_merge
+
+    MERGED_BAM=$MAP_DIR/$SAMPLE".bam"    
+    FILTERED_BAM=$MAP_DIR/$SAMPLE"_filtered.bam" 
+
+    CMD="${ENVIRONMENTS[$ENV]} samtools view -@ 12 -b -F 4 $MERGED_BAM >$FILTERED_BAM"      
+    
+    JOB_QSUB=$QSUB" -N $JID -o $LOG -pe mpi $THREADS $HOLD"
+
+    echo $CMD | $JOB_QSUB
 
     ############ ADD READ GROUP INFO
     JID=$SAMPLE"_add_rgs"
     LOG=$LOGS_DIR/$JID".log"
     THREADS=12
     ENV="SINGULARITY"
-    HOLD="-hold_jid "$SAMPLE"_merge"
+    HOLD="-hold_jid "$SAMPLE"_FILTER"
     
-    MERGED_BAM=$MAP_DIR/$SAMPLE".bam"
+    FILTERED_BAM=$MAP_DIR/$SAMPLE"_filtered.bam" 
     RG_BAM=$MAP_DIR/$SAMPLE"_rg.bam"        
 
     LANE=${RG_LANE[$SAMPLE]}
@@ -194,7 +211,7 @@ for SAMPLE in "${SAMPLES[@]}"; do
 
     CMD="${ENVIRONMENTS[$ENV]} \
             gatk AddOrReplaceReadGroups \
-                --INPUT=$MERGED_BAM \
+                --INPUT=$FILTERED_BAM \
                 --OUTPUT=$RG_BAM \
                 --RGID=$CELL.$LANE \
                 --RGLB=library1 \
@@ -204,7 +221,6 @@ for SAMPLE in "${SAMPLES[@]}"; do
     JOB_QSUB=$QSUB" -N $JID -o $LOG -pe mpi $THREADS $HOLD"
 
     echo $CMD | $JOB_QSUB
-    echo $CMD >>$SAMPLE"_process.sh"
 
     ############ MARK DUPLICATE READS
     JID=$SAMPLE"_mark_dups"
@@ -227,7 +243,6 @@ for SAMPLE in "${SAMPLES[@]}"; do
     JOB_QSUB=$QSUB" -N $JID -o $LOG -pe mpi $THREADS $HOLD"
 
     echo $CMD | $JOB_QSUB
-    echo $CMD >>$SAMPLE"_process.sh"
 
     ############ INDEX BAM FILE
     JID=$SAMPLE"_bam_index"
@@ -243,7 +258,6 @@ for SAMPLE in "${SAMPLES[@]}"; do
     JOB_QSUB=$QSUB" -N $JID -o $LOG -pe mpi $THREADS $HOLD"
 
     echo $CMD | $JOB_QSUB
-    echo $CMD >>$SAMPLE"_process.sh"
    
 done
 
@@ -258,7 +272,7 @@ for SAMPLE in "${SAMPLES[@]}"; do
     rm $SAMPLE"_samse.bam"
     rm $SAMPLE"_sorted_sampe.bam"
     rm $SAMPLE"_sorted_samse.bam"
-    rm $SAMPLE"__noDupes.metrics"
+    rm $SAMPLE"_noDupes.metrics"
 done
 
 mkdir metrics

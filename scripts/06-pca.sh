@@ -90,5 +90,31 @@ grep "#" haemOnly_auto_maf_ld.vcf  \
     | sed 's/\t/\n/g' \
     >haemOnly_auto_maf_ld_pca.samples
 
+################################################################################
+#4) EXOME_ONLY (excludes haem from SRA)
+vcftools \
+    --vcf haemOnly_auto_maf_ld.vcf \
+    --remove-indv ERR037800 \
+    --recode \
+    --recode-INFO-all \
+    --stdout \
+    >exome_auto_maf_ld.vcf
+    #After filtering, kept 94 out of 96 Individuals
+    #After filtering, kept 5882 out of a possible 5882 Sites
+
+plink \
+    --vcf exome_auto_maf_ld.vcf \
+    --pca \
+    --allow-extra-chr \
+    --out exome_auto_maf_ld_pca
+
+
+grep "#" exome_auto_maf_ld.vcf  \
+    | tail -n1 \
+    | cut -f10- \
+    | sed 's/\t/\n/g' \
+    >exome_auto_maf_ld_pca.samples
+
+
 # PLOT IN R (pca.R)
 #R $SCRIPTS_DIR/R/pca.R

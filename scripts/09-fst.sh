@@ -160,3 +160,15 @@ np.savetxt("wc_fst_250kb_50kb_autosomal.csv", wc_fst, fmt='%s', delimiter=",")
 
 #now plot this in R so that each chromosome has a different color
 
+#####################################################################
+vcftools \
+    --vcf ../build_snp_panel/auto_maf.vcf \
+    --weir-fst-pop ../niger.list \
+    --weir-fst-pop ../tz.list \
+    --fst-window-size 500000 \
+    --fst-window-step 50000 \
+    --stdout \
+    | sort -k1,1 \
+    >ne_vs_tz_fst_w500k_s50k.tsv
+
+
