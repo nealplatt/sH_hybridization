@@ -1,11 +1,27 @@
-source /master/nplatt/schisto_hybridization/scripts/set_env.sh
+#!/bin/bash
+#
+# SNP calling in S. haemotobium hybridzone(s).
+# NPlatt
+# Neal.platt@gmail.com
+
+# 12-snp_density.sh - calculate the number of snps in various windows (as 
+#        defined by bedtools makewindows
+
+# Uses a conda to manage the enviroment
+
+#Set up the environmentsource /master/nplatt/schisto_hybridization/scripts/set_env.sh
 source activate snp_calling
 
-mkdir $RESULTS_DIR/admixture
-cd $RESULTS_DIR/admixture
+mkdir $RESULTS_DIR/snp_density
+cd $RESULTS_DIR/snp_density
 
 #make windows
-bedtools makewindows -g ../../data/genome/Smansoni_v7.fa.fai -w 100000 -s 100000 | grep '\<SM_V7_.\>' >sman_10k-10k.windows
+bedtools makewindows \
+    -g ../../data/genome/Smansoni_v7.fa.fai \
+    -w 100000 \
+    -s 100000 \
+    | grep '\<SM_V7_.\>' \
+    >sman_100k-100k.windows
 
 #get sample files
 cp ../niger.list .
