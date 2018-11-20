@@ -1,0 +1,238 @@
+#prep array to split genome
+NUMBERS=list(range(1, CONTIG_CHUNKS))
+NUMS_2D=[]
+for NUM in NUMBERS:
+    NUMS_2D.append("%02d" % NUM)
+
+#get genomes - sman_v7 ftp://ftp.sanger.ac.uk/pub/project/pathogens/Schistosoma/mansoni/v7/sequence/Smansoni_v7.fa.gz
+
+#-------------------------------------------------------------------------------
+# Filter reads
+#
+rule filter_reads:
+    input:
+        R1 = SEQ_DIR + "{sample}_R1.fastq.gz",
+        R2 = SEQ_DIR + "{sample}_R2.fastq.gz"
+    output:
+        R1_PE = FILTER_READS_DIR + "{sample}_filtered_paired_R1.fastq.gz",
+        R1_SE = temp(FILTER_READS_DIR + "{sample}_filtered_unpaired_R1.fastq.gz"),
+        R2_PE = FILTER_READS_DIR + "{sample}_filtered_paired_R2.fastq.gz",
+        R2_SE = temp(FILTER_READS_DIR + "{sample}_filtered_unpaired_R2.fastq.gz"),
+        RX = FILTER_READS_DIR + "{sample}_filtered_unpaired_RX.fastq.gz"
+    threads:
+        12
+    conda:
+        CONFIG_DIR + "snp_calling.yaml"
+    log:
+        LOG_DIR + "{sample}.filter_reads.log"    
+    shell:
+        """
+        trimmomatic \
+            PE \
+            -threads {threads} \
+            -phred33 \
+            {input.R1} \
+            {input.R2} \
+            {output.R1_PE} \
+            {output.R1_SE} \
+            {output.R2_PE} \
+            {output.R2_SE} \
+            LEADING:10 \
+            TRAILING:10 \
+            SLIDINGWINDOW:4:15 \
+            MINLEN:36
+
+        zcat {output.R1_SE} {output.R2_SE} | gzip >{output.RX} 
+        """
+
+#-------------------------------------------------------------------------------
+# MAPPING FILTERED READS TO THE GENOME
+#
+rule index_genome:
+    input:
+        GENOME_DIR + "GCA_000699445.1_SchHae_1.0_genomic.fna"
+    output:
+        expand(GENOME_DIR + "schHae_v1.fa{ext}", ext=["", ".pac", ".ann", ".amb", ".bwt", ".sa"])
+    conda:
+        CONFIG_DIR + "snp_calling.yaml"
+    log:
+        LOG_DIR + "index_genome.log"
+    params:
+        SOFT_LINK = GENOME
+    shell:
+        """
+        ln -s {input} {params.SOFT_LINK}
+                
+        bwa index {params.SOFT_LINK}
+        """
+
+rule bwa_map_R1:
+    input:
+        rules.index_genome.output,
+        PE_R1 = rules.filter_reads.output.R1_PE,
+        REFERENCE = GENOME
+    output:
+        temp(MAP_DIR + "{sample}_R1.sai")
+    conda:
+        CONFIG_DIR + "snp_calling.yaml"
+    threads:
+        12
+    log:
+        LOG_DIR + "{sample}.bwa_map_R1.log"
+    shell:
+        """
+        bwa aln -t {threads} -f {output} {input.REFERENCE} {input.PE_R1}
+        """
+
+rule bwa_map_R2:
+    input:
+        rules.index_genome.output,
+        PE_R2 = rules.filter_reads.output.R2_PE,
+        REFERENCE = GENOME
+    output:
+        temp(MAP_DIR + "{sample}_R2.sai")
+    conda:
+        CONFIG_DIR + "snp_calling.yaml"
+    threads:
+        12
+    log:
+        LOG_DIR + "{sample}.bwa_map_R2.log"
+    shell:
+        """
+        bwa aln -t {threads} -f {output} {input.REFERENCE} {input.PE_R2}
+	    """
+
+rule bwa_map_RX:
+    input:
+        rules.index_genome.output,
+        SE_RX = rules.filter_reads.output.RX,
+        REFERENCE = GENOME
+    output:
+        temp(MAP_DIR + "{sample}_RX.sai")
+    conda:
+        CONFIG_DIR + "snp_calling.yaml"
+    threads:
+        12
+    log:
+         LOG_DIR + "{sample}.bwa_map_RX.log"
+    shell:
+        """
+        bwa aln -t {threads} -f {output} {input.REFERENCE} {input.SE_RX}
+        """
+
+rule bwa_sampe:
+    input:
+        REFERENCE = GENOME,
+        SAI_R1 = rules.bwa_map_R1.output,
+        SAI_R2 = rules.bwa_map_R2.output,
+        PE_R1 = rules.filter_reads.output.R1_PE,
+        PE_R2 = rules.filter_reads.output.R2_PE,
+    output:
+        temp(MAP_DIR + "{sample}_samPE.bam")
+    conda:
+        CONFIG_DIR + "snp_calling.yaml"
+    threads:
+        12
+    log:
+        LOG_DIR + "{sample}.bwa_sampe.log"
+    shell:
+        """
+        bwa sampe {input} | samtools view -Sb -F 4 - >{output}       
+        """
+
+rule bwa_samse:
+    input:
+        REFERENCE = GENOME,
+        SAI_RX = rules.bwa_map_RX.output,
+        SE_RX = rules.filter_reads.output.RX
+    output:
+        temp(MAP_DIR + "{sample}_samSE.bam")
+    conda:
+        CONFIG_DIR + "snp_calling.yaml"
+    threads:
+        12
+    log:
+        LOG_DIR + "{sample}.bwa_samse.log"
+    shell:
+        """
+        bwa samse {input} | samtools view -Sb -F 4 - >{output}       
+        """
+
+rule sort_sampe:
+    input:
+        rules.bwa_sampe.output
+    output:
+        temp(MAP_DIR + "{sample}_samPE_sorted.bam")
+    conda:
+        CONFIG_DIR + "snp_calling.yaml"
+    threads:
+        12
+    log:
+        LOG_DIR + "{sample}.sort_sampe.log"
+    shell:
+        """
+        samtools sort --threads {threads} -o {output} {input} 
+        """
+
+rule sort_samse:
+    input:
+        rules.bwa_samse.output
+    output:
+        temp(MAP_DIR + "{sample}_samSE_sorted.bam")
+    conda:
+        CONFIG_DIR + "snp_calling.yaml"
+    threads:
+        12
+    log:
+        LOG_DIR + "{sample}.sort_samse.log"
+    shell:
+        """
+        samtools sort --threads {threads} -o {output} {input} 
+        """
+
+rule process_bam:
+    input:
+        rules.sort_sampe.output,
+        rules.sort_samse.output
+    output:
+        MERGED = temp(MAP_DIR + "{sample}_merged.bam"),
+        RG = temp(MAP_DIR + "{sample}_merged_RGs.bam"),
+        BAM = protected(MAP_DIR + "{sample}_processed.bam"),
+        METRICS = MAP_DIR + "{sample}_noDupes.metrics",
+        INDEX = MAP_DIR + "{sample}_processed.bam.bai"
+    conda:
+        CONFIG_DIR + "snp_calling.yaml"
+    threads:
+        12
+    log:
+        LOG_DIR + "{sample}.process_bam.log"
+    params:
+        CELL = lambda wildcards: config['rg_cell'][wildcards.sample],
+        LANE = lambda wildcards: config['rg_lane'][wildcards.sample],
+        INDEX = lambda wildcards: config['rg_index'][wildcards.sample]
+    shell:
+        """
+        samtools merge {output.MERGED} {input}
+
+        singularity exec {SINGULARITY_IMG} \
+            gatk AddOrReplaceReadGroups \
+                --INPUT={output.MERGED} \
+                --OUTPUT={output.RG} \
+                --RGID={params.CELL}.{params.LANE} \
+                --RGLB=library1 \
+                --RGPL=illumina \
+                --RGPU={params.CELL}.{params.INDEX}.{params.LANE} \
+                --RGSM={wildcards.sample}
+
+        singularity exec {SINGULARITY_IMG} \
+            gatk MarkDuplicates \
+                --INPUT {output.RG} \
+                --OUTPUT {output.BAM} \
+                --METRICS_FILE {output.METRICS} \
+                --MAX_FILE_HANDLES_FOR_READ_ENDS_MAP 900
+
+        samtools index {output.BAM}
+        """
+
+
+

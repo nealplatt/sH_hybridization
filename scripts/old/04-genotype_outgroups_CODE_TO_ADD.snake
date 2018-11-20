@@ -1,0 +1,731 @@
+
+
+
+
+
+#-------------------------------------------------------------------------------
+# initial SNPs with haplotype caller
+rule genotype_outgroup_haplotype_caller:
+    input: 
+        GENOME_DIR + "schHae_v1.dict",
+        MAP_DIR + "{sample}_processed.bam.bai",
+        BAM = MAP_DIR + "{sample}_processed.bam",
+        REFERENCE = GENOME,
+        LIST = GATK_DIR + "contigs.{chunk}.list"
+    output:
+        OUT_BQ_1_HC + "{sample}_n{chunk}.g.vcf"
+    threads:
+        1
+    log:
+        LOG_DIR + "{sample}_{chunk}.outgroup_bqsr_r1_haplotype_caller"
+    shell:
+        """
+        singularity exec snpCalling_v0.0.8.img \
+            gatk HaplotypeCaller \
+               -I {input.BAM} \
+                -O {output} \
+                -R {input.REFERENCE} \
+                -L {input.LIST} \
+                -ERC GVCF
+        """
+
+#combine the snp calls into single vcfs per individuals
+rule outgroup_build_inidiv_vcfs:
+    input: 
+        expand(OUT_BQ_1_HC + "{{sample}}_n{number}.g.vcf", number=NUMS_2D) 
+    output:
+        SORTED_VCF = OUT_BQ_1_HC + "{sample}.sorted.g.vcf",
+        LIST = OUT_BQ_1_HC + "{sample}.list",
+        TMP_VCF = OUT_BQ_1_HC + "tmp_{sample}.merged.g.vcf"
+    threads:
+       1
+    log:
+        LOG_DIR + "{sample}.outgroup_bqsr_r1_build_indiv_vcfs"
+    shell:
+        """
+        ls {input} >{output.LIST}
+    
+        singularity exec snpCalling_v0.0.8.img \
+           gatk MergeVcfs \
+                -I {output.LIST} \
+                -O {output.TMP_VCF}
+        
+        singularity exec snpCalling_v0.0.8.img \
+            gatk SortVcf \
+                -I {output.TMP_VCF} \
+                -O {output.SORTED_VCF}
+        """
+
+#make a list and db for gatk gdbimport
+rule outgroup_prep_gdbimport:
+    input:
+        expand(OUT_BQ_1_HC + "{sample}.sorted.g.vcf", sample=OUTGROUP_SAMPLES),
+        PANEL = REFPAN_DIR + "sH_ref_panel_snps.list"
+    output:
+        SAMPLE_LIST = OUT_BQ_1_HC + "outgroup_bqsr_r1_hc_samples.list",
+        CONTIG_LIST = OUT_BQ_1_HC + "sH_ref_panel_snps.list",
+        DB = OUT_BQ_1_DB
+    threads:
+        1
+    log:
+       LOG_DIR + "outgroup_bqsr_r1_prep_gdbimport"
+    shell:
+        """
+        ls {input} >{output.SAMPLE_LIST}
+	    mkdir {output.DB}
+
+        cat {input.PANEL} | cut -f1 -d: | sort | uniq >{output.CONTIG_LIST}
+	    """
+
+rule outgroup_prep_gdbimport_grab_minimal_contig_list:
+    input:
+        PANEL = REFPAN_DIR + "sH_ref_panel_snps.list"
+    threads:
+        1
+    log:
+       LOG_DIR + "outgroup_prep_gdbimport_grab_minimal_contig_list"
+    run:
+        """
+
+        with open({input.PANEL}) as LIST_IN:
+            REF_PANEL_CONTIGS=LIST_IN.readlines()
+              
+        REF_PANEL_CONTIGS=[contig.strip() for contig in REF_PANEL_CONTIGS]
+	    """
+
+#run gdbimport (per contig)
+rule outgroup_bqsr_r1_gdbimport:
+    input:
+        VCF_LIST = OUT_BQ_1_HC + "outgroup_bqsr_r1_hc_samples.list",
+        CONTIG_LIST = OUT_BQ_1_HC + "sH_ref_panel_snps.list",
+    output:
+        OUT_BQ_1_DB + "{params.CONTIG}"
+    threads:
+        12
+    log:
+        LOG_DIR + "{params.CONITG}.outgroup_bqsr_r1_gdbimport"
+    params:
+        CONTIG = lambda wildcards: \REF_PANEL_CONTIGS
+        #CELL = lambda wildcards: config['rg_cell'][wildcards.sample],
+    shell:
+        """
+        singularity exec snpCalling_v0.0.8.img \
+            gatk --java-options \"-Xmx4g -Xms4g\" GenomicsDBImport \
+                -V {input.VCF_LIST} \
+                --genomicsdb-workspace-path {output} \
+                -L {wildcards.contig} \
+                --reader-threads {threads} \
+                --batch-size 24
+        """
+
+
+#run gdbimport (per contig)
+rule outgroup_bqsr_r1_gdbimport:
+    input:
+        OUT_BQ_1_HC + "outgroup_bqsr_r1_hc_samples.list",
+    output:
+        OUT_BQ_1_DB + "{contig}"
+    threads:
+        12
+    log:
+        LOG_DIR + "{contig}.outgroup_bqsr_r1_gdbimport"
+    params:
+        CONTIG=config["contigs"]
+    shell:
+        """
+        singularity exec snpCalling_v0.0.8.img \
+            gatk --java-options \"-Xmx4g -Xms4g\" GenomicsDBImport \
+                -V {input} \
+                --genomicsdb-workspace-path {output} \
+                -L {wildcards.contig} \
+                --reader-threads {threads} \
+                --batch-size 24
+        """
+
+
+  
+#genotype each contg
+rule outgroup_bqsr_r1_genotype:
+    input:
+        REFERENCE = GENOME,
+        DB = OUT_BQ_1_DB + "{contig}"     
+    output:
+        OUT_BQ_1_GENO + "{contig}.vcf"
+    threads:
+        1
+    log:
+        LOG_DIR + "{contig}.outgroup_bqsr_r1_genotype"
+    shell:
+        """
+            with open(file) as f:
+                contigs=f.readlines()
+                  
+            contigs=[x.strip() for x in contigs]
+            return contigs
+
+        """
+
+#create a cohort.vcf of raw genotypes through heirarchical merging.
+# first merge vcfs into a single file per thousand contigs
+#   create a lists to merge
+rule outgroup_bqsr_r1_create_merge_lists:
+    input:
+        expand(OUT_BQ_1_GENO + "{contig}.vcf", contig=config['contigs'])
+    output:
+        expand(OUT_BQ_1_MERGE + "merge-1_{number}.list", number=FIRST_MERGE_3D)
+    threads:
+        1
+    log:
+        LOG_DIR + "outgroup_bqsr_r1_create_merge_lists"
+    params:
+        GENO_DIR = OUT_BQ_1_GENO,
+        PREFIX = OUT_BQ_1_MERGE + "merge-1_",
+        VCF_LIST = OUT_BQ_1_MERGE + "vcf.list"
+    shell:
+        """     
+        for VCF in $(ls {params.GENO_DIR}*.vcf); do
+            echo $VCF
+        done >{params.VCF_LIST}
+        
+        singularity exec snpCalling_v0.0.8.img \
+            split -n l/999 \
+                --numeric-suffixes=1 \
+                --additional-suffix .list \
+                {params.VCF_LIST} \
+                {params.PREFIX}
+        """
+
+# merge to 1k vcfs
+rule outgroup_bqsr_r1_merge1K_gvcf:
+    input:
+        LIST = OUT_BQ_1_MERGE + "merge-1_{number}.list"
+    output:
+        OUT_BQ_1_MERGE + "merge-1_{number}.vcf"
+    threads:
+        12
+    log:
+        LOG_DIR + "n{number}.outgroup_bqsr_r1_merge1K_gvcf"
+    shell:
+        """        
+        singularity exec snpCalling_v0.0.8.img \
+           gatk MergeVcfs \
+                -I {input.LIST} \
+                -O {output}
+        """
+
+rule outgroup_bqsr_r1_create_merge_lists_100:
+    input:
+        expand(OUT_BQ_1_MERGE+ "merge-1_{number}.vcf", number=FIRST_MERGE_3D)
+    output:
+        expand(OUT_BQ_1_MERGE + "merge-2_{number}.list", number=SECOND_MERGE_2D)
+    threads:
+        1
+    log:
+        LOG_DIR + "outgroup_bqsr_r1_create_merge_lists_100"
+    params:
+        GENO_DIR = OUT_BQ_1_GENO,
+        PREFIX = OUT_BQ_1_MERGE + "merge-2_",
+        VCF_LIST = OUT_BQ_1_MERGE + "vcf.list"
+    shell:
+        """     
+        for VCF in $(ls {params.GENO_DIR}*.vcf); do
+            echo $VCF
+        done >{params.VCF_LIST}
+        
+        singularity exec snpCalling_v0.0.8.img \
+            split -n l/99 \
+                --numeric-suffixes=1 \
+                --additional-suffix .list \
+                {params.VCF_LIST} \
+                {params.PREFIX}
+        """
+
+## merge to 100 vcfs
+rule outgroup_bqsr_r1_merge100_gvcf:
+    input:
+        LIST = OUT_BQ_1_MERGE + "merge-2_{number}.list"
+    output:
+        OUT_BQ_1_MERGE + "merge-2_{number}.vcf"
+    threads:
+        12
+    log:
+        LOG_DIR + "n{number}.outgroup_bqsr_r1_merge100_gvcf"
+    shell:
+        """        
+        singularity exec snpCalling_v0.0.8.img \
+           gatk --java-options "-Xmx8g" MergeVcfs \
+                --MAX_RECORDS_IN_RAM 500000 \
+                -I {input.LIST} \
+                -O {output}
+        """
+
+
+## combine 1k vcfs into a single cohort vcf
+rule outgroup_bqsr_r1_build_cohort_vcf:
+    input:
+        VCF = expand(OUT_BQ_1_MERGE + "merge-2_{number}.vcf", number=SECOND_MERGE_2D)
+    output:
+        OUT_BQ_1_FILTER + "cohort_raw.vcf"
+    threads:
+        12
+    log:
+        LOG_DIR + "outgroup_bqsr_r1_build_cohort_vcf"
+    params: 
+        LIST = OUT_BQ_1_FILTER + "contig.list",
+        TMP_VCF = OUT_BQ_1_FILTER + "all.merged.g.vcf"
+    shell:
+        """        
+        ls {input} >{params.LIST}
+    
+        singularity exec snpCalling_v0.0.8.img \
+           gatk --java-options "-Xmx8g" MergeVcfs \
+                --MAX_RECORDS_IN_RAM 500000 \
+                -I {params.LIST} \
+                -O {params.TMP_VCF}
+        
+        singularity exec snpCalling_v0.0.8.img \
+            gatk --java-options "-Xmx8g" SortVcf \
+                --MAX_RECORDS_IN_RAM 500000 \
+                -I {params.TMP_VCF} \
+                -O {output}
+        """
+
+# using the cohort vcf - filter into snps and indels
+# snps
+rule outgroup_bqsr_r1_filter_snps:
+    input:
+        REFERENCE = GENOME,
+        VCF = OUT_BQ_1_FILTER + "cohort_raw.vcf"
+    output:
+        OUT_BQ_1_FILTER + "cohort_filtered_SNPs.vcf"
+    threads:
+        1
+    log:
+        LOG_DIR + "outgroup_bqsr_r1_filter_snps"
+    params:
+        TMP_VCF = OUT_BQ_1_FILTER + "cohort_SNPs.vcf"
+    shell:
+        """
+        singularity exec snpCalling_v0.0.8.img \
+            gatk SelectVariants \
+                -V {input.VCF} \
+                -select-type SNP \
+                -O {params.TMP_VCF} \
+                -R {input.REFERENCE}
+
+        singularity exec snpCalling_v0.0.8.img \
+            gatk VariantFiltration \
+                -R {input.REFERENCE} \
+                -V {params.TMP_VCF} \
+                --filter-name "QD_lt_2,snp" \
+                --filter-expression "QD < 2.0" \
+                --filter-name "FS_gt_60,snp" \
+                --filter-expression "FS > 60.0" \
+                --filter-name "MQ_lt_40,snp" \
+                --filter-expression "MQ < 40.0" \
+                --filter-name "MQRankSum_lt_-12.5,snp" \
+                --filter-expression "MQRankSum < -12.5" \
+                --filter-name "ReadPosRankSum_lt_-8,snp" \
+                --filter-expression "ReadPosRankSum < -8.0" \
+                -O {output}
+        """
+
+# indels
+rule bqsr_r1_filter_indels:
+    input:
+        REFERENCE = GENOME,
+        VCF = OUT_BQ_1_FILTER + "cohort_raw.vcf"
+    output:
+        OUT_BQ_1_FILTER + "cohort_filtered_INDELs.vcf"
+    threads:
+        1
+    log:
+        LOG_DIR + "bqsr_r1_filter_indels"
+    params:
+        TMP_VCF = OUT_BQ_1_FILTER + "cohort_INDELs.vcf"
+    shell:
+        """
+        singularity exec snpCalling_v0.0.8.img \
+            gatk SelectVariants \
+                -V {input.VCF} \
+                -select-type INDEL \
+                -O {params.TMP_VCF} \
+                -R {input.REFERENCE}
+
+        singularity exec snpCalling_v0.0.8.img \
+            gatk VariantFiltration \
+                -R {input.REFERENCE} \
+                -V {params.TMP_VCF} \
+                --filter-name "QD_lt_2,indel" \
+                --filter-expression "QD < 2.0" \
+                --filter-name "FS_gt_200,indel" \
+                --filter-expression "FS > 200.0" \
+                --filter-name "ReadPosRankSum_lt_-20,indel" \
+                --filter-expression "ReadPosRankSum < -20.0" \
+                -O {output}
+        """
+
+#and merge them back together.
+rule bqsr_r1_merge_variants:
+    input:
+        INDELS = OUT_BQ_1_FILTER + "cohort_filtered_INDELs.vcf",
+        SNPS = OUT_BQ_1_FILTER + "cohort_filtered_SNPs.vcf",
+        REFERENCE = GENOME
+    output:
+        OUTGENO_DIR + "cohort_filtered_variants_r1.vcf"
+    threads:
+        12
+    log:
+        LOG_DIR + "bqsr_r1_merge_variants"
+    params:
+        LIST = OUT_BQ_1_FILTER + "variant.list"
+    shell:
+        """
+        ls {input.SNPS} {input.INDELS} >{params.LIST}
+        
+        singularity exec snpCalling_v0.0.8.img \
+            gatk MergeVcfs \
+                -I {params.LIST} \
+                -O {output} \
+                -R {input.REFERENCE}
+        """
+
+# with filtered cohort vcf...calculate covariates (per sample)
+rule bqsr_r1_score_pre_recal:
+    input:
+        BAM = MAP_DIR + "{sample}_processed.bam",
+        VCF = OUT_BQ_1_DIR + "cohort_filtered_variants_r1.vcf",
+        REFERENCE = GENOME        
+    output:
+        OUT_BQ_1_TABLE + "{sample}_PRErecal_r1.table"
+    threads:
+        4
+    log:
+        LOG_DIR + "{sample}bqsr_r1_score_pre_recal"
+    shell:
+        """
+        singularity exec snpCalling_v0.0.8.img \
+            gatk BaseRecalibrator \
+                -R {input.REFERENCE} \
+                -I {input.BAM} \
+                --known-sites {input.VCF} \
+                -O {output}
+        """
+
+# modify the quality scores in the bam files (per sample)
+rule bqsr_r1_recalibrate_bams:
+    input:
+        BAM = MAP_DIR + "{sample}_processed.bam",
+        REFERENCE = GENOME,
+        PRE_TABLE = OUT_BQ_1_TABLE + "{sample}_PRErecal_r1.table"       
+    output:
+        R1_BAM + "{sample}_recal_r1.bam"
+    threads:
+        4
+    log:
+        LOG_DIR + "{sample}bqsr_r1_score_pre_recal"
+    shell:
+        """
+        singularity exec snpCalling_v0.0.8.img \
+            gatk ApplyBQSR \
+                -R {input.REFERENCE} \
+                -I {input.BAM} \
+                --bqsr-recal-file {input.PRE_TABLE} \
+                -O {output}
+        """
+
+#check for qual distribtuion after recal (per sample)
+rule bqsr_r1_score_post_recal:
+    input:
+        BAM  = OUT_BQ_1_BAM + "{sample}_recal_r1.bam",
+        VCF = OUTGENO_DIR + "cohort_filtered_variants_r1.vcf",
+        REFERENCE = GENOME      
+    output:
+        R1_TABLE + "{sample}_POSTrecal_r1.table"
+    threads:
+        4
+    log:
+        LOG_DIR + "{sample}.bqsr_r1_score_pre_recal"
+    shell:
+        """
+        singularity exec snpCalling_v0.0.8.img \
+            gatk BaseRecalibrator \
+                -R {input.REFERENCE} \
+                -I {input.BAM} \
+                --known-sites {input.VCF} \
+                -O {output}
+        """
+
+# build plot to compare pre and post cal distributions (per sample)
+rule bqsr_r1_analyze_covariates_by_sample:
+    input:
+        PRE_TABLE = OUT_BQ_1_TABLE + "{sample}_PRErecal_r1.table",
+        POST_TABLE = OUT_BQ_1_TABLE + "{sample}_POSTrecal_r1.table"
+    output:
+        R1_TABLE + "{sample}_recalibration_plot_r1.pdf"
+    threads:
+        4
+    log:
+        LOG_DIR + "bqsr_r1_build_cohort_vcf"
+    shell:
+        """
+        singularity exec snpCalling_v0.0.8.img \
+            gatk AnalyzeCovariates \
+            -before {input.PRE_TABLE} \
+            -after {input.POST_TABLE} \
+            -plots {output}
+        """
+
+# gather bqsr tables and examine for convergence across all samples
+rule bqsr_r1_analyze_covariates_all:
+    input:
+        PRE_TABLES = expand(OUT_BQ_1_TABLE + "{sample}_PRErecal_r1.table", sample=SAMPLES),
+        POST_TABLES = expand(OUT_BQ_1_TABLE + "{sample}_POSTrecal_r1.table", sample=SAMPLES)
+    output:
+        protected(BQSR_R1_DIR + "all_recalibration_plot_r1.pdf")
+    threads:
+        12
+    log:
+        LOG_DIR + "bqsr_r1_build_cohort_vcf"
+    params:
+        PRE_LIST = OUT_BQ_1_TABLE + "pre.list",
+        POST_LIST = OUT_BQ_1_TABLE + "post.list",
+        PRE_TABLE = OUT_BQ_1_TABLE + "all_PRErecal_r1.table",
+        POST_TABLE = OUT_BQ_1_TABLE + "all_POSTrecal_r1.table"
+    shell:
+        """
+        ls {input.PRE_TABLES} >{params.PRE_LIST}
+        ls {input.POST_TABLES} >{params.POST_LIST} 
+
+        singularity exec snpCalling_v0.0.8.img \
+            gatk GatherBQSRReports \
+                --input {params.PRE_LIST} \
+                --output {params.PRE_TABLE}
+
+        singularity exec snpCalling_v0.0.8.img \
+            gatk GatherBQSRReports \
+                --input {params.POST_LIST}  \
+                --output {params.POST_TABLE}
+        
+        singularity exec snpCalling_v0.0.8.img \
+            gatk AnalyzeCovariates \
+                -before {params.PRE_TABLE} \
+                -after {params.POST_TABLE} \
+                -plots {output}
+        """
+
+# depending on the results the modified bam files can be used in a second round
+#   of BQSR or proceed wtih analyses of genotypes (if converged).
+
+
+
+
+rule call_snps_in_outgroup_samples:
+    input: 
+        GENOME_DIR + "schHae_v1.dict"
+        MAP_DIR + "{sample}_processed.bam.bai",
+        BAM = MAP_DIR + "{sample}_processed.bam",
+        REFERENCE = GENOME,
+        LIST = REFPAN_DIR + "sH_ref_panel_snps.list"
+    output:
+        OUTGENO_HC + "{sample}.g.vcf"
+    threads:
+        1
+    log:
+        LOG_DIR + "{sample}_{chunk}.call_snps_in_outgroup_samples"
+    shell:
+        """
+        singularity exec snpCalling_v0.0.8.img \
+            gatk HaplotypeCaller \
+                -I {input.BAM} \
+                -O {output} \
+                -R {input.REFERENCE} \
+                -L {input.LIST} \
+                -ERC GVCF
+        """
+
+#make a list and db for gatk gdbimport
+rule prep_for_gdbimport_of_outgroup_snps:
+    input:
+        expand(R1_HC + "{sample}.g.vcf", sample=SAMPLES)
+    output:
+        LIST = OUTGENO_HC + "hc_samples.list",
+        DB = OUTGENO_DB
+    threads:
+        1
+    log:
+       LOG_DIR + "prep_for_gdbimport_of_outgroup_snps"
+    shell:
+        """
+        ls {input} >{output.LIST}
+	    mkdir {output.DB}
+	    """
+
+#run gdbimport (per contig)
+rule gdbimport_of_outgroup_snps:
+    input:
+        OUTGENO_HC + "hc_samples.list",
+    output:
+        OUTGENO_DB + "{contig}"
+    threads:
+        12
+    log:
+        LOG_DIR + "{contig}.gdbimport_of_outgroup_snps"
+    params:
+        CONTIG=config["contigs"]
+    shell:
+        """
+        singularity exec snpCalling_v0.0.8.img \
+            gatk --java-options \"-Xmx4g -Xms4g\" GenomicsDBImport \
+                -V {input} \
+                --genomicsdb-workspace-path {output} \
+                -L {wildcards.contig} \
+                --reader-threads {threads} \
+                --batch-size 24
+        """
+  
+#genotype each contg
+rule genotype_outgroup_samples:
+    input:
+        REFERENCE = GENOME,
+        DB = OUTGENO_DB + "{contig}"     
+    output:
+        OUTGENO_GENO + "{contig}.vcf"
+    threads:
+        1
+    log:
+        LOG_DIR + "{contig}.genotype_outgroup_samples"
+    shell:
+        """
+        singularity exec snpCalling_v0.0.8.img \
+            gatk GenotypeGVCFs \
+                -R {input.REFERENCE} \
+                -V gendb://{input.DB} \
+                -new-qual \
+                -O {output}
+        """
+
+#create a cohort.vcf of raw genotypes through heirarchical merging.
+# first merge vcfs into a single file per thousand contigs
+#   create a lists to merge
+rule prep_to_merge_1k_outgroup_vcfs:
+    input:
+        expand(OUTGENO_GENO + "{contig}.vcf", contig=config['contigs'])
+    output:
+        expand(OUTGENO_MERGE + "merge-1_{number}.list", number=FIRST_MERGE_3D)
+    threads:
+        1
+    log:
+        LOG_DIR + "create_list_of_outgroup_samples_to_merge"
+    params:
+        GENO_DIR = OUTGENO_GENO,
+        PREFIX = OUTGENO_MERGE + "merge-1_",
+        VCF_LIST = OUTGENO_MERGE + "vcf.list"
+    shell:
+        """     
+        for VCF in $(ls {params.GENO_DIR}*.vcf); do
+            echo $VCF
+        done >{params.VCF_LIST}
+        
+        singularity exec snpCalling_v0.0.8.img \
+            split -n l/999 \
+                --numeric-suffixes=1 \
+                --additional-suffix .list \
+                {params.VCF_LIST} \
+                {params.PREFIX}
+        """
+
+# merge to 1k vcfs
+rule merge_1k_outgroup_vcfs:
+    input:
+        LIST = OUTGENO_MERGE + "merge-1_{number}.list"
+    output:
+        OUTGENO_MERGE + "merge-1_{number}.vcf"
+    threads:
+        12
+    log:
+        LOG_DIR + "n{number}.merge_1k_outgroup_vcfs"
+    shell:
+        """        
+        singularity exec snpCalling_v0.0.8.img \
+           gatk MergeVcfs \
+                -I {input.LIST} \
+                -O {output}
+        """
+
+rule prep_to_merge_100_outgroup_vcfs:
+    input:
+        expand(OUTGENO_MERGE+ "merge-1_{number}.vcf", number=FIRST_MERGE_3D)
+    output:
+        expand(OUTGENO_MERGE + "merge-2_{number}.list", number=SECOND_MERGE_2D)
+    threads:
+        1
+    log:
+        LOG_DIR + "prep_to_merge_100_outgroup_vcfs"
+    params:
+        GENO_DIR = OUTGENO_GENO,
+        PREFIX = OUTGENO_MERGE + "merge-2_",
+        VCF_LIST = OUTGENO_MERGE + "vcf.list"
+    shell:
+        """     
+        for VCF in $(ls {params.GENO_DIR}*.vcf); do
+            echo $VCF
+        done >{params.VCF_LIST}
+        
+        singularity exec snpCalling_v0.0.8.img \
+            split -n l/99 \
+                --numeric-suffixes=1 \
+                --additional-suffix .list \
+                {params.VCF_LIST} \
+                {params.PREFIX}
+        """
+
+## merge to 100 vcfs
+rule merge_100_outgroup_vcfs:
+    input:
+        LIST = OUTGENO_MERGE + "merge-2_{number}.list"
+    output:
+        OUTGENO_MERGE + "merge-2_{number}.vcf"
+    threads:
+        12
+    log:
+        LOG_DIR + "n{number}.merge_100_outgroup_vcfs"
+    shell:
+        """        
+        singularity exec snpCalling_v0.0.8.img \
+           gatk --java-options "-Xmx8g" MergeVcfs \
+                --MAX_RECORDS_IN_RAM 500000 \
+                -I {input.LIST} \
+                -O {output}
+        """
+
+
+## combine 1k vcfs into a single cohort vcf
+rule build_outgroup_cohort_vcf:
+    input:
+        VCF = expand(OUTGENO_MERGE + "merge-2_{number}.vcf", number=SECOND_MERGE_2D)
+    output:
+        OUTGENO_FILTER + "cohort_raw.vcf"
+    threads:
+        12
+    log:
+        LOG_DIR + "build_outgroup_cohort_vcf"
+    params: 
+        LIST = OUTGENO_FILTER + "contig.list",
+        TMP_VCF = OUTGENO_FILTER + "all.merged.g.vcf"
+    shell:
+        """        
+        ls {input} >{params.LIST}
+    
+        singularity exec snpCalling_v0.0.8.img \
+           gatk --java-options "-Xmx8g" MergeVcfs \
+                --MAX_RECORDS_IN_RAM 500000 \
+                -I {params.LIST} \
+                -O {params.TMP_VCF}
+        
+        singularity exec snpCalling_v0.0.8.img \
+            gatk --java-options "-Xmx8g" SortVcf \
+                --MAX_RECORDS_IN_RAM 500000 \
+                -I {params.TMP_VCF} \
+                -O {output}
+        """

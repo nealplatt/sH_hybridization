@@ -1,0 +1,1043 @@
+# File:     03-refine_genotypes.snake
+# Name:     Neal Platt
+# Date:     04 April 2018
+# Desc:     This Snake file is used to filter genotypes from sH exome reads
+#           after reaching BQSR convergence.
+
+# Reccomended
+# Usage:    snakemake \
+#               --printshellcmds \
+#               --use-conda \
+#               --cluster 'qsub -V -cwd -S /bin/bash -pe mpi {threads} -o {log}.log -e {log}.stderr' \
+#               --jobs 100 \
+#               --latency-wait 200 \
+#               --snake \
+#               --keep-going
+#               --restart-times 2
+
+# Reqs:     All required software should be installed/available through the inc.
+#            singularity image or the packaged conda env.
+
+# Comments: This portion of the workflow exectures after BQSR convergence and
+#           whole genome alignment/coordinate liftover.  Results in filtered 
+#           genotypes for all, autosomal, sex chr, and mito variants. 
+
+#-------------------------------------------------------------------------------
+# To Do:
+#   3] update comments
+#   4] add cleanup on success
+#   5] choose better names
+#   6] check log/rule name consistency
+#-------------------------------------------------------------------------------
+
+#setting up snakemake 
+configfile: "config.yaml"
+HOME_DIR = "/master/nplatt/schisto_hybridization/"
+CONTIG_CHUNKS=50
+ASSEMBLY = "schHae_v1.fa"
+
+#setting work directory
+RESULTS_DIR = HOME_DIR + "results/"
+DATA_DIR = HOME_DIR + "data/"
+LOG_DIR = RESULTS_DIR + "logs/"
+GENOME_DIR = DATA_DIR + "genome/"
+GENOME = GENOME_DIR + ASSEMBLY
+SEQ_DIR = DATA_DIR + "sequence_data/"
+SCRIPTS_DIR = HOME_DIR + "scripts/"
+
+FILTER_READS_DIR = RESULTS_DIR + "01-filtered_reads/"
+MAP_DIR = RESULTS_DIR + "02-mapped_reads/" 
+
+GATK_DIR = RESULTS_DIR + "03-gatk/" 
+BQSR_R1_DIR = GATK_DIR + "r1/"
+R1_HC = BQSR_R1_DIR + "hc/"
+R1_DB = BQSR_R1_DIR + "db/"
+R1_GENO = BQSR_R1_DIR + "geno/"
+R1_MERGE = BQSR_R1_DIR + "merge/"
+R1_FILTER = BQSR_R1_DIR + "filter/"
+R1_BAM = BQSR_R1_DIR + "bams/"
+R1_TABLE = BQSR_R1_DIR + "tables/"
+
+BQSR_R2_DIR = GATK_DIR + "r2/"
+R2_HC = BQSR_R2_DIR + "hc/"
+R2_DB = BQSR_R2_DIR + "db/"
+R2_GENO = BQSR_R2_DIR + "geno/"
+R2_MERGE = BQSR_R2_DIR + "merge/"
+R2_FILTER = BQSR_R2_DIR + "filter/"
+R2_BAM = BQSR_R2_DIR + "bams/"
+R2_TABLE = BQSR_R2_DIR + "tables/"
+
+GENO_DIR = GATK_DIR + "filter_geno/"
+ 
+WGA_DIR = RESULTS_DIR + "06-wga/" 
+
+SMAN_GENOME = GENOME_DIR + "Smansoni_v7.fa"
+
+#setting work directory
+workdir: HOME_DIR
+
+#setting up local rules to be run on the head node
+localrules: all
+
+
+shell.prefix("source ~/.bash_profile; ")
+
+#onsuccess:
+#    shell("rm -r " + R2_HC)
+
+#-------------------------------------------------------------------------------
+# initializing rule - these files need to be generated...initiates the pipeline
+rule all:
+    input:
+        expand(GENO_DIR + "sH_filtered_{type}-variants.vcf.idx", type=["auto", "sex", "mito", "all"]),
+        expand(GENO_DIR + "sH_filtered_{type}-variants_sManLift.vcf", type=["auto", "sex", "mito", "all"])
+
+#-------------------------------------------------------------------------------
+rule annotate_variants:
+    input:
+        VCF = R2_FILTER + "cohort_raw.vcf",
+    output:
+        ANNOTATED_VCF = GENO_DIR + "cohort_annotated_variants.vcf",
+    threads:
+        1
+    log:
+        LOG_DIR + "annotate_variants"
+    conda:
+        "environment.yaml"
+    shell:
+        """
+        bcftools annotate \
+           --set-id +'%CHROM\:%POS' \
+           {input.VCF} >{output.ANNOTATED_VCF}
+        """
+
+rule exclude_multi_locus_snps:
+    input:
+        VCF = GENO_DIR + "cohort_annotated_variants.vcf",
+        MULTI_MAPPING_SNPS_LIST = GENO_DIR + "multi-mapping_sH_vs_sM_snps.list",
+        MULTI_MAPPING_SNPS_INT = GENO_DIR + "multi-mapping_sH_vs_sM_snps.intervals"
+    output:
+        SINGLE_SMAN_SNP_VCF = temp(GENO_DIR + "cohort_annotated_singleSMan_SNPonly_variants.vcf"),
+        SINGLE_SMAN_INT_VCF = GENO_DIR + "cohort_annotated_singleSMan_variants.vcf",
+        VCF_IDX = GENO_DIR + "cohort_annotated_singleSMan_variants.vcf.idx"
+    threads:
+        1
+    log:
+        LOG_DIR + "exclude_multi_locus_snps"
+    conda:
+        "environment.yaml"
+    shell:
+        """
+        vcftools \
+            --exclude {input.MULTI_MAPPING_SNPS_LIST} \
+            --vcf {input.VCF} \
+            --stdout \
+            --recode \
+            >{output.SINGLE_SMAN_SNP_VCF}
+
+        vcftools \
+            --exclude-positions {input.MULTI_MAPPING_SNPS_INT} \
+            --vcf {output.SINGLE_SMAN_SNP_VCF} \
+            --stdout \
+            --recode \
+            >{output.SINGLE_SMAN_INT_VCF}
+
+        singularity exec snpCalling_v0.0.8.img \
+            gatk IndexFeatureFile \
+                -F {output.SINGLE_SMAN_INT_VCF}
+        """
+
+################################################################################
+rule all_select_snps:
+    input:
+        VCF = GENO_DIR + "cohort_annotated_singleSMan_variants.vcf",
+        VCF_IDX = GENO_DIR + "cohort_annotated_singleSMan_variants.vcf.idx",
+        REFERENCE = GENOME
+    output:
+        temp(GENO_DIR + "cohort_SNP.vcf.idx"),
+        VCF = temp(GENO_DIR + "cohort_SNP.vcf")
+    threads:
+        1
+    log:
+        LOG_DIR + "select_snps"
+    shell:
+        """
+        singularity exec snpCalling_v0.0.8.img \
+            gatk SelectVariants \
+                -V {input.VCF} \
+                -select-type SNP \
+                -O {output.VCF} \
+                -R {input.REFERENCE}
+        """
+
+rule all_select_indels:
+    input:
+        VCF = GENO_DIR + "cohort_annotated_singleSMan_variants.vcf",
+        REFERENCE = GENOME
+    output:
+        temp(GENO_DIR + "cohort_INDEL.vcf.idx"),
+        VCF = temp(GENO_DIR + "cohort_INDEL.vcf")
+    threads:
+        1
+    log:
+        LOG_DIR + "select_indels"
+    shell:
+        """
+        singularity exec snpCalling_v0.0.8.img \
+            gatk SelectVariants \
+                -V {input.VCF} \
+                -select-type INDEL \
+                -O {output.VCF} \
+                -R {input.REFERENCE}
+        """
+
+rule all_soft_filter_snps:
+    input:
+        VCF = GENO_DIR + "cohort_SNP.vcf",
+        REFERENCE = GENOME
+    output:
+        temp(GENO_DIR + "cohort_soft-filtered_SNPs.vcf.idx"),
+        VCF = temp(GENO_DIR + "cohort_soft-filtered_SNPs.vcf")
+    threads:
+        1
+    log:
+        LOG_DIR + "soft_filter_snps"
+    shell:
+        """
+        singularity exec snpCalling_v0.0.8.img \
+            gatk VariantFiltration \
+                -R {input.REFERENCE} \
+                -V {input.VCF} \
+                --filter-name "snp_QD_lt_5" \
+                --filter-expression "QD < 5.0" \
+                --filter-name "snp_FS_gt_55" \
+                --filter-expression "FS > 55.0" \
+                --filter-name "snp_MQ_lt_30" \
+                --filter-expression "MQ < 30.0 || MQ = \"nan\"" \
+                --filter-name "snp_MQRankSum_lt_-12.5" \
+                --filter-expression "MQRankSum < -12.5" \
+                --filter-name "snp_ReadPosRankSum_lt_-8" \
+                --filter-expression "ReadPosRankSum < -8.0" \
+                --filter-name "snp_SQR_gt_3" \
+                --filter-expression "SOR > 3.0"  \
+                -O {output.VCF}
+        """
+
+# indels
+rule all_soft_filter_indels:
+    input:
+        REFERENCE = GENOME,
+        VCF = GENO_DIR + "cohort_INDEL.vcf",
+    output:
+        temp(GENO_DIR + "cohort_soft-filtered_INDELs.vcf.idx"),
+        VCF = temp(GENO_DIR + "cohort_soft-filtered_INDELs.vcf")
+    threads:
+        1
+    log:
+        LOG_DIR + "soft_filter_indels"
+    shell:
+        """
+        singularity exec snpCalling_v0.0.8.img \
+            gatk VariantFiltration \
+                -R {input.REFERENCE} \
+                -V {input.VCF} \
+                --filter-name "indel_QD_lt_5" \
+                --filter-expression "QD < 5.0" \
+                --filter-name "snp_FS_gt_55" \
+                --filter-expression "FS > 55.0" \
+                --filter-name "snp_ReadPosRankSum_lt_-20" \
+                --filter-expression "ReadPosRankSum < -20.0" \
+                --filter-name "snp_SQR_gt_10" \
+                --filter-expression "SOR > 10.0" \
+                -O {output.VCF}
+        """
+
+#and merge them back together.
+rule all_merge_soft_filtered_variants:
+    input:
+        SNPS = GENO_DIR + "cohort_soft-filtered_SNPs.vcf",
+        INDELS = GENO_DIR + "cohort_soft-filtered_INDELs.vcf",
+        REFERENCE = GENOME
+    output:
+        temp(GENO_DIR + "all_soft-filtered_variants.vcf.idx"),
+        VCF = temp(GENO_DIR + "all_soft-filtered_variants.vcf"),
+        LIST = temp(GENO_DIR + "variant.list")
+    threads:
+        1
+    log:
+        LOG_DIR + "merge_soft_filtered_variants"
+    params:
+        LIST = R2_FILTER + "variant.list"
+    shell:
+        """
+        ls {input.SNPS} {input.INDELS} >{output.LIST}
+        
+        singularity exec snpCalling_v0.0.8.img \
+            gatk MergeVcfs \
+                -I {output.LIST} \
+                -O {output.VCF} \
+                -R {input.REFERENCE}
+        """
+
+rule all_filtering:
+    input:
+        VCF = GENO_DIR + "all_soft-filtered_variants.vcf"
+    output:
+        FILT_1 = temp(GENO_DIR + "all-filt-1.vcf"),
+        MISSING_TABLE = GENO_DIR + "all-table.imiss",
+        REMOVE_LIST = GENO_DIR + "all-data_poor_indivs.list",
+        FILT_2 = temp(GENO_DIR + "all-filt-2.vcf"),
+        FILT_3 = temp(GENO_DIR + "all-filt-3.vcf"),
+        FINAL_VCF = protected(GENO_DIR + "sH_filtered_all-variants.vcf")
+    threads:
+        1
+    log:
+        LOG_DIR + "first_pass_filtering"
+    conda:
+        "environment.yaml"
+    shell:
+        """
+        vcftools \
+            --remove-filtered-all \
+            --min-alleles 2 \
+            --max-alleles 2 \
+            --max-missing 0.51 \
+            --mac 3 \
+            --vcf {input.VCF} \
+            --recode \
+            --recode-INFO-all \
+            --stdout >{output.FILT_1}
+
+        vcftools \
+            --vcf {output.FILT_1} \
+            --missing-indv \
+            --stdout >{output.MISSING_TABLE}
+
+        #remove individuals missing more than 25% of the data    
+        cat {output.MISSING_TABLE}.imiss | awk '$5 >0.25 {{print $1}}' >{output.REMOVE_LIST}
+
+        vcftools \
+            --vcf {output.FILT_1} \
+            --remove {output.REMOVE_LIST} \
+            --recode \
+            --recode-INFO-all \
+            --stdout >{output.FILT_2}
+
+        vcftools \
+            --vcf {output.FILT_2} \
+             --max-missing 0.75 \
+            --maf 0.05 \
+            --recode \
+            --recode-INFO-all \
+            --stdout >{output.FILT_3}
+
+        bcftools filter \
+            --SnpGap 50 \
+            --IndelGap 100 \
+            --output {output.FINAL_VCF} \
+            -O v \
+            {output.FILT_3}
+        """
+
+################################################################################
+rule select_mito_snps:
+    input:
+        VCF = GENO_DIR + "cohort_annotated_singleSMan_variants.vcf",
+        REFERENCE = GENOME
+    output:
+        MITO_SNPS = temp(GENO_DIR + "mito_snp.vcf"),
+        MITO_SOFT_SNPS = temp(GENO_DIR + "mito_soft_snp.vcf"),
+        MITO_SNPS_IDX = temp(GENO_DIR + "mito_snp.vcf.idx"),
+        MITO_SOFT_SNPS_IDX = temp(GENO_DIR + "mito_soft_snp.vcf.idx")
+    threads:
+        1
+    log:
+        LOG_DIR + "select_mito_snps"
+    params:
+        MITO_CONTIG = "AMPZ01026399.1"
+    shell:
+        """
+        singularity exec snpCalling_v0.0.8.img \
+                gatk SelectVariants \
+                    -V {input.VCF}  \
+                    -L {params.MITO_CONTIG} \
+                    -O {output.MITO_SNPS}
+
+            singularity exec snpCalling_v0.0.8.img \
+                gatk VariantFiltration \
+                    -R {input.REFERENCE} \
+                    -V {output.MITO_SNPS} \
+                    --filter-name "snp_QD_lt_5" \
+                    --filter-expression "QD < 5.0" \
+                    --filter-name "snp_FS_gt_55" \
+                    --filter-expression "FS > 55.0" \
+                    --filter-name "snp_MQ_lt_30" \
+                    --filter-expression "MQ < 30.0 || MQ = \"nan\"" \
+                    --filter-name "snp_MQRankSum_lt_-12.5" \
+                    --filter-expression "MQRankSum < -12.5" \
+                    --filter-name "snp_ReadPosRankSum_lt_-8" \
+                    --filter-expression "ReadPosRankSum < -8.0" \
+                    --filter-name "snp_SQR_gt_3" \
+                    --filter-expression "SOR > 3.0"  \
+                    -O {output.MITO_SOFT_SNPS}
+        """
+rule select_mito_indels:
+    input:
+        VCF = GENO_DIR + "cohort_annotated_singleSMan_variants.vcf",
+        REFERENCE = GENOME
+    output:
+        MITO_INDELS = temp(GENO_DIR + "mito_indel.vcf"),
+        MITO_SOFT_INDELS = temp(GENO_DIR + "mito_soft_indel.vcf"),
+        MITO_INDELS_IDX = temp(GENO_DIR + "mito_indel.vcf.idx"),
+        MITO_SOFT_INDELS_IDX = temp(GENO_DIR + "mito_soft_indel.vcf.idx"),
+    threads:
+        1
+    log:
+        LOG_DIR + "select_mito_indels"
+    params:
+        MITO_CONTIG="AMPZ01026399.1"
+    shell:
+        """
+        singularity exec snpCalling_v0.0.8.img \
+            gatk SelectVariants \
+                -V {input.VCF}  \
+                -L {params.MITO_CONTIG} \
+                -O {output.MITO_INDELS}
+
+        singularity exec snpCalling_v0.0.8.img \
+            gatk VariantFiltration \
+                -R {input.REFERENCE} \
+                -V {output.MITO_INDELS} \
+                --filter-name "indel_QD_lt_5" \
+                --filter-expression "QD < 5.0" \
+                --filter-name "snp_FS_gt_55" \
+                --filter-expression "FS > 55.0" \
+                --filter-name "snp_ReadPosRankSum_lt_-20" \
+                --filter-expression "ReadPosRankSum < -20.0" \
+                --filter-name "snp_SQR_gt_10" \
+                --filter-expression "SOR > 10.0" \
+                -O {output.MITO_SOFT_INDELS}
+        """
+
+rule mito_filtering:
+    input:
+        MITO_SOFT_SNPS = GENO_DIR + "mito_soft_snp.vcf",
+        MITO_SOFT_INDELS = GENO_DIR + "mito_soft_indel.vcf",
+        REFERENCE = GENOME
+    output:
+        MITO_SOFT_VARIANTS = temp(GENO_DIR + "mito_soft_variants.vcf"),
+        MITO_SOFT_VARIANTS_IDX = temp(GENO_DIR + "mito_soft_variants.vcf.idx"),
+        VARIANT_LIST = temp(GENO_DIR + "mito_variants.list"),
+        MITO_HARD = temp(GENO_DIR + "mito_hard_variants.vcf"),
+        MITO_HET = temp(GENO_DIR + "mito_het_variants.vcf"),
+        MISSING_LIST = temp(GENO_DIR + "mito-data_poor_indivs.list"),
+        TABLE = GENO_DIR + "mito-table.imiss",
+        FINAL_VCF = protected(GENO_DIR + "sH_filtered_mito-variants.vcf")
+    threads:
+        1
+    log:
+        LOG_DIR + "soft_filter_snps"
+    conda:
+        "environment.yaml"
+    shell:
+        """
+        ls {input.MITO_SOFT_SNPS} {input.MITO_SOFT_INDELS} >{output.VARIANT_LIST}
+        
+        singularity exec snpCalling_v0.0.8.img \
+            gatk MergeVcfs \
+                -I {output.VARIANT_LIST} \
+                -O {output.MITO_SOFT_VARIANTS} \
+                -R {input.REFERENCE}
+
+        #inital_hard_filt
+        vcftools \
+            --remove-filtered-all \
+            --max-missing 0.51 \
+            --mac 2 \
+            --vcf {output.MITO_SOFT_VARIANTS} \
+            --recode \
+            --recode-INFO-all \
+            --stdout >{output.MITO_HARD}
+        
+        #het_filt
+        bcftools view \
+            --genotype ^het \
+            {output.MITO_HARD} \
+            >{output.MITO_HET}
+
+        #count-missing per inidv
+        vcftools \
+            --vcf {output.MITO_HET} \
+            --missing-indv \
+            --stdout >{output.TABLE}
+
+        #remove individuals missing more than 25% of the data    
+        cat {output.TABLE} | awk '$5 >0.50 {{print $1}}' >{output.MISSING_LIST}
+
+        #remove low perc indivs
+        vcftools \
+            --vcf {output.MITO_HET} \
+            --remove {output.MISSING_LIST} \
+            --recode \
+            --recode-INFO-all \
+            --stdout >{output.FINAL_VCF}
+        """
+################################################################################
+rule lift_over_variants:
+    input:
+        HAL = WGA_DIR + "schMan7_vs_schMan1.hal",
+        VCF = GENO_DIR + "cohort_annotated_variants.vcf"
+    output:
+        SHAE_BED = temp(GENO_DIR + "sH_snps.bed"),
+        SMAN_BED = protected(GENO_DIR + "sH_vs_sM7_liftover.bed"),
+        MULTI_MAPPING_LIST = GENO_DIR + "multi-mapping_sH_vs_sM_snps.list",
+        MULTI_MAPPING_BED = GENO_DIR + "multi-mapping_sH_vs_sM_snps.intervals",
+    threads:
+        1
+    log:
+        LOG_DIR + "lift_over_snps"
+    conda:
+        "environment.yaml"
+    shell:
+        """
+         vcf2bed --do-not-sort --max-mem=2G <{input.VCF} | \
+                awk '{{print $1"\t"$2"\t"$3"\t"$4}}' \
+                >{output.SHAE_BED}
+
+        singularity exec snpCalling_v0.0.8.img \
+            /usr/software/progressiveCactus/submodules/hal/bin/halLiftover  \
+                {input.HAL} \
+                schHae_v1 \
+                {output.SHAE_BED} \
+                schMan_v7 \
+                {output.SMAN_BED}
+
+        awk '{{print $4}}' {output.SMAN_BED} | sort | uniq -c | awk '$1>1 {{print $2}}' >{output.MULTI_MAPPING_LIST}
+        grep -v "#" tmp.vcf | awk '{{print $1"\t"$2}}' | sort | uniq -c | awk '$1>1 {{print $2"\t"$3}}' >{output.MULTI_MAPPING_BED}
+        """
+
+
+################################################################################
+rule create_list_of_autosomal_variants:
+    input:
+        SMAN_BED = GENO_DIR + "sH_vs_sM7_liftover.bed",
+        REFERENCE = GENOME,
+        VCF = GENO_DIR + "cohort_annotated_singleSMan_variants.vcf",
+    output:
+        AUTO_VARIANTS_LIST = temp(GENO_DIR + "autosomes.list"),
+    threads:
+        1
+    log:
+        LOG_DIR + "select_autosome_variants"
+    shell:
+        """
+        grep -v \
+            -e _ZW \
+            -e _MITO \
+            -e _U \
+            -e _W \
+            {input.SMAN_BED} \
+            | awk '{{print $4}}' \
+                >{output.AUTO_VARIANTS_LIST}
+        """
+
+rule select_autosome_snps:
+    input:
+        GENO_DIR + "cohort_SNP.vcf.idx",
+        AUTO_VARIANTS_LIST = GENO_DIR + "autosomes.list",
+        REFERENCE = GENOME,
+        VCF = GENO_DIR + "cohort_SNP.vcf"
+    output:
+        VCF = temp(GENO_DIR + "cohort_autoChr_snps.vcf")
+    threads:
+        1
+    log:
+        LOG_DIR + "select_autosome_variants"
+    conda:
+        "environment.yaml"
+    shell:
+        """
+        singularity exec snpCalling_v0.0.8.img \
+            gatk SelectVariants \
+                -V {input.VCF} \
+                -L {input.AUTO_VARIANTS_LIST} \
+                -select-type SNP \
+                -O {output.VCF} \
+                -R {input.REFERENCE}
+        """
+
+rule select_autosome_indels:
+    input:
+        GENO_DIR + "cohort_INDEL.vcf.idx",
+        AUTO_VARIANTS_LIST = GENO_DIR + "autosomes.list",
+        REFERENCE = GENOME,
+        VCF = GENO_DIR + "cohort_INDEL.vcf"
+    output:
+        temp(GENO_DIR + "cohort_autoChr_indels.vcf.idx")
+        VCF = temp(GENO_DIR + "cohort_autoChr_indels.vcf")
+    threads:
+        1
+    log:
+        LOG_DIR + "select_autosome_variants"
+    conda:
+        "environment.yaml"
+    shell:
+        """
+        singularity exec snpCalling_v0.0.8.img \
+            gatk SelectVariants \
+                -V {input.VCF} \
+                -L {input.AUTO_VARIANTS_LIST} \
+                -select-type INDEL \
+                -O {output.VCF} \
+                -R {input.REFERENCE}
+        """
+
+rule soft_filter_autosomal_snps:
+    input:
+        AUTO_SNPS_VCF = GENO_DIR + "cohort_autoChr_snps.vcf",
+        REFERENCE = GENOME
+    output:
+        temp(GENO_DIR + "cohort_soft-filtered_autoSNPs.vcf")
+    threads:
+        1
+    log:
+        LOG_DIR + "auto_soft_filter_snps"
+    shell:
+        """
+        singularity exec snpCalling_v0.0.8.img \
+            gatk VariantFiltration \
+                -R {input.REFERENCE} \
+                -V {input.AUTO_SNPS_VCF} \
+                --filter-name "snp_QD_lt_5" \
+                --filter-expression "QD < 5.0" \
+                --filter-name "snp_FS_gt_55" \
+                --filter-expression "FS > 55.0" \
+                --filter-name "snp_MQ_lt_30" \
+                --filter-expression "MQ < 30.0 || MQ = \"nan\"" \
+                --filter-name "snp_MQRankSum_lt_-12.5" \
+                --filter-expression "MQRankSum < -12.5" \
+                --filter-name "snp_ReadPosRankSum_lt_-8" \
+                --filter-expression "ReadPosRankSum < -8.0" \
+                --filter-name "snp_SQR_gt_3" \
+                --filter-expression "SOR > 3.0"  \
+                -O {output}
+        """
+
+# indels
+rule soft_filter_autosomal_indels:
+    input:
+        GENO_DIR + "cohort_autoChr_indels.vcf.idx",
+        AUTO_SNPS_VCF = GENO_DIR + "cohort_autoChr_indels.vcf",
+        REFERENCE = GENOME
+    output:
+        temp(GENO_DIR + "cohort_soft-filtered_autoINDELs.vcf")
+    threads:
+        1
+    log:
+        LOG_DIR + "auto_soft_filter_indels"
+    shell:
+        """
+        singularity exec snpCalling_v0.0.8.img \
+            gatk VariantFiltration \
+                -R {input.REFERENCE} \
+                -V {input.AUTO_SNPS_VCF} \
+                --filter-name "indel_QD_lt_5" \
+                --filter-expression "QD < 5.0" \
+                --filter-name "snp_FS_gt_55" \
+                --filter-expression "FS > 55.0" \
+                --filter-name "snp_ReadPosRankSum_lt_-20" \
+                --filter-expression "ReadPosRankSum < -20.0" \
+                --filter-name "snp_SQR_gt_10" \
+                --filter-expression "SOR > 10.0" \
+                -O {output}
+        """
+
+#and merge them back together.
+rule merge_autosomal_variants:
+    input:
+        SNPS = GENO_DIR + "cohort_autoChr_snps.vcf",
+        INDELS = GENO_DIR + "cohort_autoChr_indels.vcf",
+        REFERENCE = GENOME
+    output:
+        LIST = temp(GENO_DIR + "autosomal_variant.list"),
+        VCF = temp(GENO_DIR + "auto_soft-filtered_variants.vcf")
+    threads:
+        1
+    log:
+        LOG_DIR + "auto_merge_soft_filtered_variants"
+    params:
+
+    shell:
+        """
+        ls {input.SNPS} {input.INDELS} >{output.LIST}
+        
+        singularity exec snpCalling_v0.0.8.img \
+            gatk MergeVcfs \
+                -I {output.LIST} \
+                -O {output.VCF} \
+                -R {input.REFERENCE}
+        """
+
+rule autosome_filtering:
+    input:
+        VCF = GENO_DIR + "auto_soft-filtered_variants.vcf"
+    output:
+        FILT_1 = temp(GENO_DIR + "auto-filt-1.recode.vcf"),
+        MISSING_TABLE = GENO_DIR + "auto-table.imiss",
+        REMOVE_LIST = temp(GENO_DIR + "auto-data_poor_indivs.list"),
+        FILT_2 = temp(GENO_DIR + "auto-filt-2.recode.vcf"),
+        FILT_3 = temp(GENO_DIR + "auto-filt-3.recode.vcf"),
+        FINAL_VCF = protected(GENO_DIR + "sH_filtered_auto-variants.vcf")
+    threads:
+        1
+    log:
+        LOG_DIR + "autosome_filtering"
+    conda:
+        "environment.yaml"
+    shell:
+        """
+        vcftools \
+            --remove-filtered-all \
+            --min-alleles 2 \
+            --max-alleles 2 \
+            --max-missing 0.51 \
+            --mac 3 \
+            --vcf {input.VCF} \
+            --recode \
+            --recode-INFO-all \
+            --stdout >{output.FILT_1} \
+
+        vcftools \
+            --vcf {output.FILT_1} \
+            --missing-indv \
+            --stdout >{output.MISSING_TABLE}
+
+        #remove individuals missing more than 25% of the data    
+        cat {output.MISSING_TABLE} | awk '$5 >0.25 {{print $1}}' >{output.REMOVE_LIST}
+
+        vcftools \
+            --vcf {output.FILT_1} \
+            --remove {output.REMOVE_LIST} \
+            --recode \
+            --recode-INFO-all \
+            --stdout >{output.FILT_2}
+
+        vcftools \
+            --vcf {output.FILT_2} \
+             --max-missing 0.75 \
+            --maf 0.05 \
+            --recode \
+            --recode-INFO-all \
+            --stdout >{output.FILT_3}
+
+        bcftools filter \
+            --SnpGap 50 \
+            --IndelGap 100 \
+            --output {output.FINAL_VCF} \
+            -O v \
+            {output.FILT_3}
+        """
+
+
+################################################################################
+
+rule select_sex_chr_variants:
+    input:
+        SMAN_BED = GENO_DIR + "sH_vs_sM7_liftover.bed",
+        REFERENCE = GENOME
+    output:
+        SEX_SNPS_LIST = temp(GENO_DIR + "sex_chromosomes.list")
+    threads:
+        1
+    log:
+        LOG_DIR + "select_sex_chr_variants"
+    conda:
+        "environment.yaml"
+    shell:
+        """
+        grep -e _ZW -e _W {input.SMAN_BED} | awk '{{print $4}}' >{output.SEX_SNPS_LIST}
+        """
+
+rule select_sex_snps:
+    input:
+        GENO_DIR + "cohort_SNP.vcf.idx",
+        SEX_VARIANTS_LIST = GENO_DIR + "sex_chromosomes.list",
+        REFERENCE = GENOME,
+        VCF = GENO_DIR + "cohort_SNP.vcf",
+    output:
+        VCF = temp(GENO_DIR + "cohort_sexChr_snps.vcf")
+    threads:
+        1
+    log:
+        LOG_DIR + "select_sex_variants"
+    conda:
+        "environment.yaml"
+    shell:
+        """
+        singularity exec snpCalling_v0.0.8.img \
+            gatk SelectVariants \
+                -V {input.VCF} \
+                -L {input.SEX_VARIANTS_LIST} \
+                -select-type SNP \
+                -O {output.VCF} \
+                -R {input.REFERENCE}
+        """
+
+rule select_sex_indels:
+    input:
+        GENO_DIR + "cohort_INDEL.vcf.idx",
+        SEX_VARIANTS_LIST = GENO_DIR + "sex_chromosomes.list",
+        REFERENCE = GENOME,
+        VCF = GENO_DIR + "cohort_INDEL.vcf",
+    output:
+        temp(GENO_DIR + "cohort_sexChr_indels.vcf.idx"),
+        VCF = temp(GENO_DIR + "cohort_sexChr_indels.vcf")
+    threads:
+        1
+    log:
+        LOG_DIR + "select_sex_indels"
+    conda:
+        "environment.yaml"
+    shell:
+        """
+        singularity exec snpCalling_v0.0.8.img \
+            gatk SelectVariants \
+                -V {input.VCF} \
+                -L {input.SEX_VARIANTS_LIST} \
+                -select-type INDEL \
+                -O {output.VCF} \
+                -R {input.REFERENCE}
+        """
+
+
+rule sex_soft_filter_snps:
+    input:
+        VCF = GENO_DIR + "cohort_sexChr_snps.vcf",
+        REFERENCE = GENOME
+    output:
+        temp(GENO_DIR + "cohort_soft-filtered_sexSNPs.vcf")
+    threads:
+        1
+    log:
+        LOG_DIR + "sex_soft_filter_snps"
+    shell:
+        """
+        singularity exec snpCalling_v0.0.8.img \
+            gatk VariantFiltration \
+                -R {input.REFERENCE} \
+                -V {input.VCF} \
+                --filter-name "snp_QD_lt_5" \
+                --filter-expression "QD < 5.0" \
+                --filter-name "snp_FS_gt_55" \
+                --filter-expression "FS > 55.0" \
+                --filter-name "snp_MQ_lt_30" \
+                --filter-expression "MQ < 30.0 || MQ = \"nan\"" \
+                --filter-name "snp_MQRankSum_lt_-12.5" \
+                --filter-expression "MQRankSum < -12.5" \
+                --filter-name "snp_ReadPosRankSum_lt_-8" \
+                --filter-expression "ReadPosRankSum < -8.0" \
+                --filter-name "snp_SQR_gt_3" \
+                --filter-expression "SOR > 3.0"  \
+                -O {output}
+        """
+
+# indels
+rule sex_soft_filter_indels:
+    input:
+        GENO_DIR + "cohort_sexChr_indels.vcf.idx,
+        VCF = GENO_DIR + "cohort_sexChr_indels.vcf",
+        REFERENCE = GENOME
+    output:
+        temp(GENO_DIR + "cohort_soft-filtered_sexINDELs.vcf")
+    threads:
+        1
+    log:
+        LOG_DIR + "sex_soft_filter_indels"
+    shell:
+        """
+        singularity exec snpCalling_v0.0.8.img \
+            gatk VariantFiltration \
+                -R {input.REFERENCE} \
+                -V {input.VCF} \
+                --filter-name "indel_QD_lt_5" \
+                --filter-expression "QD < 5.0" \
+                --filter-name "snp_FS_gt_55" \
+                --filter-expression "FS > 55.0" \
+                --filter-name "snp_ReadPosRankSum_lt_-20" \
+                --filter-expression "ReadPosRankSum < -20.0" \
+                --filter-name "snp_SQR_gt_10" \
+                --filter-expression "SOR > 10.0" \
+                -O {output}
+        """
+
+#and merge them back together.
+rule sex_merge_soft_filtered_variants:
+    input:
+        SNPS = rules.sex_soft_filter_snps.output,
+        INDELS = rules.sex_soft_filter_indels.output,
+        REFERENCE = GENOME
+    output:
+        LIST = temp(GENO_DIR + "sex_variant.list"),
+        VCF = temp(GENO_DIR + "sex_soft-filtered_variants.vcf")
+    threads:
+        1
+    log:
+        LOG_DIR + "sex_merge_soft_filtered_variants"
+    params:
+
+    shell:
+        """
+        ls {input.SNPS} {input.INDELS} >{output.LIST}
+        
+        singularity exec snpCalling_v0.0.8.img \
+            gatk MergeVcfs \
+                -I {output.LIST} \
+                -O {output.VCF} \
+                -R {input.REFERENCE}
+        """
+
+rule sex_filtering:
+    input:
+        SEX_VCF = GENO_DIR + "sex_soft-filtered_variants.vcf"
+    output:
+        SEX_FILT_1 = temp(GENO_DIR + "sex-filt-1.recode.vcf"),
+        SEX_MISSING_TABLE = GENO_DIR + "sex-table.imiss",
+        SEX_REMOVE_LIST = temp(GENO_DIR + "sex-data_poor_indivs.list"),
+        SEX_FILT_2 = temp(GENO_DIR + "sex-filt-2.recode.vcf"),
+        SEX_FILT_3 = temp(GENO_DIR + "sex-filt-3.recode.vcf"),
+        SEX_FINAL_VCF = protected(GENO_DIR + "sH_filtered_sex-variants.vcf")
+    threads:
+        1
+    log:
+        LOG_DIR + "sex_filtering"
+    conda:
+        "environment.yaml"
+    params:
+        PREF_1 = GENO_DIR + "sex-filt-1",
+        PREF_2 = GENO_DIR + "sex-filt-2",
+        PREF_3 = GENO_DIR + "sex-filt-3"
+    shell:
+        """
+        vcftools \
+            --remove-filtered-all \
+            --min-alleles 2 \
+            --max-alleles 2 \
+            --max-missing 0.51 \
+            --mac 3 \
+            --vcf {input.SEX_VCF} \
+            --recode \
+            --recode-INFO-all \
+            --stdout >{output.SEX_FILT_1}
+
+        vcftools \
+            --vcf {output.SEX_FILT_1} \
+            --missing-indv \
+            --stdout >{output.SEX_MISSING_TABLE}
+
+        #remove individuals missing more than 25% of the data    
+        cat {output.SEX_MISSING_TABLE} | awk '$5 >0.25 {{print $1}}' >{output.SEX_REMOVE_LIST}
+
+        vcftools \
+            --vcf {output.SEX_FILT_1} \
+            --remove {output.SEX_REMOVE_LIST} \
+            --recode \
+            --recode-INFO-all \
+            --stdout >{output.SEX_FILT_2}
+
+        vcftools \
+            --vcf {output.SEX_FILT_2} \
+             --max-missing 0.75 \
+            --maf 0.05 \
+            --recode \
+            --recode-INFO-all \
+            --stdout >{output.SEX_FILT_3} 
+
+        bcftools filter \
+            --SnpGap 50 \
+            --IndelGap 100 \
+            --output {output.SEX_FINAL_VCF} \
+            -O v \
+            {output.SEX_FILT_3}
+        """
+
+################################################################################
+
+#index for downstream analyses
+rule index_filtered_vcf:
+    input:
+        GENO_DIR + "sH_filtered_{type}-variants.vcf"
+    output:
+        GENO_DIR + "sH_filtered_{type}-variants.vcf.idx"
+    threads:
+        1
+    log:
+        LOG_DIR + "index_filtered_vcf"
+    shell:
+        """
+        singularity exec snpCalling_v0.0.8.img \
+            gatk IndexFeatureFile \
+                -F {input}
+        """
+
+#sequence dictionary
+rule index_sman_genome:
+    input: 
+        SMAN_GENOME
+    output:
+        GENOME_DIR + "Smansoni_v7.dict",
+        GENOME_DIR + "Smansoni_v7.fa.fai"
+    threads:
+        1
+    log:
+        LOG_DIR + "index_sman_genome"
+    shell:
+        """
+        singularity exec snpCalling_v0.0.8.img \
+            gatk CreateSequenceDictionary -R {input}
+
+        samtools faidx {input}
+        """
+
+rule lift_to_sman:
+    input:
+        VCF = GENO_DIR + "sH_filtered_{chr_type}-variants.vcf",
+        LIFTOVER_BED = GENO_DIR + "sH_vs_sM7_liftover.bed",  
+        SMAN_REFERENCE = SMAN_GENOME  
+    output:
+        LIFTOVER_VCF = temp(GENO_DIR + "sH_filtered_{chr_type}-variants_lift.vcf"),    
+        MINUS_HEADER_VCF = temp(GENO_DIR + "sH_filtered_{chr_type}-variants_header.vcf"),
+        UNSORTED_VCF = temp(GENO_DIR + "sH_filtered_{chr_type}-variants_header_unsorted.vcf"),    
+        FINAL_VCF = GENO_DIR + "sH_filtered_{chr_type}-variants_sManLift.vcf",
+        FINAL_IDX = GENO_DIR + "sH_filtered_{chr_type}-variants_sManLift.vcf.idx"            
+    threads:
+        4
+    log:
+        LOG_DIR + "lift_to_sman"
+    params:
+        SCRIPT = SCRIPTS_DIR + "lift_over_vcf.py"
+    conda:
+        "environment.yaml"
+    shell:
+        """
+        python scripts/lift_over_vcf.py \
+            {input.LIFTOVER_BED} \
+            {input.VCF} \
+            {output.LIFTOVER_VCF}
+
+        grep -v "##contig" {output.LIFTOVER_VCF} >{output.MINUS_HEADER_VCF}
+
+        singularity exec snpCalling_v0.0.8.img \
+            gatk SelectVariants \
+                -V {output.MINUS_HEADER_VCF} \
+                -R {input.SMAN_REFERENCE} \
+                -O {output.UNSORTED_VCF}
+
+        singularity exec snpCalling_v0.0.8.img \
+            gatk SortVcf \
+                -I {output.UNSORTED_VCF} \
+                -O {output.FINAL_VCF}
+
+        singularity exec snpCalling_v0.0.8.img \
+            gatk IndexFeatureFile \
+                -F {output.FINAL_VCF}
+        """
