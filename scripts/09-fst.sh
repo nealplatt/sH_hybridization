@@ -1,4 +1,18 @@
-#clean and process reads to the haematobium genome
+#!/bin/bash
+#
+# SNP calling in S. haemotobium hybridzone(s).
+# NPlatt
+# Neal.platt@gmail.com
+
+# 09-fst.sh - calculate genome wide fst in the scikit-allel package.  
+
+# *** IMPORTANT
+# So this script is not inteded to be "run" as much as it reflect steps that I
+#   took in the analysis.  Its a combination of bash and python
+
+# Uses a conda to manage the enviroment
+
+#Set up the environment
 source /master/nplatt/schisto_hybridization/scripts/set_env.sh
 source activate snp_calling
 
