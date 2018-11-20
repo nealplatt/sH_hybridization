@@ -1,3 +1,17 @@
+#!/bin/bash
+#
+# SNP calling in S. haemotobium hybridzone(s).
+# NPlatt
+# Neal.platt@gmail.com
+
+# 16-bayescan.sh - run multipe bayescan chains to identify SNPs under selection
+#       based on allele frequency differences
+
+# Uses a conda to manage the enviroment and relies heavily on the scheduler
+
+# Some steps run on local computer manually (format conversion)
+
+#Set up the environment
 source /master/nplatt/schisto_hybridization/scripts/set_env.sh
 source activate snp_calling
 
@@ -41,13 +55,15 @@ grep -v "#" tz-ne_maf05_bi.vcf | cut -f1,2 >sites
 #converted to bayescan format wtih pgd spider on local computer
 #vcf ->pgd ->bayescan  (tz-ne_maf05_bi.bayescan)
 
+#get the bayescan software
 wget http://cmpg.unibe.ch/software/BayeScan/files/BayeScan2.1.zip
 unzip BayeScan2.1.zip
 chmod u+x BayeScan2.1/binaries/BayeScan2.1_linux64bits 
 
-
+#going to use a date to keep different runs seperate
 DATE=$(date +"%Y-%m-%d")
 
+#running 100 independent bayescan runs
 for CHAIN in $(seq -w 1 100); do
 
     mkdir -p $DATE/chain$CHAIN
@@ -69,6 +85,7 @@ for CHAIN in $(seq -w 1 100); do
 
     JOB_QSUB=$QSUB" -N $JID -o $LOG -pe mpi 12"
 
+    #run submitted to the scheduler/compute nodes
     echo $CMD | $JOB_QSUB 
 
     cd ../..
