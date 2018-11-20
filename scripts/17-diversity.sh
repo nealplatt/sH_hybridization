@@ -1,4 +1,15 @@
-#clean and process reads to the haematobium genome
+#!/bin/bash
+#
+# SNP calling in S. haemotobium hybridzone(s).
+# NPlatt
+# Neal.platt@gmail.com
+
+# 17-diversity.sh - compare heterozygosity between tz and ne, and caclulate pi
+#       in windows to build a ratio across chr4
+
+# Uses a conda to manage the enviroment
+
+#Set up the environment
 source /master/nplatt/schisto_hybridization/scripts/set_env.sh
 source activate snp_calling
 
@@ -11,30 +22,8 @@ cd diversity
 cp ../niger.list .
 cp ../tz.list .
 
-############################## R O H ###########################################
-#identify regions of homozygosity in NE and TZ (and find regions that differ)
-for i in $(seq 1 7); do
-    CHR=SM_V7_"$i"
-    for POP in niger tz; do
-    
-        vcftools \
-            --vcf ../beagle/auto_beagle.vcf \
-            --chr $CHR \
-            --LROH \
-            --keep $POP.list \
-            --stdout \
-            >$CHR"_"$POP.lroh
-
-        sed '1d' $CHR"_"$POP.lroh >$CHR"_"$POP.bed
-    done
-done
-
-#gen coords for plotting in R
-cat SM_V7_?_tz.bed | awk '{print $5-$4","$6}' >tz.cords
-cat SM_V7_?_ne.bed | awk '{print $5-$4","$6}' >ne.cords
-cat ne.cords tz.cords >all.coords
-
-############################## HET & F #########################################
+#-------------------
+#calculate heterozygosity
 vcftools \
     --vcf ../beagle/auto_beagle.vcf \
     --maf 0.05 \
@@ -46,6 +35,10 @@ vcftools \
 
 #plot in R
 
+#-------------------
+#calculate pi (diversity) on chr4
+
+#get list of alleles with maf >0.05
 vcftools \
     --vcf ../beagle/auto_beagle.vcf \
     --maf 0.05 \
@@ -55,8 +48,11 @@ vcftools \
     --recode \
     >maf05.vcf
 
+#create list of snps
 grep -v "#" maf05.vcf | cut -f3 >maf05.list
 
+#calculate pi in windows on chr 4 with snps from maf>0.05
+#...in NE
 vcftools \
     --vcf ../beagle/auto_beagle.vcf \
     --snps maf05.list \
@@ -67,6 +63,7 @@ vcftools \
     --stdout \
     >ne_SM_V7_4_maf05.window_pi
 
+#...in TZ
 vcftools \
     --vcf ../beagle/auto_beagle.vcf \
     --snps maf05.list \
@@ -77,5 +74,8 @@ vcftools \
     --stdout \
     >tz_SM_V7_4_maf05.window_pi
 
+#combine the pi calculations to compare
 paste ne_SM_V7_4_maf05.window_pi tz_SM_V7_4_maf05.window_pi >window.pi
+
+#plot in R
 
