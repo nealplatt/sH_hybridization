@@ -1,3 +1,19 @@
+#!/bin/bash
+#
+# SNP calling in S. haemotobium hybridzone(s).
+# NPlatt
+# Neal.platt@gmail.com
+
+# 21-f3_and_derived_f3.sh - calculate genome wide fst in the scikit-allel 
+#   then recalculate f3 with only derived alleles. 
+
+# Uses a conda to manage the enviroment
+
+# *** IMPORTANT
+# So this script is not inteded to be "run" as much as it reflect steps that I
+#   took in the analysis.  Its a combination of bash and python
+
+#Set up the environment
 source /master/nplatt/schisto_hybridization/scripts/set_env.sh
 source activate snp_calling
 
@@ -60,25 +76,34 @@ f3_ne_tz_curs=allel.average_patterson_f3(niger_ac, tz_ac, curs_ac, 50)
 #SE 0.00995347006333908
 #Z  -5.277266135884872
 
-with open('f3_tz_ne_bov', 'w') as f:
-    for item in f3_tz_ne_bov[3]:
-        f.write("%s\n" % item)
 
-with open('f3_ne_tz_bov', 'w') as f:
-    for item in f3_ne_tz_bov[3]:
-        f.write("%s\n" % item)
+################################################################################
+mkdir f3_bovis_vs_curassoni
 
-with open('f3_tz_ne_curs', 'w') as f:
-    for item in f3_tz_ne_curs[3]:
-        f.write("%s\n" % item)
+cd f3_bovis_vs_curassoni
 
-with open('f3_ne_tz_curs', 'w') as f:
-    for item in f3_ne_tz_curs[3]:
-        f.write("%s\n" % item)
+#f3 stats indicates introgression from two populations in a third.  F3 is neg
+# for NE, TZ + BOV and NE, TZ + CURS.  I am thinking this is driven by shared 
+# variation rather than admixture from both species. 
+#
+# to test get autapomorphic/derived loci from each
 
+#get list of autapomorphies
+python ../../scripts/find_bovis_and_curassoni_autapomorphies.py \
+    ../build_snp_panel/auto_maf.vcf \
+    bov_cur_autapomorphic_snps.list
 
+#get the vcf
+cut -f1 bov_cur_autapomorphic_snps.list | sort | uniq >snps.list
 
+vcftools \
+    --vcf ../build_snp_panel/auto.vcf \
+    --snps snps.list \
+    --recode \
+    --stdout \
+    >bov_cur_autapomorphic_snps.vcf
 
+###### in python
 callset=allel.read_vcf('../f3_bovis_vs_curassoni/bov_cur_autapomorphic_snps.vcf', log=sys.stdout)
 gt=allel.GenotypeArray(callset['calldata/GT'])
 
@@ -121,86 +146,7 @@ af3_tz_ne_curs=allel.average_patterson_f3(tz_ac, niger_ac, curs_ac, 100)
 #Z  7.977942099115457
 
 
-
-with open('af3_tz_ne_bov', 'w') as f:
-    for item in af3_tz_ne_bov[3]:
-        f.write("%s\n" % item)
-
-with open('af3_ne_tz_bov', 'w') as f:
-    for item in af3_ne_tz_bov[3]:
-        f.write("%s\n" % item)
-
-with open('af3_tz_ne_curs', 'w') as f:
-    for item in af3_tz_ne_curs[3]:
-        f.write("%s\n" % item)
-
-with open('af3_ne_tz_curs', 'w') as f:
-    for item in af3_ne_tz_curs[3]:
-        f.write("%s\n" % item)
-
-
-##################################
-# in bash
-plink \
-    --vcf ../beagle/auto_beagle_maf05.vcf \
-    --allow-extra-chr \
-    --indep-pairwise 25 5 0.20 \
-    --out auto_beagle_maf05
-
-vcftools \
-    --vcf ../beagle/auto_beagle_maf05.vcf \
-    --exclude auto_beagle_maf05.prune.out \
-    --recode \
-    --recode-INFO-all \
-    --stdout \
-    >auto_beagle_maf05_LD.vcf
-
-vcftools \
-    --vcf auto_beagle_maf05_LD.vcf \
-    --het \
-    --stdout >auto_beagle_maf05_f.out
-
-#F NE  = -0.001748478
-#F TZ  =  0.3607874
-#H0 NE =  0.2759724
-#HO TZ =  0.1760968
-
-import allel
-import numpy as np  
-import sys
-import itertools
-
-#read in the vcf data
-
-callset=allel.read_vcf('../build_snp_panel/auto_maf_ld.vcf', log=sys.stdout)
-gt=allel.GenotypeArray(callset['calldata/GT'])
-
-#get allele counts for each locus
-ac=gt.count_alleles()
-
-
-#designate the population (index) in the allele count array
-egypt_pop=0 
-bov_pop=1
-mat_pop=[2,7,8]
-guin_pop=3
-inter_pop=4
-curs_pop=5
-marg_pop=6      
-niger_pop=list(range(9,56))                                                            
-tz_pop=list(range(56,102))
-
-#now count the alleles in the array for each pop
-egypt_ac=gt.count_alleles(subpop=[egypt_pop])
-bov_ac=gt.count_alleles(subpop=[bov_pop])
-mat_ac=gt.count_alleles(subpop=mat_pop)
-guin_ac=gt.count_alleles(subpop=[guin_pop])
-inter_ac=gt.count_alleles(subpop=[inter_pop])
-curs_ac=gt.count_alleles(subpop=[curs_pop])
-marg_ac=gt.count_alleles(subpop=[marg_pop])
-niger_ac=gt.count_alleles(subpop=niger_pop)
-tz_ac=gt.count_alleles(subpop=tz_pop)
-
-
-f3_tz_ne_bov=allel.average_patterson_f3(tz_ac, niger_ac, mat_ac, 50)
+#these results indicate that niger haem is an admixed tx and bov population.
+# the test for admixture between tz and curs is negative (indicating admixture..
+# but is not significant.
 

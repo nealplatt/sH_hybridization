@@ -1,4 +1,14 @@
-#clean and process reads to the haematobium genome
+#!/bin/bash
+#
+# SNP calling in S. haemotobium hybridzone(s).
+# NPlatt
+# Neal.platt@gmail.com
+
+# 16-ld.sh - compare ld between schHae_V1 vs. lifted schMan_v7 coordinates.  
+
+# Uses a conda to manage the enviroment
+
+#Set up the environment
 source /master/nplatt/schisto_hybridization/scripts/set_env.sh
 source activate snp_calling
 
@@ -8,6 +18,7 @@ mkdir ld
 
 cd ld
 
+#generate a file that give R2 and bp between markers for schMan
 mkdir schMan_ld
 for i in $(seq 1 7); do
     CHR=SM_V7_"$i"
@@ -46,6 +57,12 @@ for i in $(seq 1 7); do
     rm $CHR.ped $CHR.map $CHR.nosex $CHR.log $CHR.vcf $CHR.ld
 done
 
+
+
+###############
+# to do something similar with schHaem coordinates need to re-build vcf
+
+
 #build new vcf file with schHaem coords
 grep -v "#" ../build_snp_panel/auto_maf.vcf \
     | awk  '{print $3"\t"$0}' \
@@ -75,13 +92,7 @@ ${ENVIRONMENTS["TITAN SINGULARITY"]} \
         -O auto_maf_schHae.vcf
         #75,704 snp loci across all (sman homologous) chromosomes
 
-${ENVIRONMENTS["TITAN SINGULARITY"]} \
-    gatk SortVcf \
-        -R $HAE_GENOME \
-        -I header.vcf \
-        -O auto_maf_schHae.vcf
-#create list of contigs with snps
-
+#make sure they are bi-allelic
 bcftools view \
     -m2 \
     -M2 \
@@ -89,6 +100,7 @@ bcftools view \
     auto_maf_schHae.vcf \
     >auto_maf_schHae_bi.vcf
 
+#remove low frequency snps
 vcftools \
     --vcf auto_maf_schHae.vcf \
     --keep haem.list \
@@ -97,6 +109,8 @@ vcftools \
     --stdout \
     >auto_maf_schHae_bi_haem.vcf
 
+#create a list of contigs (have to do on a contig by contig basis (like chrs in 
+# schMan)).
 grep -v "#" auto_maf_schHae_bi_haem.vcf \
     | cut -f1 \
     | sort \
@@ -104,6 +118,7 @@ grep -v "#" auto_maf_schHae_bi_haem.vcf \
     | awk '{ if ($1>1) print $2}' \
     >schHae_contigs.list                                                   
 
+#generate a file that give R2 and bp between markers for schHae
 mkdir schHae_ld
 #calc ld for all schHae contigs
 for CHR in $(cat schHae_contigs.list); do
@@ -143,14 +158,15 @@ for CHR in $(cat schHae_contigs.list); do
 
 done
 
-rm KL* AMP*
-
 #when finished, create csv files with r2 and physical distance
 cat schHae_ld/*.ld | awk '{print $7","$8}' | grep -v "R2" >schHae_ld.csv
 grep -v R2 schMan_ld/SM_V7_?.ld | awk '{print $7","$8 }' >schMan_ld.csv
 
+
+#cleanup
 tar -czf schHae_ld.tgz schHae_ld/
 tar -czf schMan_ld.tgz schMan_ld/
-
 rm -r schHae_ld/ schMan_ld
+rm KL* AMP*
 
+#plot schHae_ld.csv and schMan_ld.csv in R

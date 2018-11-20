@@ -1,3 +1,19 @@
+#!/bin/bash
+#
+# SNP calling in S. haemotobium hybridzone(s).
+# NPlatt
+# Neal.platt@gmail.com
+
+# theta.sh - calculate theta with scikit-allele
+
+# Uses a conda to manage environment
+
+# this code is not intended to be run as is since it mixes bash and python
+#   instead it reflects steps i used for the analysis
+
+# Some steps run on local computer manually (format conversion)
+
+#Set up the environment
 source /master/nplatt/schisto_hybridization/scripts/set_env.sh
 source activate snp_calling
 
@@ -7,7 +23,7 @@ mkdir theta
 
 cd theta
 
-#calcuate D with scikit allele. IN PYTHON !!!!!!!!!!!!!!!!!!!
+#calcuate theta with scikit allele. IN PYTHON !!!!!!!!!!!!!!!!!!!
 import allel
 import numpy as np  
 import sys
@@ -34,7 +50,7 @@ curs_ac=gt.count_alleles(subpop=[curs_pop])
 niger_ac=gt.count_alleles(subpop=niger_pop)
 tz_ac=gt.count_alleles(subpop=tz_pop)
 
-#get ac for each chr
+#get ac for each chr [nums came from snps per chrom]
 chr1_pos=list(range(1, 9501))
 chr2_pos=list(range(9501, 9501+6135))
 chr3_pos=list(range(9501+6135, 9501+6135+4592))

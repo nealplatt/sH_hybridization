@@ -3,13 +3,15 @@ source activate snp_calling
 
 cd $RESULTS_DIR
 
-mkdir d_bovis_vs_curassoni
+mkdir f3_bovis_vs_curassoni
 
-cd d_bovis_vs_curassoni
+cd f3_bovis_vs_curassoni
 
-#D stats indicate introgression into nigerien haematobium from bovis and
-# curassoni.  I am thinking this is driven by shared variation rather than
-# introgression from both species.  Need to calculate D from autopomorphic loci.
+#f3 stats indicates introgression from two populations in a third.  F3 is neg
+# for NE, TZ + BOV and NE, TZ + CURS.  I am thinking this is driven by shared 
+# variation rather than admixture from both species. 
+#
+# to test get autapomorphic/derived loci from each
 
 #get list of autapomorphies
 python ../../scripts/find_bovis_and_curassoni_autapomorphies.py \
