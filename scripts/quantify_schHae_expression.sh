@@ -80,61 +80,70 @@ for SAMPLE in SRX3632881 SRX3632879 SRX3632877; do
 
     cufflinks \
         --no-update-check \
-        --num-threads 6 \
+        --num-threads 12 \
         --multi-read-correct \
         --output-dir $SAMPLE"_cufflinks" \
         --frag-bias-correct schHae_v1.fa \
         --library-type fr-unstranded \
         --upper-quartile-norm \
-        $SAMPLE"_tophat"/accepted_hits.bam \
-         >>$SAMPLE"_cufflinks.log" 2>&1 &
+        $SAMPLE"_tophat"/accepted_hits.bam 
 
-      wait
 done
 
 #----------------------------------------------------
 #create a list of all the predicted transcripts
-ls ERR*cufflinks/transcripts.gtf >assembly_GTF_list.txt
+ls SRX*cufflinks/transcripts.gtf >assembly_GTF_list.txt
 
 #then use cuffmerge to merge the predicted transcripts across all samples to
 # generate a single/consensus/merged annotation
 cuffmerge \
+    --no-update-check \
     -o cuffmerge \
     --num-threads 12 \
     --ref-sequence schHae_v1.fa \
     assembly_GTF_list.txt 
 
-#----------------------------------------------------
-#quantify expression for each gene across all samples
-cuffquant \
-    --no-update-check \
-    --output-dir cuffquant \
-    --num-threads 12 \
-    --library-type fr-unstranded \
-    --frag-bias-correct schHae_v1.fa \
-    --multi-read-correct \
-    ./cuffmerge/merged.gtf \
-    ./SRX3632881_tophat/accepted_hits.bam \
-    ./SRX3632879_tophat/accepted_hits.bam \
-    ./SRX3632877_tophat/accepted_hits.bam
+
+
+#ran into errors switching to hisat2 - installed with conda
+hisat2-build schHae_v1.fa schHae_v1
+
+for SRA_ACCESSION in SRX3632881 SRX3632879 SRX3632877; do
+
+    hisat2 \
+        -q \
+        --threads 12 \
+        -x schHae_v1 \
+        -1 $SRA_ACCESSION"_reads"/$SRA_ACCESSION"_1.fastq.gz" \
+        -2 $SRA_ACCESSION"_reads"/$SRA_ACCESSION"_2.fastq.gz" \
+        -S $SRA_ACCESSION"_tophat".sam
+
+done
+
+
+for SRA_ACCESSION in SRX3632881 SRX3632879 SRX3632877; do
+
+    #sort sam file
+    samtools view  -Sb $SRA_ACCESSION"_tophat.sam" \
+        | samtools sort - $SRA_ACCESSION"_sorted"
+
+    #use stringtie to assemble transcripts and get abundance
+    stringtie \
+        $SRA_ACCESSION"_tophat_sorted.sam" \
+        -o $SRA_ACCESSION"_stringtie.gtf" \
+        -A $SRA_ACCESSION"_stringtie_gene_abund.tab"
+
+done
 
 
 
-#----------------------------------------------------
-#normalize expression between samples
-cuffnorm \
-    --no-update-check \
-    --output-dir cuffnorm_schHae_v1 \
-    --num-threads 12 \
-    --library-type fr-unstranded \
-    --compatible-hits-norm \
-    --output-format simple-table \
-    --library-norm-method classic-fpkm \
-    --labels eggs,adult_female,adult_male \
-    ########/master/nplatt/schisto_hybridization/data/Sm_v7.0.gff  \
-    ./SRX3632881_tophat/accepted_hits.bam \
-    ./SRX3632879_tophat/accepted_hits.bam \
-    ./SRX3632877_tophat/accepted_hits.bam
+
+
+
+
+
+
+
 
 
 #get invadolysins (from Berriman 2009 (supp table 8)
