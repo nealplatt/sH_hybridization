@@ -1,3 +1,16 @@
+#!/bin/bash
+#
+# SNP calling in S. haemotobium hybridzone(s).
+# NPlatt
+# Neal.platt@gmail.com
+
+# 31-dn_ds_invadolysin.sh - checking to see if invadolysin (Smp_127030) has elev
+#       dn/ds ratios.  
+
+# Uses a conda and singularity to manage the enviroment; needs relativley high
+#       mem compute (used Titan - 125Gb)
+
+#set up environment
 source activate snp_calling
 source /master/nplatt/schisto_hybridization/scripts/set_env.sh
 
@@ -7,533 +20,191 @@ mkdir dnds
 
 cd dnds
 
-#mask genome for unsampled regions
-
-#first convert all bams to bed and merge
-for BAM in $(ls ../map_reads/exome/*_processed.bam); do
-    
-    SAMPLE=$(basename $BAM .bam)
-
-    genomeCoverageBed \
-        -bga \
-        -split \
-        -ibam $BAM \
-        | bedtools \
-            merge \
-            -i - \
-            >$SAMPLE.bed
-done &
+grep cds ../../data/Sm_v7.0.bed | grep Smp_127030 >Smp_127030_cds.bed
 
 
-for BAM in $(ls ../map_reads/exome/*_processed.bam); do
-    
-    echo -e "    $BAM \\"
-done &
-
-
-cut -f1,2 ../../data/genome/schHae_v1.fa.fai >schHae_v1.fa.genome
-awk '{print $1"\t0\t"$2"\t"$1}' schHae_v1.fa.genome >schHae_v1.fa.genome.bed
-
-bedtools \
-    multicov \
-    -bed schHae_v1.fa.genome.bed \
-    -bams \
-    ../map_reads/exome/ERR037800_processed.bam \
-    ../map_reads/exome/ERR084970_processed.bam \
-    ../map_reads/exome/ERR103048_processed.bam \
-    ../map_reads/exome/ERR103051_processed.bam \
-    ../map_reads/exome/ERR119612_processed.bam \
-    ../map_reads/exome/ERR119613_processed.bam \
-    ../map_reads/exome/ERR119622_processed.bam \
-    ../map_reads/exome/ERR119623_processed.bam \
-    ../map_reads/exome/ERR310937_processed.bam \
-    ../map_reads/exome/ERR310940_processed.bam \
-    ../map_reads/exome/ERR539850_processed.bam \
-    ../map_reads/exome/ERR539851_processed.bam \
-    ../map_reads/exome/ERR539852_processed.bam \
-    ../map_reads/exome/ERR539853_processed.bam \
-    ../map_reads/exome/ERR539854_processed.bam \
-    ../map_reads/exome/ERR539855_processed.bam \
-    ../map_reads/exome/ERR539856_processed.bam \
-    ../map_reads/exome/ERR539857_processed.bam \
-    ../map_reads/exome/Sh.NE_Dai-002.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Dai-010.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Dai-013.3_processed.bam \
-    ../map_reads/exome/Sh.NE_Dai-031.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Dai-033.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Dai-044.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Dai-045.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Dai-051.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Dai-074.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Dai-146.1_processed.bam \
-    ../map_reads/exome/Sh.NE_DaiCP-233.1_processed.bam \
-    ../map_reads/exome/Sh.NE_DaiCP-276.1_processed.bam \
-    ../map_reads/exome/Sh.NE_DaiCP-277.2_processed.bam \
-    ../map_reads/exome/Sh.NE_Doki-029.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Kar-001.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Kar-002.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Kar-076.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Kar-096.2_processed.bam \
-    ../map_reads/exome/Sh.NE_Kar-241.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Kar-241.2_processed.bam \
-    ../map_reads/exome/Sh.NE_Kar-281.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Kar-37.2_processed.bam \
-    ../map_reads/exome/Sh.NE_Lata-007.3_processed.bam \
-    ../map_reads/exome/Sh.NE_Lata-033.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Lata-078.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Lata-253.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Lata-275.2_processed.bam \
-    ../map_reads/exome/Sh.NE_Lata-293.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Lata-294.1_processed.bam \
-    ../map_reads/exome/Sh.NE_LibTB-009.2_processed.bam \
-    ../map_reads/exome/Sh.NE_LibTB-010.1_processed.bam \
-    ../map_reads/exome/Sh.NE_LibTB-022.1_processed.bam \
-    ../map_reads/exome/Sh.NE_LibTB-028.1_processed.bam \
-    ../map_reads/exome/Sh.NE_LibTB-031.1_processed.bam \
-    ../map_reads/exome/Sh.NE_NG-011.1_processed.bam \
-    ../map_reads/exome/Sh.NE_NG-06.2_processed.bam \
-    ../map_reads/exome/Sh.NE_NG-089.1_processed.bam \
-    ../map_reads/exome/Sh.NE_NG-236.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Seb-076.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Seb-078.2_processed.bam \
-    ../map_reads/exome/Sh.NE_Seb-081.2_processed.bam \
-    ../map_reads/exome/Sh.NE_Tiag-272.1_processed.bam \
-    ../map_reads/exome/Sh.NE_YK-029.2_processed.bam \
-    ../map_reads/exome/Sh.NE_YK-069.1_processed.bam \
-    ../map_reads/exome/Sh.NE_YK-099.2_processed.bam \
-    ../map_reads/exome/Sh.NE_YK-248.2_processed.bam \
-    ../map_reads/exome/Sh.NE_Youri-069.2_processed.bam \
-    ../map_reads/exome/Sh.NE_Youri-091.3_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0063.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0075.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0076.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0079.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0089.2_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0094.2_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0099.2_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0103.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0104.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0106.2_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0108.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0110.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0114.3_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0115.4_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0120.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0125.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0126.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0127.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0128.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0130.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0133.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0139.2_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0145.3_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0154.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0157.3_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0166.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0171.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0006.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0038.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0076.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0077.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0078.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0087.2_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0089.3_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0092.3_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0099.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0102.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0111.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0117.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0121.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0125.3_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0127.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0129.2_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0134.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0137.3_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0139.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0142.2_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0146.1_processed.bam \
-    ../map_reads/exome/Sm.BR_0447.1_processed.bam \
-    ../map_reads/exome/Sm.BR_1278.1_processed.bam \
-    ../map_reads/exome/Sm.BR_2039.1_processed.bam \
-    ../map_reads/exome/SRR433865_processed.bam \
-    >all_multicov.bed
-
-#so i need to find all positions that have a bunch (n=?) of sh coverage
-#  and atleast 3 of 6 for outgroup coverage.
-
-
-#mask genome
-
-#build cds for each gene
-#make a list of each transcript
-grep cds Sm_v7.0.bed | cut -f4 | sed 's/.cds//gi' | sort | uniq >cds.list
-wc -l cds.list 
-#14608 cds.list
-
-mkdir cds_bed
-grep cds Sm_v7.0.bed >all_cds.bed
-#for each cds build a bed file that has the cds coordinates
-while read TRANSCRIPT; do
-    grep $TRANSCRIPT all_cds.bed \
-        | awk '{print $1"\t"$2"\t"$3"\t"$4"\t"$5*1000"\t"$6'} \
-        >cds_bed/$TRANSCRIPT.bed
-   
-    #use this command to do a quick and dirty check that everything is in frame
-    #awk '{SUM+=$3-$2} END {print SUM/3}' cds_bed/$TRANSCRIPT.bed
-
-    #lift the coordinates to haematobium
-    ${ENVIRONMENTS["TITAN SINGULARITY"]} \
-        /usr/software/progressiveCactus/submodules/hal/bin/halLiftover  \
-            $RESULTS_DIR/wga/schMan7_vs_schMan1.hal \
-            schMan_v7 \
-            cds_bed/$TRANSCRIPT.bed \
-            schHae_v1 \
-            cds_bed/$TRANSCRIPT"_schHae.bed"
- 
-    awk '{SUM+=$3-$2} END {print SUM/3}' cds_bed/$TRANSCRIPT"_schHae.bed"
-    #check to see that things lifted over correctly
-    #->haem_cleaned.bed
-
-    #if so extract the fasta with haem bed file
-    #->cds.fasta
-
-    #depending on the orientation concatenate cds
-    #->gene.fasta
-
-done <head.list
-
-
-#convert to necessary format for paml/codeml
-
-
-################################################################################
-
-#get only the invadolysin CDS
-grep Smp_127030 all_cds.bed >Smp_127030_cds.bed
-
-#convert from Sman to sHaem coords
-${ENVIRONMENTS["TITAN SINGULARITY"]} \
+#lift the coordinates to haematobium
+/opt/projects/singularity-2.4.2/bin/singularity exec $WORK_DIR/config/snpCalling_v0.0.8.img \
     /usr/software/progressiveCactus/submodules/hal/bin/halLiftover  \
         $RESULTS_DIR/wga/schMan7_vs_schMan1.hal \
         schMan_v7 \
         Smp_127030_cds.bed \
         schHae_v1 \
         Smp_127030_cds_schHae.bed
+ 
+awk '{SUM+=$3-$2} END {print SUM/3}' Smp_127030_cds_schHae.bed
+#check to see that things lifted over correctly
 
-#intersect the CDS with the probe coordinates
-bedtools intersect -a ../../data/schHae_v1_probes.bed -b Smp_127030_cds_schHae.bed >Smp_127030_probed-cds_schHae.bed
-
-#to calculate coverage across all probed regions...need to have single bp intervals
-bedtools makewindows -b Smp_127030_probed-cds_schHae.bed  -w 1 -s 1 >Smp_127030_probed-cds_schHae_1bpWindows.bed
-
-#calculate coverage across each base in probed regions of Smp_127030
-bedtools \
-    multicov \
-    -bed Smp_127030_probed-cds_schHae_1bpWindows.bed \
-    -bams \
-    ../map_reads/exome/ERR037800_processed.bam \
-    ../map_reads/exome/ERR103048_processed.bam \
-    ../map_reads/exome/ERR103051_processed.bam \
-    ../map_reads/exome/ERR119612_processed.bam \
-    ../map_reads/exome/ERR119613_processed.bam \
-    ../map_reads/exome/ERR310937_processed.bam \
-    ../map_reads/exome/ERR310940_processed.bam \
-    ../map_reads/exome/ERR539850_processed.bam \
-    ../map_reads/exome/ERR539855_processed.bam \
-    ../map_reads/exome/ERR539857_processed.bam \
-    ../map_reads/exome/Sh.NE_Dai-002.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Dai-010.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Dai-013.3_processed.bam \
-    ../map_reads/exome/Sh.NE_Dai-031.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Dai-033.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Dai-044.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Dai-045.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Dai-051.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Dai-074.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Dai-146.1_processed.bam \
-    ../map_reads/exome/Sh.NE_DaiCP-233.1_processed.bam \
-    ../map_reads/exome/Sh.NE_DaiCP-276.1_processed.bam \
-    ../map_reads/exome/Sh.NE_DaiCP-277.2_processed.bam \
-    ../map_reads/exome/Sh.NE_Kar-001.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Kar-002.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Kar-076.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Kar-096.2_processed.bam \
-    ../map_reads/exome/Sh.NE_Kar-241.2_processed.bam \
-    ../map_reads/exome/Sh.NE_Kar-281.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Kar-37.2_processed.bam \
-    ../map_reads/exome/Sh.NE_Lata-007.3_processed.bam \
-    ../map_reads/exome/Sh.NE_Lata-033.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Lata-078.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Lata-253.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Lata-275.2_processed.bam \
-    ../map_reads/exome/Sh.NE_Lata-293.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Lata-294.1_processed.bam \
-    ../map_reads/exome/Sh.NE_LibTB-009.2_processed.bam \
-    ../map_reads/exome/Sh.NE_LibTB-010.1_processed.bam \
-    ../map_reads/exome/Sh.NE_LibTB-022.1_processed.bam \
-    ../map_reads/exome/Sh.NE_LibTB-028.1_processed.bam \
-    ../map_reads/exome/Sh.NE_LibTB-031.1_processed.bam \
-    ../map_reads/exome/Sh.NE_NG-011.1_processed.bam \
-    ../map_reads/exome/Sh.NE_NG-06.2_processed.bam \
-    ../map_reads/exome/Sh.NE_NG-089.1_processed.bam \
-    ../map_reads/exome/Sh.NE_NG-236.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Seb-076.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Seb-078.2_processed.bam \
-    ../map_reads/exome/Sh.NE_Seb-081.2_processed.bam \
-    ../map_reads/exome/Sh.NE_Tiag-272.1_processed.bam \
-    ../map_reads/exome/Sh.NE_YK-029.2_processed.bam \
-    ../map_reads/exome/Sh.NE_YK-069.1_processed.bam \
-    ../map_reads/exome/Sh.NE_YK-099.2_processed.bam \
-    ../map_reads/exome/Sh.NE_YK-248.2_processed.bam \
-    ../map_reads/exome/Sh.NE_Youri-069.2_processed.bam \
-    ../map_reads/exome/Sh.NE_Youri-091.3_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0063.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0076.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0079.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0089.2_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0094.2_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0099.2_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0103.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0104.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0106.2_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0108.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0110.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0114.3_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0115.4_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0120.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0125.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0126.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0127.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0128.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0130.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0133.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0139.2_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0145.3_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0154.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0157.3_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0166.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0171.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0006.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0038.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0076.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0077.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0078.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0087.2_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0089.3_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0092.3_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0099.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0102.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0111.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0117.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0121.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0125.3_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0127.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0129.2_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0134.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0137.3_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0139.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0142.2_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0146.1_processed.bam \
-    >Smp_127030_probed-cds_schHae_1bpWindows_multicov.tbl
-
-#find probed regions of low coverage 
-# to be included site must have:
-#   85% Haem with >= 5 reads
-#   gtd in bovis
-#   gtd in curassoni
-#   gtd in margrebowie
-#   gtd in one other outgroup
-
-#equal to lowest cov snp in invadolysin calls
-vcftools \
-    --vcf ../build_snp_panel/auto.vcf \
-    --bed Smp_127030_cds.bed \
-    --recode \
-    --stdout >Smp_127030_cds.vcf
-
-vcf2bed \
-    --do-not-sort \
-    --max-mem=2G \
-    <Smp_127030_cds.vcf \
-    | awk '{print $1"\t"$2"\t"$3"\t"$4}' \
-    >Smp_127030_cds_snps.bed
-    #60 remaining snps
-
-${ENVIRONMENTS["TITAN SINGULARITY"]} \
-    /usr/software/progressiveCactus/submodules/hal/bin/halLiftover  \
-        $RESULTS_DIR/wga/schMan7_vs_schMan1.hal \
-        schMan_v7 \
-        Smp_127030_cds_snps.bed \
-        schHae_v1 \
-        Smp_127030_cds_snps_schHae.bed
-
-bedtools \
-    multicov \
-    -bed Smp_127030_cds_snps_schHae.bed \
-    -bams \
-    ../map_reads/exome/ERR037800_processed.bam \
-    ../map_reads/exome/ERR103048_processed.bam \
-    ../map_reads/exome/ERR103051_processed.bam \
-    ../map_reads/exome/ERR119612_processed.bam \
-    ../map_reads/exome/ERR119613_processed.bam \
-    ../map_reads/exome/ERR310937_processed.bam \
-    ../map_reads/exome/ERR310940_processed.bam \
-    ../map_reads/exome/ERR539850_processed.bam \
-    ../map_reads/exome/ERR539855_processed.bam \
-    ../map_reads/exome/ERR539857_processed.bam \
-    ../map_reads/exome/Sh.NE_Dai-002.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Dai-010.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Dai-013.3_processed.bam \
-    ../map_reads/exome/Sh.NE_Dai-031.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Dai-033.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Dai-044.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Dai-045.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Dai-051.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Dai-074.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Dai-146.1_processed.bam \
-    ../map_reads/exome/Sh.NE_DaiCP-233.1_processed.bam \
-    ../map_reads/exome/Sh.NE_DaiCP-276.1_processed.bam \
-    ../map_reads/exome/Sh.NE_DaiCP-277.2_processed.bam \
-    ../map_reads/exome/Sh.NE_Kar-001.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Kar-002.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Kar-076.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Kar-096.2_processed.bam \
-    ../map_reads/exome/Sh.NE_Kar-241.2_processed.bam \
-    ../map_reads/exome/Sh.NE_Kar-281.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Kar-37.2_processed.bam \
-    ../map_reads/exome/Sh.NE_Lata-007.3_processed.bam \
-    ../map_reads/exome/Sh.NE_Lata-033.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Lata-078.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Lata-253.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Lata-275.2_processed.bam \
-    ../map_reads/exome/Sh.NE_Lata-293.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Lata-294.1_processed.bam \
-    ../map_reads/exome/Sh.NE_LibTB-009.2_processed.bam \
-    ../map_reads/exome/Sh.NE_LibTB-010.1_processed.bam \
-    ../map_reads/exome/Sh.NE_LibTB-022.1_processed.bam \
-    ../map_reads/exome/Sh.NE_LibTB-028.1_processed.bam \
-    ../map_reads/exome/Sh.NE_LibTB-031.1_processed.bam \
-    ../map_reads/exome/Sh.NE_NG-011.1_processed.bam \
-    ../map_reads/exome/Sh.NE_NG-06.2_processed.bam \
-    ../map_reads/exome/Sh.NE_NG-089.1_processed.bam \
-    ../map_reads/exome/Sh.NE_NG-236.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Seb-076.1_processed.bam \
-    ../map_reads/exome/Sh.NE_Seb-078.2_processed.bam \
-    ../map_reads/exome/Sh.NE_Seb-081.2_processed.bam \
-    ../map_reads/exome/Sh.NE_Tiag-272.1_processed.bam \
-    ../map_reads/exome/Sh.NE_YK-029.2_processed.bam \
-    ../map_reads/exome/Sh.NE_YK-069.1_processed.bam \
-    ../map_reads/exome/Sh.NE_YK-099.2_processed.bam \
-    ../map_reads/exome/Sh.NE_YK-248.2_processed.bam \
-    ../map_reads/exome/Sh.NE_Youri-069.2_processed.bam \
-    ../map_reads/exome/Sh.NE_Youri-091.3_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0063.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0076.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0079.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0089.2_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0094.2_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0099.2_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0103.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0104.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0106.2_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0108.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0110.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0114.3_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0115.4_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0120.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0125.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0126.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0127.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0128.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0130.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0133.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0139.2_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0145.3_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0154.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0157.3_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0166.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_PEM0171.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0006.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0038.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0076.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0077.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0078.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0087.2_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0089.3_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0092.3_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0099.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0102.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0111.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0117.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0121.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0125.3_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0127.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0129.2_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0134.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0137.3_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0139.1_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0142.2_processed.bam \
-    ../map_reads/exome/Sh.TZ_UNG0146.1_processed.bam \
-    >Smp_127030_cds_snps_schHae_multicov.tbl
-
-#so manually examining called snps vs all probed regions its apparent that we had
-# good enough coverage to include all the probed regions in the dn ds caluculation
-# roughly, the lowest called SNP had 11.5x coverage and all but 1 bp in the 
-# entire probed regions of invadolysin had gt 11.5...and this region was like 10.5
-
-#create bed intervals of unprobed Smp cds
-bedtools intersect -v -a Smp_127030_cds_schHae.bed -b ../../data/schHae_v1_probes.bed  >Smp_127030_UNprobed-cds_schHae.bed
-
-#need to build cds for invadolysin.
-# first get invadolysin contig
+#get a fasta and mask for uprobed regions
 samtools faidx ../../data/genome/schHae_v1.fa KL250964.1 >KL250964.1.fasta
 
-#now mask unprobed regions
-bedtools intersect -v -a Smp_127030_cds_schHae.bed -b ../../data/schHae_v1_probes.bed  >Smp_127030_UNprobed-cds_schHae.bed
-bedtools maskfasta -fi KL250964.1.fasta -bed Smp_127030_UNprobed-cds_schHae.bed -fo KL250964.1_masked.fasta
+
+bedtools intersect \
+    -v \
+    -a Smp_127030_cds_schHae.bed \
+    -b ../../data/schHae_v1_probes.bed  \
+    >Smp_127030_UNprobed-cds_schHae.bed
+
+bedtools maskfasta \
+    -fi KL250964.1.fasta \
+    -bed Smp_127030_UNprobed-cds_schHae.bed \
+    -fo KL250964.1_masked.fasta
+
+#index sequences
 samtools faidx KL250964.1_masked.fasta
-${ENVIRONMENTS["TITAN SINGULARITY"]} gatk CreateSequenceDictionary -R KL250964.1_masked.fasta
+
+/opt/projects/singularity-2.4.2/bin/singularity exec $WORK_DIR/config/snpCalling_v0.0.8.img \
+    gatk CreateSequenceDictionary \
+    -R KL250964.1_masked.fasta
+
 
 #then fasta from reference of invadolysin snps
 #...need to convert vcf from sman to shaem coords
-schMan_to_schHae_vcf_coords.py Smp_127030_cds.vcf tmp.vcf 
 
-Smp_127030_cds_schHae_coords.vcf
+#get a small region of the vcf file (wiht sman coordinates)
+vcftools \
+    --vcf ../beagle/auto_beagle_maf05.vcf \
+    --chr SM_V7_4 \
+    --from-bp 19000000 \
+    --to-bp 21000000 \
+    --recode \
+    --stdout \
+    >auto_beagle_maf05_chr4:19M-21M.vcf 
+
+#now convert these coordinates to schHaem
+python ../../scripts/schMan_to_schHae_vcf_coords.py \
+    auto_beagle_maf05_chr4:19M-21M.vcf  \
+    tmp.vcf 
+
+#make the vcf compatible by fixing the header
 grep -v "contig=<ID=" tmp.vcf \
     >headerless.vcf
 
 #add contigs for sman to header
-${ENVIRONMENTS["TITAN SINGULARITY"]} \
+/opt/projects/singularity-2.4.2/bin/singularity exec $WORK_DIR/config/snpCalling_v0.0.8.img \
     gatk SelectVariants \
         -R $HAE_GENOME \
         -V headerless.vcf \
         -O header.vcf
 
 #may need to be run on high mem nodes
-${ENVIRONMENTS["TITAN SINGULARITY"]} \
+/opt/projects/singularity-2.4.2/bin/singularity exec $WORK_DIR/config/snpCalling_v0.0.8.img \
     gatk SortVcf \
         -R $HAE_GENOME \
         -I header.vcf \
         -O Smp_127030_cds_schHae_coords.vcf
 
-#for each sample make a fasta
-if [ -f Smp_127030_cds.fasta ]; then
-    rm Smp_127030_cds.fasta
-fi
+#clean up
+rm header*
+rm tmp.vcf
+rm out.log
+rm auto_beagle_maf05_chr4:19M-21M.vcf
 
+
+#now I need phased haplotypes for each sample...to do this need to run beagle
+
+grep -v "#" ../build_snp_panel/auto.vcf  \
+    | grep -i sm_v7_4 \
+        | awk '{printf "%s\t%s\t%.6f\t%s\n", $1, $3, $2/287000, $2}' \
+    >$CHR".map"
+
+    CHR=SM_V7_4
+
+    #extract autosome specific vcf for the samples of interest
+    vcftools \
+        --vcf ../build_snp_panel/auto.vcf \
+        --chr $CHR \
+        --recode \
+        --stdout >$CHR".vcf"
+
+    sed -i 's/,assembly=schMan_v7.fa//gi' $CHR.vcf
+
+    grep -v "#" ../build_snp_panel/auto.vcf  \
+        | grep -i sm_v7_4 \
+            | awk '{printf "%s\t%s\t%.6f\t%s\n", $1, $3, $2/287000, $2}' \
+                >$CHR".map"
+
+    beagle \
+        gt=$CHR".vcf" \
+        out=$CHR"_beagle_all_samples" \
+        map=$CHR".map" \
+        nthreads=4 \
+        window=300 \
+        overlap=30 \
+        niterations=250
+
+
+#now get the phased invadolysin haplotypes
+ vcftools \
+    --vcf chr4.vcf \
+    --bed Smp_127030_cds.bed \
+    --recode \
+    --recode-INFO-all \
+    --stdout \
+    >Smp_127030_phased.vcf
+
+
+
+#now get this vcf for phased invadolysin haplotypes
+python ../../scripts/diploid_to_haploid_vcf.py \
+    Smp_127030_phased.vcf \
+    Smp_127030_phased_hap_A.vcf \
+    Smp_127030_phased_hap_B.vcf
+
+#convert each haplotype to a schMan invadolysin vcf file
+for HAPLOTYPE in A B; do
+    
+    #in out files
+    IN_VCF="Smp_127030_phased_hap_"$HAPLOTYPE".vcf"
+    OUT_VCF="Smp_127030_hap_"$HAPLOTYPE"_schHae_coords.vcf"
+
+    #lift coordinates
+    python ../../scripts/schMan_to_schHae_vcf_coords.py $IN_VCF tmp.vcf 
+
+    #strip header
+    grep -v "contig=<ID=" tmp.vcf >headerless.vcf
+
+    #add contigs for schHae to header
+    ${ENVIRONMENTS["TITAN SINGULARITY"]} \
+        gatk SelectVariants \
+            -R $HAE_GENOME \
+            -V headerless.vcf \
+            -O header.vcf
+
+    #sort to generate final vcf file
+    ${ENVIRONMENTS["TITAN SINGULARITY"]} \
+        gatk SortVcf \
+            -R $HAE_GENOME \
+            -I header.vcf \
+            -O $OUT_VCF
+
+    #clean up
+    rm tmp.vcf 
+    rm headerless.vcf 
+    rm header.vcf*
+    rm out.log
+
+done
+
+
+
+
+
+#for each sample make a fasta
 for SAMPLE in $(cat ../samples.list); do
     
     #get the vcf
     vcftools \
         --vcf Smp_127030_cds_schHae_coords.vcf \
         --indv $SAMPLE \
+        --chr KL250964.1 \
         --recode \
         --recode-INFO-all \
         --stdout \
         >$SAMPLE"_Smp_127030_cds.vcf"
 
     #get the fasta
-    gatk \
+    java -jar ../../scripts/GenomeAnalysisTK-3.8-1-0-gf15c1c3ef/GenomeAnalysisTK.jar  \
        -T FastaAlternateReferenceMaker \
        -R KL250964.1_masked.fasta \
        -IUPAC $SAMPLE\
