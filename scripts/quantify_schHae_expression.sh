@@ -129,19 +129,27 @@ for SRA_ACCESSION in SRX3632881 SRX3632879 SRX3632877; do
 
     #use stringtie to assemble transcripts and get abundance
     stringtie \
-        $SRA_ACCESSION"_tophat_sorted.sam" \
+        $SRA_ACCESSION"_sorted.bam" \
         -o $SRA_ACCESSION"_stringtie.gtf" \
         -A $SRA_ACCESSION"_stringtie_gene_abund.tab"
 
 done
 
+ls SRX*gtf >gtf.list
 
+stringtie \
+    --merge \
+    -o schHaem_stringtie-merged.gtf \
+    gtf.list
 
+for SRA_ACCESSION in SRX3632881 SRX3632879 SRX3632877; do
 
+    stringtie -eB \
+        $SRA_ACCESSION"_sorted.bam" \
+        -o $(pwd)/$SRA_ACCESSION/ \
+        -G schHaem_stringtie-merged.gtf
 
-
-
-
+done
 
 
 
