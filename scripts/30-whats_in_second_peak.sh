@@ -1,3 +1,14 @@
+#!/bin/bash
+#
+# SNP calling in S. haemotobium hybridzone(s).
+# NPlatt
+# Neal.platt@gmail.com
+
+# 30-whats_in_the_second_peak.sh - From our bayescan results there is a second
+#       minor peak showing selection...what gene is in the second peak 
+
+# Uses a conda and singularity to manage the enviroment; needs relativley high
+#       mem compute (used Titan - 125Gb)
 source activate snp_calling
 source /master/nplatt/schisto_hybridization/scripts/set_env.sh
 
