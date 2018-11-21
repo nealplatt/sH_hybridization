@@ -1,4 +1,16 @@
-#clean and process reads to the haematobium genome
+#!/bin/bash
+#
+# SNP calling in S. haemotobium hybridzone(s).
+# NPlatt
+# Neal.platt@gmail.com
+
+# 25-filter_wgrs.sh - map whole genome resequencing data to schHaem. processes
+#       the bam files for GATK, also calculates genome coverage
+
+# Uses a conda and singularity to manage the enviroment; some steps need high
+#       mem compute (used Titan - 125Gb), relies heavily on the scheduler
+
+#Set up the environment
 source /master/nplatt/schisto_hybridization/scripts/set_env.sh
 
 #START FILTERING/MAPPING PROCESS
@@ -394,27 +406,4 @@ for SAMPLE in "${SAMPLES[@]}"; do
     echo -e $SAMPLE"\t"$READS"\t"$MAPPED
 done
     
-
-
-
-
-
-   
-
-
-    SAMPE_BAM=$SAMPLE"_wgrs_sampe.bam"
-
-    echo "samtools flagstat $SAMPE_BAM >$SAMPLE.flagstat" \
-        |  $QSUB -pe mpi 12 -N $SAMPLE"_flagstat" -o $SAMPLE"_flagstat.log" -hold_jid $SAMPLE"_sampe"
-
-
-
-
-
-
-    #get mapping stats
-    SAMPE_BAM=$SAMPLE"_wgrs_sampe.bam"
-
-    echo "samtools flagstat $SAMPE_BAM >$SAMPLE.flagstat" \
-        |  $QSUB -pe mpi 12 -N $SAMPLE"_flagstat" -o $SAMPLE"_flagstat.log" -hold_jid $SAMPLE"_sampe"
 
