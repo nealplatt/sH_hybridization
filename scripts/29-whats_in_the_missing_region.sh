@@ -1,3 +1,23 @@
+#!/bin/bash
+#
+# SNP calling in S. haemotobium hybridzone(s).
+# NPlatt
+# Neal.platt@gmail.com
+
+# 29-whats_in_the_missing_region.sh - there are  blind spots in our data due to
+#       exome sequencing.  One is close to our region of interest.  Checking to
+#       see if thats because of probe and/or alignment issues.  
+
+# Uses a conda and singularity to manage the enviroment; needs relativley high
+#       mem compute (used Titan - 125Gb)
+
+#------------ answer (from below)
+#all snps in gap accounted for...
+#239/247 are snps that map to more than one place in the schMan genome
+#008/247 are snps with MAF < 0.05
+#001/247 is the ending snp in the gap
+
+#Set up the environment
 source activate snp_calling
 source /master/nplatt/schisto_hybridization/scripts/set_env.sh
 
