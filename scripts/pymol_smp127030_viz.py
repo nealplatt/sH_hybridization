@@ -1,5 +1,5 @@
 
-cd C:\Users\nplatt\Desktop\2beb168a6f53090f
+cd C:\Users\nplatt\Dropbox\work\projects\sH_hybridization\results\pymol
 
 reinitialize
 set matrix_mode, 1
@@ -16,7 +16,7 @@ space rgb
 
 
 # Load data
-load final.casp.pdb
+load 2beb168a6f53090f\final.casp.pdb
 
 # General settings
 hide all
@@ -56,3 +56,9 @@ sites = ["resi 94", "resi 95", "resi 107", "resi 169", "resi 296", "resi 309", "
 for i in sites: \
 	cmd.show("sphere", i + " and name ca") \
 	cmd.set("sphere_color", "red", i + " and name ca")
+
+
+
+#move molecule to desired position
+png smp127030_structure.png, width=4800, height=4800, dpi=1200
+
