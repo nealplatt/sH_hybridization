@@ -146,7 +146,8 @@ for SRA_ACCESSION in SRX3632881 SRX3632879 SRX3632877; do
 
     stringtie -eB \
         $SRA_ACCESSION"_sorted.bam" \
-        -o $(pwd)/$SRA_ACCESSION/ \
+        -o $(pwd)/$SRA_ACCESSION/$SRA_ACCESSION"_schHaem_stringtie-merged.gtf" \
+        -A $(pwd)/$SRA_ACCESSION/$SRA_ACCESSION"_schHaem_stringtie-merged_gene_abund.tab" \
         -G schHaem_stringtie-merged.gtf
 
 done
