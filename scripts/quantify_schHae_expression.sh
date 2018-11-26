@@ -152,28 +152,65 @@ for SRA_ACCESSION in SRX3632881 SRX3632879 SRX3632877; do
 
 done
 
+#manually identify the Smp_127030 paralogue
+cat ../../dn_ds/Smp_127030_cds_schHae.bed
+#KL250964.1      34303   34549   Smp_127030.1.cds
+#<...>
+#KL250964.1      67553   67895   Smp_127030.1.cds
+
+#Smp_127030 goes from KL250964.1:34303-67895
+
+grep KL250964 SRX3632881/SRX3632881_schHaem_stringtie-merged_gene_abund.tab 
+#MSTRG.12886     -       KL250964.1      -       960     31802   18.656673       14.235166       15.798444
+#MSTRG.12887     -       KL250964.1      +       34713   65600   0.000000        0.000000        0.000000
+#MSTRG.12888     -       KL250964.1      -       38255   40445   0.000000        0.000000        0.000000
+#MSTRG.12889     -       KL250964.1      .       60485   60856   0.000000        0.000000        0.000000
+#MSTRG.12890     -       KL250964.1      +       66510   67679   0.000000        0.000000        0.000000
+#MSTRG.12891     -       KL250964.1      .       78480   78698   64.191780       42.928440       47.642757
+#MSTRG.12892     -       KL250964.1      +       101331  114330  18.730738       23.561680       26.149178
+#MSTRG.12893     -       KL250964.1      -       113808  114025  0.000000        0.000000        0.000000
+#MSTRG.12894     -       KL250964.1      -       126959  141558  3.747135        2.505908        2.781101
+#MSTRG.12895     -       KL250964.1      +       142954  143615  5.988595        4.004890        4.444700
+#MSTRG.12896     -       KL250964.1      -       148885  149753  35.174911       23.523325       26.106611
+#MSTRG.12897     -       KL250964.1      -       149870  152870  19.816387       24.708218       27.421625
+#MSTRG.12898     -       KL250964.1      +       162565  178327  85.115547       56.921268       63.172253
+#MSTRG.12899     -       KL250964.1      -       176712  200375  15.281089       10.219273       11.341534
 
 
+#based on these expression values it seems pretty clear that MSTRG.12887 is the
+#   right match
 
-#get invadolysins (from Berriman 2009 (supp table 8)
-echo "Smp_173070" >berriman_et_al_2009_invadolysin.list
-echo "Smp_090110">>berriman_et_al_2009_invadolysin.list
-echo "Smp_127030">>berriman_et_al_2009_invadolysin.list
-echo "Smp_135530">>berriman_et_al_2009_invadolysin.list
-echo "Smp_090100">>berriman_et_al_2009_invadolysin.list
-echo "Smp_153930">>berriman_et_al_2009_invadolysin.list
-echo "Smp_190480">>berriman_et_al_2009_invadolysin.list
-echo "Smp_167110">>berriman_et_al_2009_invadolysin.list
-echo "Smp_167070">>berriman_et_al_2009_invadolysin.list
-echo "Smp_171340">>berriman_et_al_2009_invadolysin.list
-echo "Smp_167100">>berriman_et_al_2009_invadolysin.list
-echo "Smp_167090">>berriman_et_al_2009_invadolysin.list
-echo "Smp_167120">>berriman_et_al_2009_invadolysin.list
-echo "Smp_171330">>berriman_et_al_2009_invadolysin.list
+grep MSTRG.12887 SRX36328*/*gene_abund.tab
+#SRX3632877/SRX3632877_schHaem_stringtie-merged_gene_abund.tab:MSTRG.12887       -       KL250964.1      +       34713   65600   7.318426        3.7638944.831543
+#SRX3632879/SRX3632879_schHaem_stringtie-merged_gene_abund.tab:MSTRG.12887       -       KL250964.1      +       34713   65600   3.015467        2.3358052.101585
+#SRX3632881/SRX3632881_schHaem_stringtie-merged_gene_abund.tab:MSTRG.12887       -       KL250964.1      +       34713   65600   0.000000        0.0000000.000000
 
-grep -f invadolysin_ids.txt \
-    cuffnorm_schHae_v1/genes.fpkm_table \
-    >invadolysins_gene_fpkm.table
+
+#cleaned up for R
+echo "Gene,ID,Gene Name,Reference,Strand,Start,End,Coverage,FPKM,TPM"    >schHae_MSTRG12887.csv
+echo "MSTRG.12887,-,KL250964.1,+,34713,65600,7.318426,3.7638944.831543" >>schHae_MSTRG12887.csv
+echo "MSTRG.12887,-,KL250964.1,+,34713,65600,3.015467,2.3358052.101585" >>schHae_MSTRG12887.csv
+echo "MSTRG.12887,-,KL250964.1,+,34713,65600,0.000000,0.0000000.000000" >>schHae_MSTRG12887.csv
+
+
+#--------------------------- U N U S E D ---------------------------------------
+##if we decide to look at expression from each invadolysin paralogue
+##get invadolysins (from Berriman 2009 (supp table 8)
+#echo "Smp_173070" >berriman_et_al_2009_invadolysin.list
+#echo "Smp_090110">>berriman_et_al_2009_invadolysin.list
+#echo "Smp_127030">>berriman_et_al_2009_invadolysin.list
+#echo "Smp_135530">>berriman_et_al_2009_invadolysin.list
+#echo "Smp_090100">>berriman_et_al_2009_invadolysin.list
+#echo "Smp_153930">>berriman_et_al_2009_invadolysin.list
+#echo "Smp_190480">>berriman_et_al_2009_invadolysin.list
+#echo "Smp_167110">>berriman_et_al_2009_invadolysin.list
+#echo "Smp_167070">>berriman_et_al_2009_invadolysin.list
+#echo "Smp_171340">>berriman_et_al_2009_invadolysin.list
+#echo "Smp_167100">>berriman_et_al_2009_invadolysin.list
+#echo "Smp_167090">>berriman_et_al_2009_invadolysin.list
+#echo "Smp_167120">>berriman_et_al_2009_invadolysin.list
+#echo "Smp_171330">>berriman_et_al_2009_invadolysin.list
+
 
 
 
