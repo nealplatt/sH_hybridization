@@ -128,9 +128,11 @@ beagle \
     niterations=250
 
 
+ gunzip SM_V7_4_beagle_all_samples.vcf.gz
+
 #now get the phased invadolysin haplotypes
 vcftools \
-    --vcf chr4.vcf \
+    --vcf SM_V7_4_beagle_all_samples.vcf \
     --bed Smp_127030_cds.bed \
     --recode \
     --recode-INFO-all \
@@ -197,14 +199,16 @@ for SAMPLE in $(cat ../samples.list); do
             >sample.vcf
 
         #get the fasta
-        gatk \
+    java -jar ../../scripts/GenomeAnalysisTK-3.8-1-0-gf15c1c3ef/GenomeAnalysisTK.jar  \
            -T FastaAlternateReferenceMaker \
            -R KL250964.1_masked.fasta \
-           -IUPAC $SAMPLE\
+           -IUPAC \
+            $SAMPLE\
            -o sample.fasta \
            -V sample.vcf
 
-        #clean up fasta for extraction
+        #clean up fasta for extraction - change header so that the bed file is
+        #   compatible, then index
         sed -i "1c>KL250964.1" sample.fasta
         samtools faidx sample.fasta
 
@@ -214,11 +218,11 @@ for SAMPLE in $(cat ../samples.list); do
             -fi sample.fasta \
             -fo exons.fasta
 
-        #combine into a single sequence
+        #combine exons into a single sequence
          grep -v "^>" exons.fasta \
             | awk 'BEGIN { ORS=""; print ">Sequence_name\n" } { print }' > cds.fasta
 
-        #change the header
+        #change the header so that it shows sample and haplotype id
         sed -i "1c>$HAPLOTYPE.$SAMPLE" cds.fasta
         
         #add it to combined fasta file
@@ -233,81 +237,6 @@ for SAMPLE in $(cat ../samples.list); do
         rm out.log
     done
 done
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#for each sample make a fasta
-for SAMPLE in $(cat ../samples.list); do
-    
-    #get the vcf
-    vcftools \
-        --vcf Smp_127030_cds_schHae_coords.vcf \
-        --indv $SAMPLE \
-        --chr KL250964.1 \
-        --recode \
-        --recode-INFO-all \
-        --stdout \
-        >$SAMPLE"_Smp_127030_cds.vcf"
-
-    #get the fasta
-    java -jar ../../scripts/GenomeAnalysisTK-3.8-1-0-gf15c1c3ef/GenomeAnalysisTK.jar  \
-       -T FastaAlternateReferenceMaker \
-       -R KL250964.1_masked.fasta \
-       -IUPAC $SAMPLE\
-       -o $SAMPLE"_Smp_127030_cds.fasta" \
-       -V $SAMPLE"_Smp_127030_cds.vcf"
-
-    #clean up fasta for extraction
-    sed -i "1c>KL250964.1" $SAMPLE"_Smp_127030_cds.fasta"
-    samtools faidx $SAMPLE"_Smp_127030_cds.fasta"
-
-    #extract each cds and them combine into one
-    bedtools getfasta \
-        -bed Smp_127030_cds_schHae.bed \
-        -fi $SAMPLE"_Smp_127030_cds.fasta" \
-        -fo $SAMPLE"_Smp_127030_cds_indiv.fasta"
-
-    #combine into a single sequence
-     grep -v "^>" $SAMPLE"_Smp_127030_cds_indiv.fasta" \
-        | awk 'BEGIN { ORS=""; print ">Sequence_name\n" } { print }' > $SAMPLE"_Smp_127030_combined_cds.fasta"
-
-    #change the header
-    sed -i "1c>$SAMPLE" $SAMPLE"_Smp_127030_combined_cds.fasta"
-    
-    #add it to combined fasta file
-    cat $SAMPLE"_Smp_127030_combined_cds.fasta" >>Smp_127030_cds.fasta
-    echo >>Smp_127030_cds.fasta
-
-    #clean up
-    rm $SAMPLE"_Smp_127030_cds.vcf"
-    rm $SAMPLE"_Smp_127030_cds.vcf.idx"
-    rm $SAMPLE"_Smp_127030_cds.fasta"
-    rm $SAMPLE"_Smp_127030_cds.fasta.fai"
-    rm $SAMPLE"_Smp_127030_cds_indiv.fasta"
-    rm $SAMPLE"_Smp_127030_combined_cds.fasta"
-    rm out.log
-
-done
-
 
 
 
