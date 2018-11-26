@@ -187,7 +187,7 @@ grep MSTRG.12887 SRX36328*/*gene_abund.tab
 
 
 #cleaned up for R
-echo "Gene,ID,Gene Name,Reference,Strand,Start,End,Coverage,FPKM,TPM"    >schHae_MSTRG12887.csv
+echo "Gene,ID,Gene Name,Reference Strand,Start,End,Coverage,FPKM,TPM"    >schHae_MSTRG12887.csv
 echo "MSTRG.12887,-,KL250964.1,+,34713,65600,7.318426,3.7638944.831543" >>schHae_MSTRG12887.csv
 echo "MSTRG.12887,-,KL250964.1,+,34713,65600,3.015467,2.3358052.101585" >>schHae_MSTRG12887.csv
 echo "MSTRG.12887,-,KL250964.1,+,34713,65600,0.000000,0.0000000.000000" >>schHae_MSTRG12887.csv
