@@ -1,6 +1,7 @@
 #clean up headers and trim peptidase fasta file from
 # pfam
 
+import sys
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 from Bio.Alphabet import IUPAC
