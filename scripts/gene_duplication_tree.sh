@@ -29,13 +29,13 @@ muscle -in HExxH_peptidase.fas -out HExxH_peptidase_muscle.fas
 sed -i 's/:/#/gi' m8_platy_meta_75perc.fas
 
 #build a tree
-raxmlHPC \
-    -m PROTGAMMAAUTO \
+ raxmlHPC-PTHREADS \
+    -T 12 \
+    -m PROTGAMMAWAG \
     -p 12345 \
     -s m8_platy_meta_75perc.fas \
-    -# 1000 \
+    -# 100 \
     -n m8_platy_meta_75perc
-
 
 #this tree is imported into megas gene duplication wizard and species names maped
 
