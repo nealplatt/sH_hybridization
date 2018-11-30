@@ -1,10 +1,5 @@
 
 
-
-
-
-
-
 #generate a tree with mansoni as the outgroup
 raxmlHPC \
     -fa \
@@ -116,6 +111,8 @@ chi2
 
 # DF    0.9950   0.9750   0.9000   0.5000   0.1000   0.0500   0.0100   0.0010
 #  1    0.0000   0.0010   0.0158   0.4549   2.7055   3.8415   6.6349  10.8276
+
+
 
 #reject model with selection 
 #now run with ALL uniq haplotypes-----------------------------------------------
