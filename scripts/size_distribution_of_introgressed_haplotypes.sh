@@ -1,4 +1,25 @@
- grep  "Sh.NE"  ../dating/blocks.tsv \
+#!/bin/bash
+#
+# SNP calling in S. haemotobium hybridzone(s).
+# NPlatt
+# Neal.platt@gmail.com
+
+# size_distribution_of_introgressed_haplotypes.sh - identifies blocks
+#   introgressed haplotypes and sees how those sizes compare to randomly
+#   distributed blocks.  (Is introgression random?) 
+
+# Uses a conda to manage the enviroment and is run on a high memory node; 125gb
+#Set up the environment
+source /master/nplatt/schisto_hybridization/scripts/set_env.sh
+source activate snp_calling
+
+cd $RESULTS_DIR
+
+mkdir distribution_of_introgressed_haplotypes
+cd distribution_of_introgressed_haplotypes
+
+#get the blocks from dating dir
+grep  "Sh.NE"  ../dating/blocks.tsv \
     | awk '{print $2"\t"$3"\t"$4}' \
     | sed 1d \
     | bedtools sort \
@@ -27,20 +48,13 @@ bedtools merge -d 1 -i no_int_windows.bed >merged.bed
 #calculate sizes of regions
 awk '{print $0"\t"$3-$2}' merged.bed >merged_sizes.bed
 
-
-
 #sort
 sort -n -k4 merged_sizes.bed
 
-wc -l 1mW_1mS_windows_v_probes_gt5_25k.bed
-
-
-#make genome file
-../../data/genome/schMan_v7.fa.fai
 #randomize
 awk '{if ($4<5) print $0}' windows_v_probes.bed >1mW_1mS_windows_v_probes_lt5_25k.bed
 
-
+#replicate block size randomly 1k times
 for REP in $(seq -w 1 1000); do
    
  bedtools shuffle \
