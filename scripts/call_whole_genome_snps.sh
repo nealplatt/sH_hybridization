@@ -1,4 +1,16 @@
-#clean and process reads to the haematobium genome
+#!/bin/bash
+#
+# SNP calling in S. haemotobium hybridzone(s).
+# NPlatt
+# Neal.platt@gmail.com
+
+# call_whole_genome_snps.sh - use gatk to call snps across the sHaem genome,
+#   also uses reads from S. bovis. 
+
+# Uses a conda and singularity to manage the enviroment; run on a cluster
+#  and a node with 125gb of mem
+
+#Set up the environment
 source /master/nplatt/schisto_hybridization/scripts/set_env.sh
 source activate snp_calling
 
