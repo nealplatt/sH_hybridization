@@ -1,3 +1,14 @@
+#!/bin/bash
+#
+# SNP calling in S. haemotobium hybridzone(s).
+# NPlatt
+# Neal.platt@gmail.com
+
+# startmrca_dating_invadolysin_locus.sh - use startmrca to date time since
+#   common ancestor of the incadolysin locus 
+
+# Uses a conda to manage the enviroment and is run on a high memory node; 125gb
+#Set up the environment
 source /master/nplatt/schisto_hybridization/scripts/set_env.sh
 source activate snp_calling
 
@@ -46,14 +57,13 @@ awk -v OFS='\t' {'print $1,$2'} ../../data/genome/schMan_v7.fa.fai > schMan_v7.g
 cat schMan_v7.genome | grep "SM_V7_4\s" >SM_V7_4.genome
 
 
-
 bedtools \
     complement \
     -i SM_V7_4_probes.bed \
     -g SM_V7_4.genome \
     >unprobed_regions.bed
 
-#
+#This portion of the script is run in R
 R
 
 library(startmrca)
