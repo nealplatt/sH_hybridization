@@ -1,8 +1,23 @@
-#clean and process reads to the haematobium genome
-source activate snp_calling
+#   !!!!!!!!!!!     NOT USED !!!!!!!!!!!!!
+#!!!!!!!!!!! USED FREDS DATA INSTEAD !!!!!!!!!!
+
+#!/bin/bash
+#
+# SNP calling in S. haemotobium hybridzone(s).
+# NPlatt
+# Neal.platt@gmail.com
+
+# mansoni_invadolysin_expression.sh - calculate gene expression of S. man
+#   invadolysin paralogs
+
+# Uses a conda and singularity to manage the enviroment; run on a cluster
+#  and a node with 125gb of mem
+
+#Set up the environment
 source /master/nplatt/schisto_hybridization/scripts/set_env.sh
+source activate snp_calling
 
-
+cd $RESULTS_DIR
 cd $RESULTS_DIR
 mkdir mansoni_trans
 cd mansoni_trans
