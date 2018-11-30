@@ -1,3 +1,14 @@
+#!/bin/bash
+#
+# SNP calling in S. haemotobium hybridzone(s).
+# NPlatt
+# Neal.platt@gmail.com
+
+# filter_whole_genome_snps.sh - filter genotyped sites from vcf files of whole
+#   genome resequencing data. 
+
+# Uses a conda node with 125gb of mem
+
 #clean and process reads to the haematobium genome
 source /master/nplatt/schisto_hybridization/scripts/set_env.sh
 source activate snp_calling
