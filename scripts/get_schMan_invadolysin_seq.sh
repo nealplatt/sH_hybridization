@@ -1,3 +1,18 @@
+#!/bin/bash
+#
+# SNP calling in S. haemotobium hybridzone(s).
+# NPlatt
+# Neal.platt@gmail.com
+
+# get_schMan_invadolysin_seqs.sh - get schMan Smp127030 (invadolysin) sequence.
+
+# Uses a conda and singularity to manage the enviroment; needs relativley high
+#       mem compute (used Titan - 125Gb)
+
+source activate snp_calling
+source /master/nplatt/schisto_hybridization/scripts/set_env.sh
+
+cd $RESULTS_DIR/get_Smp127030_sequences
 
 #now get the mansoni sequence and add to use as an outgroup
 samtools faidx ../../data/genome/schMan_v7.fa SM_V7_4 >SM_V7_4.fasta
