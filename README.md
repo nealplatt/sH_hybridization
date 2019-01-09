@@ -1,4 +1,4 @@
-[![DOI](https://zenodo.org/badge/124456755.svg)](https://zenodo.org/badge/latestdoi/124456755)
+[![DOI](https://zenodo.org/badge/124456755.svg)](https://zenodo.org/badge/latestdoi/124456755) [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 
 # Ancient hybridization and adaptive introgression of an invadolysin gene in _Schistosoma haematobium_.
 
