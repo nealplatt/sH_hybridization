@@ -44,10 +44,11 @@ import pandas as pd
 
 
 __author__ = "Louis-Philippe Lemieux Perreault"
-__copyright__ = ("Copyright 2015 Louis-Philippe Lemieux Perreault. "
-                 "All rights reserved.")
+__copyright__ = (
+    "Copyright 2015 Louis-Philippe Lemieux Perreault. " "All rights reserved."
+)
 __license__ = "MIT"
-__credits__ = ["Louis-Philippe Lemieux Perreault", ]
+__credits__ = ["Louis-Philippe Lemieux Perreault"]
 __maintainer__ = "Louis-Philippe Lemieux Perreault"
 __email__ = "louis-philippe.lemieux.perreault@statgen.org"
 __status__ = "Development"
@@ -79,20 +80,25 @@ def main(args=None):
 
         if not _TESTING_MODE:
             sh = logging.StreamHandler()
-            sh.setFormatter(logging.Formatter(
-                fmt="[%(asctime)s %(levelname)s] %(message)s",
-                datefmt="%Y-%m-%d %H:%M:%S",
-            ))
+            sh.setFormatter(
+                logging.Formatter(
+                    fmt="[%(asctime)s %(levelname)s] %(message)s",
+                    datefmt="%Y-%m-%d %H:%M:%S",
+                )
+            )
             logger.addHandler(sh)
             logger.setLevel(logging.INFO)
 
-            logger.info("This is {script_name} version {version}".format(
-                script_name=os.path.basename(sys.argv[0]),
-                version=__version__,
-            ))
-            logger.info("Arguments: {}".format(
-                " ".join(shlex.quote(part) for part in sys.argv[1:]),
-            ))
+            logger.info(
+                "This is {script_name} version {version}".format(
+                    script_name=os.path.basename(sys.argv[0]), version=__version__
+                )
+            )
+            logger.info(
+                "Arguments: {}".format(
+                    " ".join(shlex.quote(part) for part in sys.argv[1:])
+                )
+            )
 
         # Reading the ped file
         sample_info = read_ped(args.ped)
@@ -126,9 +132,11 @@ def read_ped(i_filename):
             msg = "{}: wrong number of column".format(i_filename)
             raise ProgramError(msg)
 
-    data = pd.read_csv(i_filename, sep="\t",
-                       names=["FID", "IID", "Father", "Mother", "Gender",
-                              "Status"])
+    data = pd.read_csv(
+        i_filename,
+        sep="\t",
+        names=["FID", "IID", "Father", "Mother", "Gender", "Status"],
+    )
 
     return data.set_index("IID", drop=False, verify_integrity=True)
 
@@ -157,7 +165,7 @@ def convert_vcf(i_filename, sample_info, o_prefix, skip_haploid):
         open_f = gzip.open
 
     # Reading the file
-    with open_f(i_filename, 'rb') as i_file:
+    with open_f(i_filename, "rb") as i_file:
         line = i_file.readline().decode()
 
         # We read until the header
@@ -171,7 +179,7 @@ def convert_vcf(i_filename, sample_info, o_prefix, skip_haploid):
 
         # Creating the header
         row = line.rstrip("\r\n").split("\t")
-        header = {name:  i for i, name in enumerate(row)}
+        header = {name: i for i, name in enumerate(row)}
 
         # Checking some names
         for name in ["#CHROM", "POS", "ID", "REF", "ALT", "FORMAT"]:
@@ -180,12 +188,15 @@ def convert_vcf(i_filename, sample_info, o_prefix, skip_haploid):
                 raise ProgramError(msg)
 
         # Printing the TFAMs
-        tfam_names = ["{}.snv.2_alleles.tfam".format(o_prefix),
-                      "{}.snv.n_alleles.tfam".format(o_prefix),
-                      "{}.indel.2_alleles.tfam".format(o_prefix),
-                      "{}.indel.n_alleles.tfam".format(o_prefix)]
-        sample_info = print_same_tfams(tfam_names, sample_info,
-                                       row[header["FORMAT"]+1:])
+        tfam_names = [
+            "{}.snv.2_alleles.tfam".format(o_prefix),
+            "{}.snv.n_alleles.tfam".format(o_prefix),
+            "{}.indel.2_alleles.tfam".format(o_prefix),
+            "{}.indel.n_alleles.tfam".format(o_prefix),
+        ]
+        sample_info = print_same_tfams(
+            tfam_names, sample_info, row[header["FORMAT"] + 1 :]
+        )
 
         # Those positions have been seen
         seen_pos = defaultdict(int)
@@ -197,16 +208,10 @@ def convert_vcf(i_filename, sample_info, o_prefix, skip_haploid):
         tped_indel_n = None
         snv_ref = None
         try:
-            tped_snv_2 = open("{}.snv.2_alleles.tped".format(o_prefix), 'w')
-            tped_snv_n = open("{}.snv.n_alleles.tped".format(o_prefix), 'w')
-            tped_indel_2 = open(
-                "{}.indel.2_alleles.tped".format(o_prefix),
-                "w",
-            )
-            tped_indel_n = open(
-                "{}.indel.n_alleles.tped".format(o_prefix),
-                "w",
-            )
+            tped_snv_2 = open("{}.snv.2_alleles.tped".format(o_prefix), "w")
+            tped_snv_n = open("{}.snv.n_alleles.tped".format(o_prefix), "w")
+            tped_indel_2 = open("{}.indel.2_alleles.tped".format(o_prefix), "w")
+            tped_indel_n = open("{}.indel.n_alleles.tped".format(o_prefix), "w")
             snv_ref = open("{}.snv.ref".format(o_prefix), "w")
             indel_ref = open("{}.indel.ref".format(o_prefix), "w")
         except IOError:
@@ -225,9 +230,8 @@ def convert_vcf(i_filename, sample_info, o_prefix, skip_haploid):
             g_format = row[header["FORMAT"]].split(":")
             g_format = {name: i for i, name in enumerate(g_format)}
             genotypes = [
-                "." if single_point_re.match(i)
-                else i.split(":")[g_format["GT"]]
-                for i in row[header["FORMAT"]+1:]
+                "." if single_point_re.match(i) else i.split(":")[g_format["GT"]]
+                for i in row[header["FORMAT"] + 1 :]
             ]
 
             # Getting rid of the "." (so that it becomes "./.")
@@ -250,7 +254,7 @@ def convert_vcf(i_filename, sample_info, o_prefix, skip_haploid):
             g_map = {str(i): a for i, a in enumerate(alleles)}
             if indel:
                 # This is a new genotype map, only for INDELs
-                g_map = {str(i): str(i+1) for i in range(len(alleles))}
+                g_map = {str(i): str(i + 1) for i in range(len(alleles))}
 
                 # These are the required files
                 o_ref_file = indel_ref
@@ -276,16 +280,24 @@ def convert_vcf(i_filename, sample_info, o_prefix, skip_haploid):
 
             genotypes = [allele_split_re.split(i) for i in genotypes]
             genotypes = [
-                recode_genotype(g, g_map, chrom, pos, sample_info.iloc[i, 0],
-                                sample_info.iloc[i, 4], skip_haploid)
+                recode_genotype(
+                    g,
+                    g_map,
+                    chrom,
+                    pos,
+                    sample_info.iloc[i, 0],
+                    sample_info.iloc[i, 4],
+                    skip_haploid,
+                )
                 for i, g in enumerate(genotypes)
             ]
             print("\t".join(first_part + genotypes), file=o_file)
 
             # Saving the alleles
-            print("\t".join([chrom, pos, name, alleles[0],
-                             ",".join(alleles[1:])]),
-                  file=o_ref_file)
+            print(
+                "\t".join([chrom, pos, name, alleles[0], ",".join(alleles[1:])]),
+                file=o_ref_file,
+            )
 
         # Closing the output files
         tped_snv_2.close()
@@ -296,8 +308,9 @@ def convert_vcf(i_filename, sample_info, o_prefix, skip_haploid):
         indel_ref.close()
 
 
-def recode_genotype(genotype, encoding, chromosome, position, sample, gender,
-                    skip_haploid):
+def recode_genotype(
+    genotype, encoding, chromosome, position, sample, gender, skip_haploid
+):
     """Encodes the genotypes.
 
     :param genotype: the genotypes (list of alleles)
@@ -328,9 +341,8 @@ def recode_genotype(genotype, encoding, chromosome, position, sample, gender,
             logger.warning(
                 "chr{chrom}:{pos}: {sample} (gender {gender}): haploid call "
                 "set as homozygous".format(
-                    chrom=chromosome, pos=position, sample=sample,
-                    gender=gender,
-                ),
+                    chrom=chromosome, pos=position, sample=sample, gender=gender
+                )
             )
             return " ".join(encoding[genotype[0]] * 2)
 
@@ -338,9 +350,8 @@ def recode_genotype(genotype, encoding, chromosome, position, sample, gender,
             logger.warning(
                 "chr{chrom}:{pos}: {sample} (gender {gender}): haploid call "
                 "set as no call".format(
-                    chrom=chromosome, pos=position, sample=sample,
-                    gender=gender,
-                ),
+                    chrom=chromosome, pos=position, sample=sample, gender=gender
+                )
             )
             return " ".join([encoding["."]] * 2)
 
@@ -371,8 +382,7 @@ def print_same_tfams(file_names, sample_info, sample_names):
 
     try:
         # Printing only the first TFAM
-        sample_info.to_csv(file_names[0], sep="\t", header=False,
-                           index=False)
+        sample_info.to_csv(file_names[0], sep="\t", header=False, index=False)
 
         # Copying the first TFAM into the others
         for name in file_names[1:]:
@@ -466,8 +476,7 @@ def check_args(args):
         msg = "{}: no such file".format(args.vcf)
         raise ProgramError(msg)
 
-    if not ((re.search("\.vcf$", args.vcf)
-            or re.search("\.vcf\.gz$", args.vcf))):
+    if not ((re.search("\.vcf$", args.vcf) or re.search("\.vcf\.gz$", args.vcf))):
         msg = "{}: not a vcf file".format(args.vcf)
         raise ProgramError(msg)
 
@@ -492,34 +501,39 @@ def parse_args(parser, args=None):
 
     """
     parser.add_argument(
-        "-v", "--version", action="version",
-        version="{} version {}".format(os.path.basename(sys.argv[0]),
-                                       __version__),
+        "-v",
+        "--version",
+        action="version",
+        version="{} version {}".format(os.path.basename(sys.argv[0]), __version__),
     )
 
     # The input file
     group = parser.add_argument_group("Input Files")
     group.add_argument(
-        "--vcf", type=str, metavar="FILE", required=True,
-        help="The VCF file.",
+        "--vcf", type=str, metavar="FILE", required=True, help="The VCF file."
     )
     group.add_argument(
-        "--ped", type=str, metavar="FILE", required=True,
-        help="The PED file.",
+        "--ped", type=str, metavar="FILE", required=True, help="The PED file."
     )
 
     # Program options
     group = parser.add_argument_group("Options")
     group.add_argument(
-        "--skip-haploid-check", action="store_true", dest="skip_haploid",
+        "--skip-haploid-check",
+        action="store_true",
+        dest="skip_haploid",
         help="If used, no check will be performed for haploid genotypes. They "
-             "will be converted to homozygous of the same allele.",
+        "will be converted to homozygous of the same allele.",
     )
 
     # The output file
     group = parser.add_argument_group("Output Files")
     group.add_argument(
-        "-o", "--out", type=str, metavar="STR", default="vcf_to_tped",
+        "-o",
+        "--out",
+        type=str,
+        metavar="STR",
+        default="vcf_to_tped",
         help="The suffix of the output file. [Default: %(default)s]",
     )
 
@@ -536,6 +550,7 @@ class ProgramError(Exception):
     :type msg: string
 
     """
+
     def __init__(self, msg):
         """Construction of the :py:class:`ProgramError` class.
 
@@ -560,16 +575,26 @@ class TestVCF2TPED(unittest.TestCase):
         # Setting up the parser information
         self.prefix = os.path.join("test", "vcf2tped_test")
         args = [
-            "--vcf", os.path.join("test", "input.vcf"),
-            "--ped", os.path.join("test", "input.ped"),
-            "--out", self.prefix,
+            "--vcf",
+            os.path.join("test", "input.vcf"),
+            "--ped",
+            os.path.join("test", "input.ped"),
+            "--out",
+            self.prefix,
         ]
 
-        self.suffixes = [".indel.2_alleles.tfam", ".indel.2_alleles.tped",
-                         ".indel.n_alleles.tfam", ".indel.n_alleles.tped",
-                         ".indel.ref", ".snv.2_alleles.tfam",
-                         ".snv.2_alleles.tped", ".snv.n_alleles.tfam",
-                         ".snv.n_alleles.tped", ".snv.ref"]
+        self.suffixes = [
+            ".indel.2_alleles.tfam",
+            ".indel.2_alleles.tped",
+            ".indel.n_alleles.tfam",
+            ".indel.n_alleles.tped",
+            ".indel.ref",
+            ".snv.2_alleles.tfam",
+            ".snv.2_alleles.tped",
+            ".snv.n_alleles.tfam",
+            ".snv.n_alleles.tped",
+            ".snv.ref",
+        ]
 
         # Executing the script
         main(args=args)
@@ -577,9 +602,12 @@ class TestVCF2TPED(unittest.TestCase):
         # Now the test for the gender
         self.prefix_gender = os.path.join("test", "vcf2tped_gender_test")
         args = [
-            "--vcf", os.path.join("test", "input.gender.vcf"),
-            "--ped", os.path.join("test", "input.gender.ped"),
-            "--out", self.prefix_gender,
+            "--vcf",
+            os.path.join("test", "input.gender.vcf"),
+            "--ped",
+            os.path.join("test", "input.gender.ped"),
+            "--out",
+            self.prefix_gender,
         ]
 
         # Executing the script
@@ -607,9 +635,12 @@ class TestVCF2TPED(unittest.TestCase):
     def test_input_file_missing(self):
         """Tests the script raises an error if an input file is missing."""
         args = [
-            "--vcf", os.path.join("test", "wrong_input.vcf"),
-            "--ped", os.path.join("test", "input.ped"),
-            "--out", self.prefix,
+            "--vcf",
+            os.path.join("test", "wrong_input.vcf"),
+            "--ped",
+            os.path.join("test", "input.ped"),
+            "--out",
+            self.prefix,
         ]
         with self.assertRaises(SystemExit) as cm:
             with self._assertLogs(level=logging.ERROR) as logs:
@@ -620,14 +651,16 @@ class TestVCF2TPED(unittest.TestCase):
 
         # Checking the error log
         self.assertEqual(
-            ["ERROR:vcf2tped:test/wrong_input.vcf: no such file"],
-            logs.output,
+            ["ERROR:vcf2tped:test/wrong_input.vcf: no such file"], logs.output
         )
 
         args = [
-            "--vcf", os.path.join("test", "input.vcf"),
-            "--ped", os.path.join("test", "wrong_input.ped"),
-            "--out", self.prefix,
+            "--vcf",
+            os.path.join("test", "input.vcf"),
+            "--ped",
+            os.path.join("test", "wrong_input.ped"),
+            "--out",
+            self.prefix,
         ]
         with self.assertRaises(SystemExit) as cm:
             with self._assertLogs(level=logging.ERROR) as logs:
@@ -638,16 +671,18 @@ class TestVCF2TPED(unittest.TestCase):
 
         # Checking the error log
         self.assertEqual(
-            ["ERROR:vcf2tped:test/wrong_input.ped: no such file"],
-            logs.output,
+            ["ERROR:vcf2tped:test/wrong_input.ped: no such file"], logs.output
         )
 
     def test_missing_samples_in_pedfile(self):
         """Tests the script raises an error sample missing in pedfile."""
         args = [
-            "--vcf", os.path.join("test", "input.vcf"),
-            "--ped", os.path.join("test", "missing_samples.ped"),
-            "--out", self.prefix,
+            "--vcf",
+            os.path.join("test", "input.vcf"),
+            "--ped",
+            os.path.join("test", "missing_samples.ped"),
+            "--out",
+            self.prefix,
         ]
         with self.assertRaises(SystemExit) as cm:
             with self._assertLogs(level=logging.ERROR) as logs:
@@ -658,16 +693,18 @@ class TestVCF2TPED(unittest.TestCase):
 
         # Checking the error log
         self.assertEqual(
-            ["ERROR:vcf2tped:samples in PED are not the same in the VCF"],
-            logs.output,
+            ["ERROR:vcf2tped:samples in PED are not the same in the VCF"], logs.output
         )
 
     def test_not_a_vcf_file(self):
         """Tests when the input file is not a vcf file."""
         args = [
-            "--vcf", os.path.join("test", "input.notvcf"),
-            "--ped", os.path.join("test", "input.ped"),
-            "--out", self.prefix,
+            "--vcf",
+            os.path.join("test", "input.notvcf"),
+            "--ped",
+            os.path.join("test", "input.ped"),
+            "--out",
+            self.prefix,
         ]
 
         # Creating the vcf file
@@ -686,8 +723,7 @@ class TestVCF2TPED(unittest.TestCase):
 
         # Checking the error log
         self.assertEqual(
-            ["ERROR:vcf2tped:test/input.notvcf: not a vcf file"],
-            logs.output,
+            ["ERROR:vcf2tped:test/input.notvcf: not a vcf file"], logs.output
         )
 
     def test_invalid_chromosomes(self):
@@ -743,9 +779,7 @@ class TestVCF2TPED(unittest.TestCase):
 
     def test_snv_n_alleles(self):
         """Tests the output for SNV with more than 2 alleles."""
-        output = (
-            "22\trs188945759\t0\t16050984\tC A\tC C\tC G\tG A\n"
-        )
+        output = "22\trs188945759\t0\t16050984\tC A\tC C\tC G\tG A\n"
 
         content = None
         with open(self.prefix + ".snv.n_alleles.tped", "r") as i_file:
@@ -789,9 +823,7 @@ class TestVCF2TPED(unittest.TestCase):
 
     def test_indel_n_alleles(self):
         """Tests the output for INDEL with n alleles."""
-        output = (
-            "22\trs62224609\t0\t16051249\t1 1\t2 1\t2 1\t2 3\n"
-        )
+        output = "22\trs62224609\t0\t16051249\t1 1\t2 1\t2 1\t2 3\n"
 
         content = None
         with open(self.prefix + ".indel.n_alleles.tped", "r") as i_file:
@@ -834,30 +866,35 @@ class TestVCF2TPED(unittest.TestCase):
     def test_gender_skip_haploid_check(self):
         """Tests effect of gender on genotypes when skipping haploid check."""
         args = [
-            "--vcf", os.path.join("test", "input.gender.vcf"),
-            "--ped", os.path.join("test", "input.gender.ped"),
-            "--out", self.prefix_gender,
-            "--skip-haploid-check"
+            "--vcf",
+            os.path.join("test", "input.gender.vcf"),
+            "--ped",
+            os.path.join("test", "input.gender.ped"),
+            "--out",
+            self.prefix_gender,
+            "--skip-haploid-check",
         ]
         with self._assertLogs(level=logging.WARNING) as logs:
             main(args=args)
 
         # Checking the log
         self.assertEqual(
-            ["WARNING:vcf2tped:chr22:16050408: HG00096 (gender 2): haploid "
-             "call set as homozygous",
-             "WARNING:vcf2tped:chr22:16050408: HG00097 (gender 0): haploid "
-             "call set as homozygous",
-             "WARNING:vcf2tped:chr22:16050408: HG00099 (gender 1): haploid "
-             "call set as homozygous",
-             "WARNING:vcf2tped:chr23:16050408: HG00096 (gender 2): haploid "
-             "call set as homozygous",
-             "WARNING:vcf2tped:chr23:16050408: HG00097 (gender 0): haploid "
-             "call set as homozygous",
-             "WARNING:vcf2tped:chr24:16050408: HG00096 (gender 2): haploid "
-             "call set as homozygous",
-             "WARNING:vcf2tped:chr24:16050408: HG00097 (gender 0): haploid "
-             "call set as homozygous"],
+            [
+                "WARNING:vcf2tped:chr22:16050408: HG00096 (gender 2): haploid "
+                "call set as homozygous",
+                "WARNING:vcf2tped:chr22:16050408: HG00097 (gender 0): haploid "
+                "call set as homozygous",
+                "WARNING:vcf2tped:chr22:16050408: HG00099 (gender 1): haploid "
+                "call set as homozygous",
+                "WARNING:vcf2tped:chr23:16050408: HG00096 (gender 2): haploid "
+                "call set as homozygous",
+                "WARNING:vcf2tped:chr23:16050408: HG00097 (gender 0): haploid "
+                "call set as homozygous",
+                "WARNING:vcf2tped:chr24:16050408: HG00096 (gender 2): haploid "
+                "call set as homozygous",
+                "WARNING:vcf2tped:chr24:16050408: HG00097 (gender 0): haploid "
+                "call set as homozygous",
+            ],
             logs.output,
         )
 
@@ -879,20 +916,22 @@ class TestVCF2TPED(unittest.TestCase):
     def test_logs(self):
         """Checks the logs."""
         self.assertEqual(
-            ["WARNING:vcf2tped:chr22:16050408: HG00096 (gender 2): haploid "
-             "call set as no call",
-             "WARNING:vcf2tped:chr22:16050408: HG00097 (gender 0): haploid "
-             "call set as no call",
-             "WARNING:vcf2tped:chr22:16050408: HG00099 (gender 1): haploid "
-             "call set as no call",
-             "WARNING:vcf2tped:chr23:16050408: HG00096 (gender 2): haploid "
-             "call set as no call",
-             "WARNING:vcf2tped:chr23:16050408: HG00097 (gender 0): haploid "
-             "call set as no call",
-             "WARNING:vcf2tped:chr24:16050408: HG00096 (gender 2): haploid "
-             "call set as no call",
-             "WARNING:vcf2tped:chr24:16050408: HG00097 (gender 0): haploid "
-             "call set as no call"],
+            [
+                "WARNING:vcf2tped:chr22:16050408: HG00096 (gender 2): haploid "
+                "call set as no call",
+                "WARNING:vcf2tped:chr22:16050408: HG00097 (gender 0): haploid "
+                "call set as no call",
+                "WARNING:vcf2tped:chr22:16050408: HG00099 (gender 1): haploid "
+                "call set as no call",
+                "WARNING:vcf2tped:chr23:16050408: HG00096 (gender 2): haploid "
+                "call set as no call",
+                "WARNING:vcf2tped:chr23:16050408: HG00097 (gender 0): haploid "
+                "call set as no call",
+                "WARNING:vcf2tped:chr24:16050408: HG00096 (gender 2): haploid "
+                "call set as no call",
+                "WARNING:vcf2tped:chr24:16050408: HG00097 (gender 0): haploid "
+                "call set as no call",
+            ],
             self.logs,
         )
 
@@ -906,7 +945,6 @@ class TestVCF2TPED(unittest.TestCase):
 
 
 class BaseTestCaseContext_Compatibility:
-
     def __init__(self, test_case):
         self.test_case = test_case
 
@@ -915,8 +953,7 @@ class BaseTestCaseContext_Compatibility:
         raise self.test_case.failureException(msg)
 
 
-_LoggingWatcher = collections.namedtuple("_LoggingWatcher",
-                                         ["records", "output"])
+_LoggingWatcher = collections.namedtuple("_LoggingWatcher", ["records", "output"])
 
 
 class CapturingHandler_Compatibility(logging.Handler):
@@ -948,13 +985,13 @@ class AssertLogsContext_Compatibility(BaseTestCaseContext_Compatibility):
         if level:
             # Python < 3.4 logging doesn't have a _nameToLevel dictionary
             nameToLevel = {
-                'CRITICAL': logging.CRITICAL,
-                'ERROR': logging.ERROR,
-                'WARN': logging.WARNING,
-                'WARNING': logging.WARNING,
-                'INFO': logging.INFO,
-                'DEBUG': logging.DEBUG,
-                'NOTSET': logging.NOTSET,
+                "CRITICAL": logging.CRITICAL,
+                "ERROR": logging.ERROR,
+                "WARN": logging.WARNING,
+                "WARNING": logging.WARNING,
+                "INFO": logging.INFO,
+                "DEBUG": logging.DEBUG,
+                "NOTSET": logging.NOTSET,
             }
             self.level = nameToLevel.get(level, level)
         else:
@@ -987,8 +1024,10 @@ class AssertLogsContext_Compatibility(BaseTestCaseContext_Compatibility):
             return False
         if len(self.watcher.records) == 0:
             self._raiseFailure(
-                "no logs of level {} or higher triggered on {}"
-                .format(logging.getLevelName(self.level), self.logger.name))
+                "no logs of level {} or higher triggered on {}".format(
+                    logging.getLevelName(self.level), self.logger.name
+                )
+            )
 
 
 # Calling the main, if necessary
