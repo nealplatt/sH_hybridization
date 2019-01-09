@@ -9,4 +9,4 @@ Sm_v7.1.gff - Gene annotations for the S. mansoni v7 genome published by the [50
 Sm_v7.1_transcript_table_gff-hhpred.tsv - hhpred gene annotations and predictions on the S. mansoni v7 genome (above) provided by F. Chevalier (unpublished). 
 
 [le'clech]: https://doi.org/10.1017/S0031182018000811
-[50helminth]:  https://doi.org/10.1038/s41588-018-0262-1. 
+[50helminth]:  https://doi.org/10.1038/s41588-018-0262-1 
