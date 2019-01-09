@@ -1,69 +1,15 @@
-# SNP calling in SH exomes.
+# Ancient hybridization and adaptive introgression of an invadolysin gene in Schistosoma haematobium.
 
-<explanation/abstract of project>
+Roy N. Platt II, Marina McDew-White, Winka Le Clec'h, Frederic D. Chevalier, Fiona Allan, Aidan M. Emery, Amadou Garba, Shaali M. Ame, Joanne P. Webster, David Rollinson, Bonnie L. Webster, Timothy J. C. Anderson.
 
----
-### To Run:
-
-1) Clone repository
-```
-git clone https://github.com/nealplatt/sH_hybridization.git
-```
-
-2) Build singularity image/container
-```    
-sudo singularity build scripts/Singularity <image name>
-```
-
-4) Modify major env variables in the `scripts/set-env.sh` 
-
-3) Download raw sequence reads to data/
-```    
-# SRA links provided upon publication
-```
-
-5) Execute scripts in scripts in the following order:
-    ```
-    set-env.sh
-    map_filterReads.sh
-    map_prepGenome.sh
-    map_mapAndProcessBam.sh
-    map_checkBams.sh
-    map_buildListOfIntervals.sh
-    bqsr_haplotypeCaller.sh
-    bqsr_prepForGenotype.sh
-    bqsr_genotype.sh
-    bqsr_buildCohortVcf.sh
-    bqsr_recalibration.sh
-    ```
-
+The parasitic blood fluke Schistosoma haematobium causes urogenital schistosomiasis in humans and is a major cause of morbidity and mortality across sub-Saharan Africa. S. haematobium can hybridize with closely-related livestock schistosomes, including S. bovis, however the frequency, direction, age and genomic consequences of hybridization in nature are unknown. We sequenced 96 S. haematobium exomes from Niger and the Zanzibar archipelago. We found evidence of an ancient, adaptive introgression event between Nigerien S. haematobium and S. bovis occurring 108-613 generations ago. Introgressed S. bovis alleles constitute 3.3-8.2% of Nigerien S. haematobium genomes. Some S. bovis alleles have reached high frequency and show signatures of directional selection; the strongest signal spans a single gene in the invadolysin gene family, an M8 metalloprotease associated with parasitic life-history traits. 
 
 ---
+### NOTES:
 
-### Dir tree inc. major files
-  ```
-  sH_hybridization
-    |----data
-    |----scripts
-    |--------<see above>
-    |----data
-    |--------raw_seq_data
-    |--------genome
-    |----results
-    |--------filter_reads
-    |--------map_reads
-    |--------intervals
-    |--------base_recalibration
-    |------------r0_bqsr_tables
-    |------------r1_bqsr_tables
-    |------------rN_bqsr_tables
-    |------------<final modified bams>
-  ```
+All analyses were conducted on a HPCC in a ```singularity``` container or in a ```conda``` managed environment. The singularity recipe and conda environmental yaml are in the ```config``` dir. 
 
----
+Raw code is found in the ```scripts``` dir 
 
-### To Do
-TODO: (neal) modify BQSR scripts to run within failed=1 loop
-
-TODO: (neal) take in command line arguments for round, prevRound
+Data that is not readily available through the SRA is in the ```data``` dir.  These will be housed in an online repository (ex. Dryad), but provided here for documentation purposes.
 
