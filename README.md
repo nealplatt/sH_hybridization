@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/124456755.svg)](https://zenodo.org/badge/latestdoi/124456755)
+
 # Ancient hybridization and adaptive introgression of an invadolysin gene in Schistosoma haematobium.
 
 Roy N. Platt II, Marina McDew-White, Winka Le Clec'h, Frederic D. Chevalier, Fiona Allan, Aidan M. Emery, Amadou Garba, Shaali M. Ame, Joanne P. Webster, David Rollinson, Bonnie L. Webster, Timothy J. C. Anderson.
